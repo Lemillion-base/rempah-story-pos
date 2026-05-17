@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 
 ## Project Name: POS Rempah Story
-## Product Version: 2.3 (Production)
+## Product Version: 2.4 (Production)
 ## Document Status: Production Ready
 ## Last Updated: 17 Mei 2026
 ## Production URL: Deployed on Vercel
@@ -294,15 +294,22 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - Lazy filtering & pagination untuk tabel besar
 - State persist ke localStorage (instant load)
 - Auto-cleanup: stock log > 30 hari, audit log > 90 hari (on app load)
+- Code-splitting: React.lazy() per halaman (bundle utama ~450KB)
 
 ### 4.5. PWA (Progressive Web App)
 - **Installable**: Bisa di-install ke homescreen (tablet/HP) tanpa browser bar
 - **Standalone display**: Tampil seperti native app
 - **Offline-capable**: Assets di-cache oleh Workbox service worker
 - **Auto-update**: Service worker otomatis update saat ada versi baru
-- **Dev mode**: PWA aktif di dev mode (`devOptions: { enabled: true }`)
-- **Icons**: SVG 192x192 dan 512x512 (brand color)
-- **Runtime caching**: Google Fonts di-cache untuk offline access
+- **Dynamic favicon**: Icon tab browser mengikuti logo toko yang diupload
+
+### 4.6. Offline & Sync
+- **Local-first architecture**: Semua data tersimpan di localStorage, app berfungsi 100% tanpa internet
+- **Offline Queue**: Operasi cloud yang gagal (saat offline) disimpan di antrian lokal
+- **Auto-retry**: Saat internet kembali, antrian otomatis di-flush ke Supabase
+- **Max 5 retries**: Operasi yang gagal 5x dihapus dari antrian
+- **Flush on app start**: Pending items dari sesi sebelumnya langsung di-retry
+- **Real-time sync**: Supabase real-time subscriptions untuk KDS multi-device
 
 ### 4.4. Print & Thermal Printer
 - **Browser Print**: `window.open` + CSS `@page` optimized untuk thermal paper (58mm/80mm)
