@@ -5,6 +5,7 @@ import { useShiftStore } from './store/shiftStore';
 import { useStockLogStore } from './store/stockLogStore';
 import { useAuditLogStore } from './store/auditLogStore';
 import { useSettingsStore } from './store/settingsStore';
+import { updateFavicon, updatePageTitle } from './utils/favicon';
 import Layout from './components/Layout';
 import OpenShiftModal from './components/OpenShiftModal';
 import ToastContainer from './components/ToastContainer';
@@ -49,10 +50,14 @@ function ShiftGuard({ children }: { children: React.ReactNode }) {
 export default function App() {
   const { currentUser, migratePasswords } = useAuthStore();
 
-  // Migrate passwords, load cloud settings, cleanup old logs
+  // Migrate passwords, load cloud settings, cleanup old logs, update favicon
   useEffect(() => {
     migratePasswords();
-    useSettingsStore.getState().loadFromCloud();
+    useSettingsStore.getState().loadFromCloud().then(() => {
+      const s = useSettingsStore.getState().settings;
+      updateFavicon(s.storeLogo);
+      updatePageTitle(s.storeName);
+    });
     useStockLogStore.getState().clearOldLogs(30);
     useAuditLogStore.getState().clearOldLogs(90);
   }, []);

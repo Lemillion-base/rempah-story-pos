@@ -1,9 +1,11 @@
 # Product Requirements Document (PRD)
 
 ## Project Name: POS Rempah Story
-## Product Version: 2.3 (Current Build)
-## Document Status: Updated — Reflects Current Implementation
+## Product Version: 2.3 (Production)
+## Document Status: Production Ready
 ## Last Updated: 17 Mei 2026
+## Production URL: Deployed on Vercel
+## Repository: https://github.com/Lemillion-base/rempah-story-pos
 
 ---
 
@@ -19,12 +21,16 @@
 | Build Tool | Vite 5 |
 | Styling | TailwindCSS 3.4 |
 | State Management | Zustand 4.5 + persist middleware (localStorage) |
+| Cloud Database | Supabase (PostgreSQL + Real-time) |
 | Routing | React Router v6 |
 | Charts | Chart.js 4 + react-chartjs-2 |
 | PDF Export | jsPDF + jspdf-autotable |
 | Password Hashing | bcryptjs |
 | PWA | vite-plugin-pwa (Workbox) |
 | Icons | Lucide React |
+| ID Generation | uuid v9 |
+| Hosting | Vercel (Production) |
+| Repository | GitHub |
 | ID Generation | uuid v9 |
 
 ### 1.2. Objektif
@@ -681,6 +687,13 @@ Kunyit, Jahe Emprit, Temulawak, Sereh, Kayu Manis, Gula Aren, Gula Pasir, Madu M
 
 ## 11. Running the Application
 
+### Production (Live)
+- **Hosting**: Vercel (auto-deploy on git push)
+- **Database**: Supabase (PostgreSQL + Real-time subscriptions)
+- **HTTPS**: Otomatis via Vercel
+- **CI/CD**: Push ke GitHub → Vercel auto-build & deploy
+
+### Development (Local)
 ```bash
 # Install dependencies
 npm install
@@ -694,19 +707,22 @@ npm run dev
 # Terminal 2: npm run tunnel
 # → https://xxxx.ngrok-free.app
 
-# Production build
+# Production build (local test)
 npm run build
-
-# Preview production build
-npm run preview
+npm run preview --host
 ```
 
-### Ngrok Setup (sekali saja)
+### Ngrok Setup (sekali saja, untuk dev)
 ```bash
-# 1. Daftar di https://dashboard.ngrok.com/signup
-# 2. Copy authtoken
-# 3. Pasang token:
 npx ngrok config add-authtoken YOUR_TOKEN_HERE
+```
+
+### Deploy ke Production
+```bash
+git add .
+git commit -m "description of changes"
+git push origin main
+# Vercel auto-deploys within 1-2 minutes
 ```
 
 ---

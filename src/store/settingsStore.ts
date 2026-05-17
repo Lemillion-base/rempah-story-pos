@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { AppSettings } from '../types';
 import { seedSettings } from '../utils/seed';
 import { syncSettings, fetchSettingsFromCloud } from '../lib/cloudSync';
+import { updateFavicon, updatePageTitle } from '../utils/favicon';
 
 interface SettingsState {
   settings: AppSettings;
@@ -18,9 +19,11 @@ export const useSettingsStore = create<SettingsState>()(
 
       updateSettings: (data) => {
         set((s) => ({ settings: { ...s.settings, ...data } }));
-        // Sync to cloud after update
         const updated = { ...get().settings, ...data };
         syncSettings(updated);
+        // Update favicon & title if logo/name changed
+        if (data.storeLogo !== undefined) updateFavicon(data.storeLogo);
+        if (data.storeName !== undefined) updatePageTitle(data.storeName);
       },
 
       verifyPin: (pin) => get().settings.managerPin === pin,

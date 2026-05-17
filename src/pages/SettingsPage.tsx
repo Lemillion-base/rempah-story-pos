@@ -4,8 +4,10 @@ import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { connectBluetoothPrinter, disconnectBluetoothPrinter, isBluetoothConnected } from '../utils/printer';
+import { resetToDefault, clearOperationalData, factoryReset } from '../utils/dataManager';
 import type { User, Role } from '../types';
 import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import {
   Users,
   Plus,
@@ -17,6 +19,9 @@ import {
   ImagePlus,
   X,
   Printer,
+  RotateCcw,
+  Database,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -40,6 +45,11 @@ export default function SettingsPage() {
 
   // PIN
   const [pin, setPin] = useState(settings.managerPin);
+
+  // Data management confirm dialogs
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showFactoryConfirm, setShowFactoryConfirm] = useState(false);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -414,6 +424,86 @@ export default function SettingsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Data Management */}
+      <div className="card p-5 border-red-200">
+        <h2 className="font-bold text-lg flex items-center gap-2 mb-4 text-red-700">
+          <Database size={18} /> Manajemen Data
+        </h2>
+        <div className="space-y-4">
+          {/* Clear Operational Data */}
+          <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-200">
+            <div>
+              <p className="font-medium text-sm">Bersihkan Data Transaksi</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Hapus semua transaksi, shift, pelanggan, promo, dan log. Menu & inventaris tetap.
+                Cocok untuk fresh start klien baru.
+              </p>
+            </div>
+            <button onClick={() => setShowClearConfirm(true)} className="btn-secondary text-xs text-amber-700 border-amber-300 whitespace-nowrap">
+              <Trash2 size={14} /> Bersihkan
+            </button>
+          </div>
+
+          {/* Reset to Default */}
+          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <div>
+              <p className="font-medium text-sm">Reset ke Default (Demo)</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Kembalikan semua data ke keadaan awal (seed data). Semua perubahan hilang.
+                Cocok untuk reset demo setelah diuji coba.
+              </p>
+            </div>
+            <button onClick={() => setShowResetConfirm(true)} className="btn-secondary text-xs text-blue-700 border-blue-300 whitespace-nowrap">
+              <RotateCcw size={14} /> Reset Demo
+            </button>
+          </div>
+
+          {/* Factory Reset */}
+          <div className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200">
+            <div>
+              <p className="font-medium text-sm text-red-700">Factory Reset</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Hapus SEMUA data termasuk menu, inventaris, settings, dan cloud.
+                Tidak bisa dikembalikan. Gunakan dengan sangat hati-hati.
+              </p>
+            </div>
+            <button onClick={() => setShowFactoryConfirm(true)} className="btn-danger text-xs whitespace-nowrap">
+              <AlertTriangle size={14} /> Factory Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={clearOperationalData}
+        title="Bersihkan Data Transaksi"
+        message="Semua transaksi, shift, pelanggan, promo, dan log akan dihapus permanen. Menu dan inventaris tetap. Lanjutkan?"
+        confirmText="Ya, Bersihkan"
+        variant="warning"
+      />
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={resetToDefault}
+        title="Reset ke Default"
+        message="Semua data akan dikembalikan ke keadaan awal (demo). Semua perubahan Anda akan hilang. Lanjutkan?"
+        confirmText="Ya, Reset"
+        variant="warning"
+      />
+
+      <ConfirmDialog
+        open={showFactoryConfirm}
+        onClose={() => setShowFactoryConfirm(false)}
+        onConfirm={factoryReset}
+        title="⚠️ Factory Reset"
+        message="SEMUA DATA akan dihapus permanen termasuk menu, inventaris, settings, dan data cloud. Tindakan ini TIDAK BISA dibatalkan. Yakin?"
+        confirmText="HAPUS SEMUA"
+        variant="danger"
+      />
     </div>
   );
 }
