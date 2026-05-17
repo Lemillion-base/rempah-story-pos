@@ -1,0 +1,103 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { useAuthStore } from './store/authStore';
+import { useShiftStore } from './store/shiftStore';
+import { useStockLogStore } from './store/stockLogStore';
+import { useAuditLogStore } from './store/auditLogStore';
+import { useSettingsStore } from './store/settingsStore';
+import Layout from './components/Layout';
+import OpenShiftModal from './components/OpenShiftModal';
+import ToastContainer from './components/ToastContainer';
+import Login from './pages/Login';
+
+const POS = lazy(() => import('./pages/POS'));
+const Kitchen = lazy(() => import('./pages/Kitchen'));
+const Transactions = lazy(() => import('./pages/Transactions'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Catalog = lazy(() => import('./pages/Catalog'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Promos = lazy(() => import('./pages/Promos'));
+const AuditLog = lazy(() => import('./pages/AuditLog'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
+  const { currentUser } = useAuthStore();
+  if (!currentUser) return <Navigate to="/" replace />;
+  if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
+function ShiftGuard({ children }: { children: React.ReactNode }) {
+  const { currentUser } = useAuthStore();
+  const { activeShift } = useShiftStore();
+
+  // Kasir must open shift before working
+  const needsShift = currentUser && (currentUser.role === 'Kasir') && !activeShift;
+
+  return (
+    <>
+      {needsShift && <OpenShiftModal open={true} />}
+      {children}
+    </>
+  );
+}
+
+export default function App() {
+  const { currentUser, migratePasswords } = useAuthStore();
+
+  // Migrate passwords, load cloud settings, cleanup old logs
+  useEffect(() => {
+    migratePasswords();
+    useSettingsStore.getState().loadFromCloud();
+    useStockLogStore.getState().clearOldLogs(30);
+    useAuditLogStore.getState().clearOldLogs(90);
+  }, []);
+
+  return (
+    <>
+    <ToastContainer />
+    <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="text-brand-600 text-lg font-medium">Memuat...</div></div>}>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          currentUser ? (
+            <Navigate to={currentUser.role === 'Manager' ? '/dashboard' : currentUser.role === 'Kasir' ? '/pos' : '/kitchen'} replace />
+          ) : (
+            <Login />
+          )
+        }
+      />
+
+      <Route
+        element={
+          <ProtectedRoute>
+            <ShiftGuard>
+              <Layout />
+            </ShiftGuard>
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/pos" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><POS /></ProtectedRoute>} />
+        <Route path="/kitchen" element={<ProtectedRoute allowedRoles={['Manager', 'Acaraki']}><Kitchen /></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Transactions /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['Manager']}><Dashboard /></ProtectedRoute>} />
+        <Route path="/catalog" element={<ProtectedRoute allowedRoles={['Manager']}><Catalog /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute allowedRoles={['Manager']}><Inventory /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute allowedRoles={['Manager']}><Reports /></ProtectedRoute>} />
+        <Route path="/customers" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Customers /></ProtectedRoute>} />
+        <Route path="/promos" element={<ProtectedRoute allowedRoles={['Manager']}><Promos /></ProtectedRoute>} />
+        <Route path="/audit-log" element={<ProtectedRoute allowedRoles={['Manager']}><AuditLog /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute allowedRoles={['Manager']}><SettingsPage /></ProtectedRoute>} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+    </Suspense>
+    </>
+  );
+}

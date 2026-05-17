@@ -1,0 +1,349 @@
+/**
+ * Thermal Printer Utility
+ * 
+ * Supports two modes:
+ * 1. Browser Print — opens a styled print window optimized for thermal paper
+ * 2. Bluetooth ESC/POS — connects to thermal printer via Web Bluetooth API
+ */
+
+import type { AppSettings, Transaction, CartItem } from '../types';
+import { formatRupiah } from './format';
+
+// ============================================================
+// RECEIPT GENERATION (shared between both modes)
+// ============================================================
+
+export interface ReceiptData {
+  storeName: string;
+  storeAddress?: string;
+  storeLogo?: string;
+  queueNumber: number;
+  date: string;
+  cashierName: string;
+  customerName?: string;
+  items: CartItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  paymentMethod: string;
+  cashReceived?: number;
+  change?: number;
+}
+
+export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettings): ReceiptData {
+  return {
+    storeName: settings.storeName,
+    storeAddress: settings.address,
+    storeLogo: settings.storeLogo,
+    queueNumber: tx.queueNumber,
+    date: tx.date,
+    cashierName: tx.cashierName,
+    customerName: tx.customerName,
+    items: tx.items,
+    subtotal: tx.subtotal,
+    discount: tx.discount,
+    total: tx.totalAmount,
+    paymentMethod: tx.paymentMethod,
+    cashReceived: tx.cashReceived,
+    change: tx.change,
+  };
+}
+
+// ============================================================
+// MODE 1: BROWSER PRINT (window.print)
+// ============================================================
+
+export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
+  const fontSize = width === '58mm' ? '10px' : '12px';
+  const paperWidth = width === '58mm' ? '48mm' : '72mm';
+  const separator = width === '58mm' ? '─'.repeat(32) : '─'.repeat(42);
+
+  const dateStr = new Date(data.date).toLocaleString('id-ID');
+
+  let lines: string[] = [];
+
+  // Header
+  lines.push(center(data.storeName, width));
+  if (data.storeAddress) lines.push(center(data.storeAddress, width));
+  lines.push(separator);
+
+  // Transaction info
+  lines.push(`No: #${data.queueNumber}`);
+  lines.push(`Tgl: ${dateStr}`);
+  lines.push(`Kasir: ${data.cashierName}`);
+  if (data.customerName) lines.push(`Pelanggan: ${data.customerName}`);
+  lines.push(separator);
+
+  // Items
+  for (const item of data.items) {
+    const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
+    lines.push(`${item.name}`);
+    lines.push(`  ${item.temperature}/${item.sugar}${addonStr}`);
+    lines.push(`  ${item.quantity}x ${formatRupiah(item.basePrice + item.addons.reduce((a, b) => a + b.price, 0))}${padLeft(formatRupiah(item.subtotal), width)}`);
+  }
+
+  lines.push(separator);
+
+  // Totals
+  lines.push(leftRight('Subtotal', formatRupiah(data.subtotal), width));
+  if (data.discount > 0) {
+    lines.push(leftRight('Diskon', `-${formatRupiah(data.discount)}`, width));
+  }
+  lines.push(leftRight('TOTAL', formatRupiah(data.total), width));
+  lines.push(separator);
+
+  // Payment
+  lines.push(leftRight(`Bayar (${data.paymentMethod})`, formatRupiah(data.cashReceived || data.total), width));
+  if (data.paymentMethod === 'Cash' && data.change !== undefined) {
+    lines.push(leftRight('Kembali', formatRupiah(data.change), width));
+  }
+
+  lines.push(separator);
+  lines.push('');
+  lines.push(center('Terima kasih!', width));
+  lines.push(center('Semoga sehat selalu 🌿', width));
+  lines.push('');
+
+  // Open print window
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Struk #${data.queueNumber}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: ${fontSize}; width: ${paperWidth}; margin: 0 auto; padding: 4mm 2mm; }
+        pre { white-space: pre-wrap; word-break: break-all; line-height: 1.4; }
+        @media print {
+          @page { margin: 0; size: ${width} auto; }
+          body { width: 100%; padding: 2mm; }
+        }
+      </style>
+    </head>
+    <body>
+      <pre>${lines.join('\n')}</pre>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+
+  // Auto print after a short delay for rendering
+  setTimeout(() => {
+    printWindow.print();
+    // Close after print dialog
+    setTimeout(() => printWindow.close(), 1000);
+  }, 300);
+}
+
+// ============================================================
+// MODE 2: BLUETOOTH ESC/POS
+// ============================================================
+
+let bluetoothDevice: BluetoothDevice | null = null;
+let bluetoothCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
+
+export async function connectBluetoothPrinter(): Promise<boolean> {
+  try {
+    if (!navigator.bluetooth) {
+      alert('Browser ini tidak mendukung Web Bluetooth. Gunakan Chrome atau Edge.');
+      return false;
+    }
+
+    bluetoothDevice = await navigator.bluetooth.requestDevice({
+      filters: [
+        { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Common thermal printer service
+      ],
+      optionalServices: [
+        '000018f0-0000-1000-8000-00805f9b34fb',
+        '0000ff00-0000-1000-8000-00805f9b34fb',
+        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+      ],
+    });
+
+    if (!bluetoothDevice) return false;
+
+    const server = await bluetoothDevice.gatt!.connect();
+
+    // Try common thermal printer services
+    const serviceUUIDs = [
+      '000018f0-0000-1000-8000-00805f9b34fb',
+      '0000ff00-0000-1000-8000-00805f9b34fb',
+      'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+    ];
+
+    for (const uuid of serviceUUIDs) {
+      try {
+        const service = await server.getPrimaryService(uuid);
+        const characteristics = await service.getCharacteristics();
+        // Find writable characteristic
+        for (const char of characteristics) {
+          if (char.properties.write || char.properties.writeWithoutResponse) {
+            bluetoothCharacteristic = char;
+            return true;
+          }
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    alert('Printer ditemukan tapi tidak bisa menulis. Pastikan printer thermal Bluetooth kompatibel.');
+    return false;
+  } catch (err: any) {
+    if (err.name !== 'NotFoundError') { // User cancelled
+      console.error('Bluetooth error:', err);
+      alert(`Gagal connect: ${err.message}`);
+    }
+    return false;
+  }
+}
+
+export function isBluetoothConnected(): boolean {
+  return !!(bluetoothDevice?.gatt?.connected && bluetoothCharacteristic);
+}
+
+export async function disconnectBluetoothPrinter() {
+  if (bluetoothDevice?.gatt?.connected) {
+    bluetoothDevice.gatt.disconnect();
+  }
+  bluetoothDevice = null;
+  bluetoothCharacteristic = null;
+}
+
+export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '80mm') {
+  if (!bluetoothCharacteristic) {
+    const connected = await connectBluetoothPrinter();
+    if (!connected) return;
+  }
+
+  const maxChars = width === '58mm' ? 32 : 42;
+  const encoder = new TextEncoder();
+
+  // ESC/POS commands
+  const ESC = 0x1B;
+  const GS = 0x1D;
+  const commands: number[] = [];
+
+  // Initialize printer
+  commands.push(ESC, 0x40); // ESC @ - Initialize
+
+  // Center align
+  commands.push(ESC, 0x61, 0x01); // ESC a 1 - Center
+
+  // Bold on
+  commands.push(ESC, 0x45, 0x01); // ESC E 1 - Bold on
+  commands.push(...encoder.encode(data.storeName + '\n'));
+  commands.push(ESC, 0x45, 0x00); // Bold off
+
+  if (data.storeAddress) {
+    commands.push(...encoder.encode(data.storeAddress + '\n'));
+  }
+
+  // Left align
+  commands.push(ESC, 0x61, 0x00); // ESC a 0 - Left
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+
+  // Transaction info
+  commands.push(...encoder.encode(`No: #${data.queueNumber}\n`));
+  commands.push(...encoder.encode(`Tgl: ${new Date(data.date).toLocaleString('id-ID')}\n`));
+  commands.push(...encoder.encode(`Kasir: ${data.cashierName}\n`));
+  if (data.customerName) {
+    commands.push(...encoder.encode(`Pelanggan: ${data.customerName}\n`));
+  }
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+
+  // Items
+  for (const item of data.items) {
+    commands.push(...encoder.encode(`${item.name}\n`));
+    const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
+    commands.push(...encoder.encode(`  ${item.temperature}/${item.sugar}${addonStr}\n`));
+    commands.push(...encoder.encode(`  ${item.quantity}x    ${formatRupiah(item.subtotal)}\n`));
+  }
+
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+
+  // Totals
+  commands.push(...encoder.encode(`Subtotal: ${formatRupiah(data.subtotal)}\n`));
+  if (data.discount > 0) {
+    commands.push(...encoder.encode(`Diskon: -${formatRupiah(data.discount)}\n`));
+  }
+
+  // Bold total
+  commands.push(ESC, 0x45, 0x01);
+  commands.push(...encoder.encode(`TOTAL: ${formatRupiah(data.total)}\n`));
+  commands.push(ESC, 0x45, 0x00);
+
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode(`Bayar (${data.paymentMethod}): ${formatRupiah(data.cashReceived || data.total)}\n`));
+  if (data.paymentMethod === 'Cash' && data.change !== undefined) {
+    commands.push(...encoder.encode(`Kembali: ${formatRupiah(data.change)}\n`));
+  }
+
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+
+  // Center footer
+  commands.push(ESC, 0x61, 0x01);
+  commands.push(...encoder.encode('\nTerima kasih!\nSemoga sehat selalu\n\n'));
+
+  // Feed and cut
+  commands.push(ESC, 0x64, 0x04); // Feed 4 lines
+  commands.push(GS, 0x56, 0x00); // Cut paper
+
+  // Send data in chunks (BLE has MTU limit ~20 bytes)
+  const data_array = new Uint8Array(commands);
+  const chunkSize = 20;
+
+  for (let i = 0; i < data_array.length; i += chunkSize) {
+    const chunk = data_array.slice(i, i + chunkSize);
+    try {
+      if (bluetoothCharacteristic!.properties.writeWithoutResponse) {
+        await bluetoothCharacteristic!.writeValueWithoutResponse(chunk);
+      } else {
+        await bluetoothCharacteristic!.writeValue(chunk);
+      }
+      // Small delay between chunks
+      await new Promise((r) => setTimeout(r, 20));
+    } catch (err) {
+      console.error('Print chunk error:', err);
+      break;
+    }
+  }
+}
+
+// ============================================================
+// MAIN PRINT FUNCTION (auto-selects mode based on settings)
+// ============================================================
+
+export async function printReceipt(data: ReceiptData, settings: AppSettings) {
+  if (!settings.printerEnabled) return;
+
+  if (settings.printerType === 'bluetooth') {
+    await printReceiptBluetooth(data, settings.printerWidth);
+  } else {
+    printReceiptBrowser(data, settings.printerWidth);
+  }
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function center(text: string, width: '58mm' | '80mm'): string {
+  const maxChars = width === '58mm' ? 32 : 42;
+  const pad = Math.max(0, Math.floor((maxChars - text.length) / 2));
+  return ' '.repeat(pad) + text;
+}
+
+function leftRight(left: string, right: string, width: '58mm' | '80mm'): string {
+  const maxChars = width === '58mm' ? 32 : 42;
+  const space = Math.max(1, maxChars - left.length - right.length);
+  return left + ' '.repeat(space) + right;
+}
+
+function padLeft(text: string, width: '58mm' | '80mm'): string {
+  // Used for right-aligning within a line that already has content
+  return '  ' + text;
+}

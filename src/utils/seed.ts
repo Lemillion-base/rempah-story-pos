@@ -1,0 +1,148 @@
+import { v4 as uuid } from 'uuid';
+import type {
+  User,
+  InventoryItem,
+  Menu,
+  AppSettings,
+} from '../types';
+
+export const seedUsers: User[] = [
+  {
+    id: uuid(),
+    name: 'Admin Manager',
+    username: 'manager',
+    password: 'manager123',
+    role: 'Manager',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: uuid(),
+    name: 'Kasir 1',
+    username: 'kasir',
+    password: 'kasir123',
+    role: 'Kasir',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: uuid(),
+    name: 'Acaraki Dapur',
+    username: 'acaraki',
+    password: 'acaraki123',
+    role: 'Acaraki',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+export const seedInventory: InventoryItem[] = [
+  { id: 'kunyit', name: 'Kunyit Segar', stock: 5, unit: 'kg', costPerUnit: 25000, minStock: 3 },
+  { id: 'jahe', name: 'Jahe Emprit', stock: 4, unit: 'kg', costPerUnit: 30000, minStock: 3 },
+  { id: 'temulawak', name: 'Temulawak', stock: 2.5, unit: 'kg', costPerUnit: 28000, minStock: 3 },
+  { id: 'sereh', name: 'Sereh', stock: 1.5, unit: 'kg', costPerUnit: 15000, minStock: 3 },
+  { id: 'kayu-manis', name: 'Kayu Manis', stock: 1, unit: 'kg', costPerUnit: 80000, minStock: 2 },
+  { id: 'gula-aren', name: 'Gula Aren', stock: 8, unit: 'kg', costPerUnit: 35000, minStock: 3 },
+  { id: 'gula-pasir', name: 'Gula Pasir', stock: 10, unit: 'kg', costPerUnit: 16000, minStock: 3 },
+  { id: 'madu', name: 'Madu Murni', stock: 3, unit: 'L', costPerUnit: 150000, minStock: 2 },
+  { id: 'lemon', name: 'Lemon', stock: 2, unit: 'kg', costPerUnit: 40000, minStock: 3 },
+  { id: 'jeruk-nipis', name: 'Jeruk Nipis', stock: 1.2, unit: 'kg', costPerUnit: 25000, minStock: 2 },
+  { id: 'susu', name: 'Susu UHT', stock: 12, unit: 'L', costPerUnit: 18000, minStock: 5 },
+  { id: 'cup-16oz', name: 'Cup 16oz', stock: 200, unit: 'pcs', costPerUnit: 800, minStock: 50 },
+  { id: 'cup-12oz', name: 'Cup 12oz', stock: 150, unit: 'pcs', costPerUnit: 700, minStock: 50 },
+  { id: 'sedotan', name: 'Sedotan', stock: 300, unit: 'pcs', costPerUnit: 150, minStock: 50 },
+  { id: 'air', name: 'Air Galon', stock: 40, unit: 'L', costPerUnit: 500, minStock: 10 },
+];
+
+export const seedMenus: Menu[] = [
+  {
+    id: uuid(),
+    name: 'Kunyit Asam Signature',
+    category: 'Jamu Murni',
+    price: 18000,
+    isBestSeller: true,
+    description: 'Racikan kunyit segar dengan asam jawa, hangat di perut.',
+    ingredients: { kunyit: 0.05, 'gula-aren': 0.02, air: 0.3, 'cup-16oz': 1, sedotan: 1 },
+    availableAddons: [
+      { name: 'Ekstra Madu', price: 5000 },
+      { name: 'Lemon', price: 3000 },
+    ],
+  },
+  {
+    id: uuid(),
+    name: 'Beras Kencur',
+    category: 'Jamu Murni',
+    price: 16000,
+    isBestSeller: true,
+    description: 'Klasik & menyegarkan.',
+    ingredients: { 'gula-aren': 0.02, air: 0.3, 'cup-16oz': 1, sedotan: 1 },
+    availableAddons: [{ name: 'Ekstra Madu', price: 5000 }],
+  },
+  {
+    id: uuid(),
+    name: 'Wedang Jahe',
+    category: 'Wedang',
+    price: 15000,
+    description: 'Jahe emprit asli, menghangatkan.',
+    ingredients: { jahe: 0.04, 'gula-aren': 0.02, sereh: 0.01, air: 0.3, 'cup-16oz': 1 },
+    availableAddons: [
+      { name: 'Ekstra Madu', price: 5000 },
+      { name: 'Lemon', price: 3000 },
+    ],
+  },
+  {
+    id: uuid(),
+    name: 'Temulawak Madu',
+    category: 'Jamu Murni',
+    price: 20000,
+    ingredients: { temulawak: 0.05, madu: 0.02, air: 0.3, 'cup-16oz': 1, sedotan: 1 },
+    availableAddons: [{ name: 'Lemon', price: 3000 }],
+  },
+  {
+    id: uuid(),
+    name: 'Wedang Uwuh',
+    category: 'Wedang',
+    price: 17000,
+    ingredients: { 'kayu-manis': 0.005, sereh: 0.01, jahe: 0.03, 'gula-aren': 0.02, air: 0.3, 'cup-16oz': 1 },
+    availableAddons: [{ name: 'Ekstra Madu', price: 5000 }],
+  },
+  {
+    id: uuid(),
+    name: 'Golden Milk',
+    category: 'Signature',
+    price: 25000,
+    isBestSeller: true,
+    description: 'Kunyit + susu + kayu manis, favorit instagramable.',
+    ingredients: { kunyit: 0.03, susu: 0.2, 'kayu-manis': 0.003, 'gula-pasir': 0.015, 'cup-16oz': 1, sedotan: 1 },
+    availableAddons: [
+      { name: 'Ekstra Madu', price: 5000 },
+      { name: 'Extra Shot Kunyit', price: 4000 },
+    ],
+  },
+  {
+    id: uuid(),
+    name: 'Jeruk Nipis Peras',
+    category: 'Segar',
+    price: 14000,
+    ingredients: { 'jeruk-nipis': 0.05, 'gula-pasir': 0.02, air: 0.25, 'cup-12oz': 1, sedotan: 1 },
+    availableAddons: [{ name: 'Ekstra Madu', price: 5000 }],
+  },
+  {
+    id: uuid(),
+    name: 'Lemon Jahe',
+    category: 'Segar',
+    price: 16000,
+    ingredients: { jahe: 0.02, lemon: 0.04, 'gula-pasir': 0.015, air: 0.25, 'cup-12oz': 1, sedotan: 1 },
+    availableAddons: [{ name: 'Ekstra Madu', price: 5000 }],
+  },
+];
+
+export const seedSettings: AppSettings = {
+  managerPin: '1234',
+  storeName: 'Rempah Story',
+  storeLogo: undefined,
+  address: 'Jl. Jamu Modern No. 1',
+  taxPercent: 0,
+  categories: ['Jamu Murni', 'Wedang', 'Signature', 'Segar'],
+  printerEnabled: false,
+  printerType: 'browser',
+  printerWidth: '58mm',
+  autoPrintOnCheckout: false,
+};

@@ -1,0 +1,408 @@
+import { useState } from 'react';
+import { useInventoryStore } from '../store/inventoryStore';
+import { formatRupiah } from '../utils/format';
+import type { InventoryItem } from '../types';
+import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  Package,
+  AlertTriangle,
+  Download,
+  Upload,
+  Settings2,
+} from 'lucide-react';
+
+export default function Inventory() {
+  const { items: inventory, addItem, updateItem, deleteItem } = useInventoryStore();
+
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'low'>('all');
+  const [perPage, setPerPage] = useState(10);
+  const [page, setPage] = useState(1);
+  const [deleteInvId, setDeleteInvId] = useState<string | null>(null);
+
+  // Form
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [invName, setInvName] = useState('');
+  const [invSlug, setInvSlug] = useState('');
+  const [invStock, setInvStock] = useState('');
+  const [invUnit, setInvUnit] = useState('kg');
+  const [invCost, setInvCost] = useState('');
+  const [invMinStock, setInvMinStock] = useState('3');
+
+  // Bulk min stock setting
+  const [showMinStockSetting, setShowMinStockSetting] = useState(false);
+  const [globalMinStock, setGlobalMinStock] = useState('3');
+
+  const filtered = inventory.filter((item) => {
+    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) || item.id.includes(search.toLowerCase());
+    const matchStatus = filterStatus === 'all' || item.stock < (item.minStock ?? 3);
+    return matchSearch && matchStatus;
+  });
+
+  const lowStockCount = inventory.filter((i) => i.stock < (i.minStock ?? 3)).length;
+
+  const openAdd = () => {
+    setEditId(null);
+    setInvName('');
+    setInvSlug('');
+    setInvStock('');
+    setInvUnit('kg');
+    setInvCost('');
+    setInvMinStock('3');
+    setShowForm(true);
+  };
+
+  const openEdit = (item: InventoryItem) => {
+    setEditId(item.id);
+    setInvName(item.name);
+    setInvSlug(item.id);
+    setInvStock(String(item.stock));
+    setInvUnit(item.unit);
+    setInvCost(String(item.costPerUnit));
+    setInvMinStock(String(item.minStock ?? 3));
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
+    const data = {
+      name: invName,
+      stock: parseFloat(invStock) || 0,
+      unit: invUnit,
+      costPerUnit: parseFloat(invCost) || 0,
+      minStock: parseFloat(invMinStock) || 3,
+    };
+    if (editId) {
+      updateItem(editId, data);
+    } else {
+      addItem({ id: invSlug || invName.toLowerCase().replace(/\s+/g, '-'), ...data });
+    }
+    setShowForm(false);
+  };
+
+  const applyGlobalMinStock = () => {
+    const val = parseFloat(globalMinStock) || 3;
+    inventory.forEach((item) => {
+      updateItem(item.id, { minStock: val });
+    });
+    setShowMinStockSetting(false);
+  };
+
+  // CSV Export
+  const handleExport = () => {
+    const header = 'id,name,stock,unit,costPerUnit,minStock\n';
+    const rows = inventory.map((i) =>
+      [
+        `"${i.id}"`,
+        `"${i.name}"`,
+        i.stock,
+        `"${i.unit}"`,
+        i.costPerUnit,
+        i.minStock ?? 3,
+      ].join(',')
+    );
+    const csv = header + rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'inventaris-bahan-baku.csv';
+    a.click();
+  };
+
+  // CSV Import
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split('\n').slice(1); // skip header
+      lines
+        .filter((l) => l.trim())
+        .forEach((line) => {
+          const parts = line.match(/(".*?"|[^,]+)/g) || [];
+          const clean = (s: string) => s.replace(/^"|"$/g, '');
+          const id = clean(parts[0] || '');
+          const name = clean(parts[1] || '');
+          const stock = parseFloat(parts[2]) || 0;
+          const unit = clean(parts[3] || 'kg');
+          const costPerUnit = parseFloat(parts[4]) || 0;
+          const minStock = parseFloat(parts[5]) || 3;
+
+          const existing = inventory.find((i) => i.id === id);
+          if (existing) {
+            updateItem(id, { name, stock, unit, costPerUnit, minStock });
+          } else {
+            addItem({ id, name, stock, unit, costPerUnit, minStock });
+          }
+        });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const totalValue = inventory.reduce((a, i) => a + i.stock * i.costPerUnit, 0);
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold">📦 Inventaris Bahan Baku</h1>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={openAdd} className="btn-primary text-sm">
+            <Plus size={16} /> Tambah Bahan
+          </button>
+          <button onClick={() => setShowMinStockSetting(true)} className="btn-secondary text-sm">
+            <Settings2 size={16} /> Min. Stok
+          </button>
+          <button onClick={handleExport} className="btn-secondary text-sm">
+            <Download size={16} /> Export
+          </button>
+          <label className="btn-secondary text-sm cursor-pointer">
+            <Upload size={16} /> Import
+            <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
+          </label>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Package className="text-blue-600" size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Total Item</p>
+              <p className="text-lg font-bold">{inventory.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <AlertTriangle className="text-amber-600" size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Stok Rendah</p>
+              <p className="text-lg font-bold text-amber-600">{lowStockCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+              <Package className="text-green-600" size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Nilai Inventaris</p>
+              <p className="text-lg font-bold text-green-700">{formatRupiah(totalValue)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Cari bahan..."
+            className="input pl-9 text-sm"
+          />
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => { setFilterStatus(e.target.value as 'all' | 'low'); setPage(1); }}
+          className="input w-auto text-sm"
+        >
+          <option value="all">Semua Status</option>
+          <option value="low">Stok Rendah</option>
+        </select>
+        <select
+          value={perPage}
+          onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
+          className="input w-auto text-sm"
+        >
+          <option value={10}>10 / halaman</option>
+          <option value={25}>25 / halaman</option>
+          <option value={50}>50 / halaman</option>
+          <option value={100}>100 / halaman</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left p-3 font-semibold">ID</th>
+                <th className="text-left p-3 font-semibold">Nama Bahan</th>
+                <th className="text-right p-3 font-semibold">Stok</th>
+                <th className="text-left p-3 font-semibold">Unit</th>
+                <th className="text-right p-3 font-semibold">Harga/Unit</th>
+                <th className="text-right p-3 font-semibold">Min. Stok</th>
+                <th className="text-right p-3 font-semibold">Nilai</th>
+                <th className="text-center p-3 font-semibold">Status</th>
+                <th className="text-center p-3 font-semibold">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.slice((page - 1) * perPage, page * perPage).map((item) => {
+                const isLow = item.stock < (item.minStock ?? 3);
+                return (
+                  <tr key={item.id} className={`border-b border-slate-50 ${isLow ? 'bg-red-50/50' : 'hover:bg-slate-50'}`}>
+                    <td className="p-3 font-mono text-xs text-slate-400">{item.id}</td>
+                    <td className="p-3 font-medium">{item.name}</td>
+                    <td className="p-3 text-right font-medium">{item.stock}</td>
+                    <td className="p-3 text-slate-500">{item.unit}</td>
+                    <td className="p-3 text-right">{formatRupiah(item.costPerUnit)}</td>
+                    <td className="p-3 text-right text-slate-500">{item.minStock ?? 3}</td>
+                    <td className="p-3 text-right font-medium">{formatRupiah(item.stock * item.costPerUnit)}</td>
+                    <td className="p-3 text-center">
+                      {isLow ? (
+                        <span className="badge bg-red-100 text-red-700">
+                          <AlertTriangle size={11} /> Rendah
+                        </span>
+                      ) : (
+                        <span className="badge bg-green-100 text-green-700">Aman</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => setDeleteInvId(item.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {Math.ceil(filtered.length / perPage) > 1 && (
+          <div className="flex items-center justify-between p-3 border-t border-slate-100">
+            <p className="text-xs text-slate-500">
+              Menampilkan {(page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} dari {filtered.length}
+            </p>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.ceil(filtered.length / perPage) }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  className={`w-8 h-8 rounded-lg text-sm font-medium ${
+                    page === i + 1 ? 'bg-brand-600 text-white' : 'hover:bg-slate-100'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Form Modal */}
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={editId ? 'Edit Bahan' : 'Tambah Bahan'}>
+        <div className="space-y-4">
+          <div>
+            <label className="label">Nama Bahan</label>
+            <input value={invName} onChange={(e) => setInvName(e.target.value)} className="input" />
+          </div>
+          {!editId && (
+            <div>
+              <label className="label">ID (slug)</label>
+              <input value={invSlug} onChange={(e) => setInvSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))} className="input font-mono" placeholder="contoh: kunyit-segar" />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Stok</label>
+              <input value={invStock} onChange={(e) => setInvStock(e.target.value)} className="input" type="number" step="0.1" />
+            </div>
+            <div>
+              <label className="label">Unit</label>
+              <select value={invUnit} onChange={(e) => setInvUnit(e.target.value)} className="input">
+                <option value="kg">kg</option>
+                <option value="L">L</option>
+                <option value="pcs">pcs</option>
+                <option value="ml">ml</option>
+                <option value="g">g</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Harga per Unit (Rp)</label>
+              <input value={invCost} onChange={(e) => setInvCost(e.target.value)} className="input" type="number" />
+            </div>
+            <div>
+              <label className="label">Min. Stok (Peringatan)</label>
+              <input value={invMinStock} onChange={(e) => setInvMinStock(e.target.value)} className="input" type="number" />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-3 border-t border-slate-100">
+            <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">Batal</button>
+            <button onClick={handleSave} className="btn-primary flex-1" disabled={!invName}>
+              {editId ? 'Simpan' : 'Tambah'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Min Stock Setting Modal */}
+      <Modal open={showMinStockSetting} onClose={() => setShowMinStockSetting(false)} title="Pengaturan Min. Stok" maxWidth="max-w-sm">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Atur batas minimum stok untuk semua bahan baku. Bahan dengan stok di bawah nilai ini akan ditandai sebagai "Stok Rendah".
+          </p>
+          <div>
+            <label className="label">Minimum Stok (berlaku untuk semua)</label>
+            <input
+              value={globalMinStock}
+              onChange={(e) => setGlobalMinStock(e.target.value)}
+              className="input"
+              type="number"
+              step="0.5"
+              min="0"
+            />
+          </div>
+          <p className="text-xs text-slate-400">
+            Catatan: Anda juga bisa mengatur min. stok per item saat mengedit bahan.
+          </p>
+          <div className="flex gap-3 pt-3 border-t border-slate-100">
+            <button onClick={() => setShowMinStockSetting(false)} className="btn-secondary flex-1">Batal</button>
+            <button onClick={applyGlobalMinStock} className="btn-primary flex-1">
+              Terapkan ke Semua
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        open={!!deleteInvId}
+        onClose={() => setDeleteInvId(null)}
+        onConfirm={() => { if (deleteInvId) deleteItem(deleteInvId); }}
+        title="Hapus Bahan"
+        message="Yakin ingin menghapus bahan baku ini?"
+        confirmText="Ya, Hapus"
+      />
+    </div>
+  );
+}

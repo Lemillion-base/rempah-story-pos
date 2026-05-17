@@ -1,0 +1,350 @@
+import { useState } from 'react';
+import { v4 as uuid } from 'uuid';
+import { usePromoStore } from '../store/promoStore';
+import { useMenuStore } from '../store/menuStore';
+import { formatRupiah } from '../utils/format';
+import type { Promo, PromoType, PromoScope } from '../types';
+import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Tag,
+  Percent,
+  Calendar,
+  Gift,
+  Crown,
+  Save,
+} from 'lucide-react';
+
+export default function Promos() {
+  const { promos, addPromo, updatePromo, deletePromo, loyaltySettings, updateLoyaltySettings } = usePromoStore();
+  const { getCategories } = useMenuStore();
+
+  const [activeSection, setActiveSection] = useState<'promos' | 'loyalty'>('promos');
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Form state
+  const [formName, setFormName] = useState('');
+  const [formCode, setFormCode] = useState('');
+  const [formType, setFormType] = useState<PromoType>('percentage');
+  const [formValue, setFormValue] = useState('');
+  const [formScope, setFormScope] = useState<PromoScope>('all');
+  const [formScopeTarget, setFormScopeTarget] = useState('');
+  const [formMinPurchase, setFormMinPurchase] = useState('');
+  const [formMaxDiscount, setFormMaxDiscount] = useState('');
+  const [formStartDate, setFormStartDate] = useState('');
+  const [formEndDate, setFormEndDate] = useState('');
+  const [formUsageLimit, setFormUsageLimit] = useState('');
+  const [formLoyaltyMinVisits, setFormLoyaltyMinVisits] = useState('');
+
+  const categories = getCategories();
+
+  const openAdd = () => {
+    setEditId(null);
+    setFormName(''); setFormCode(''); setFormType('percentage'); setFormValue('');
+    setFormScope('all'); setFormScopeTarget(''); setFormMinPurchase('');
+    setFormMaxDiscount(''); setFormStartDate(''); setFormEndDate('');
+    setFormUsageLimit(''); setFormLoyaltyMinVisits('');
+    setShowForm(true);
+  };
+
+  const openEdit = (p: Promo) => {
+    setEditId(p.id);
+    setFormName(p.name); setFormCode(p.code || ''); setFormType(p.type);
+    setFormValue(String(p.value)); setFormScope(p.scope);
+    setFormScopeTarget(p.scopeTarget || ''); setFormMinPurchase(String(p.minPurchase || ''));
+    setFormMaxDiscount(String(p.maxDiscount || ''));
+    setFormStartDate(p.startDate.split('T')[0]); setFormEndDate(p.endDate.split('T')[0]);
+    setFormUsageLimit(String(p.usageLimit || '')); setFormLoyaltyMinVisits(String(p.loyaltyMinVisits || ''));
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
+    const data: Omit<Promo, 'id' | 'usageCount' | 'createdAt'> = {
+      name: formName,
+      code: formCode || undefined,
+      type: formType,
+      value: parseFloat(formValue) || 0,
+      scope: formScope,
+      scopeTarget: formScopeTarget || undefined,
+      minPurchase: parseInt(formMinPurchase) || undefined,
+      maxDiscount: parseInt(formMaxDiscount) || undefined,
+      startDate: new Date(formStartDate).toISOString(),
+      endDate: new Date(formEndDate + 'T23:59:59').toISOString(),
+      isActive: true,
+      usageLimit: parseInt(formUsageLimit) || undefined,
+      loyaltyMinVisits: parseInt(formLoyaltyMinVisits) || undefined,
+    };
+
+    if (editId) {
+      updatePromo(editId, data);
+    } else {
+      addPromo({ id: uuid(), ...data, usageCount: 0, createdAt: new Date().toISOString() });
+    }
+    setShowForm(false);
+  };
+
+  const isExpired = (p: Promo) => new Date(p.endDate) < new Date();
+  const isUpcoming = (p: Promo) => new Date(p.startDate) > new Date();
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold">🎁 Promo & Loyalty</h1>
+      </div>
+
+      {/* Section Toggle */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6">
+        <button
+          onClick={() => setActiveSection('promos')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${
+            activeSection === 'promos' ? 'bg-white shadow-sm text-brand-700' : 'text-slate-500'
+          }`}
+        >
+          <Tag size={16} /> Promo & Voucher
+        </button>
+        <button
+          onClick={() => setActiveSection('loyalty')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${
+            activeSection === 'loyalty' ? 'bg-white shadow-sm text-brand-700' : 'text-slate-500'
+          }`}
+        >
+          <Crown size={16} /> Loyalty Member
+        </button>
+      </div>
+
+      {/* Promos Section */}
+      {activeSection === 'promos' && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button onClick={openAdd} className="btn-primary text-sm">
+              <Plus size={16} /> Tambah Promo
+            </button>
+          </div>
+
+          {promos.length === 0 ? (
+            <div className="card p-12 text-center text-slate-400">
+              <Gift size={40} className="mx-auto mb-2 opacity-30" />
+              <p>Belum ada promo</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {promos.map((p) => (
+                <div key={p.id} className={`card p-4 ${isExpired(p) ? 'opacity-60' : ''}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold">{p.name}</h3>
+                        {p.code && <span className="badge bg-brand-100 text-brand-700 font-mono">{p.code}</span>}
+                        {isExpired(p) && <span className="badge bg-red-100 text-red-700">Expired</span>}
+                        {isUpcoming(p) && <span className="badge bg-blue-100 text-blue-700">Upcoming</span>}
+                        {!isExpired(p) && !isUpcoming(p) && p.isActive && <span className="badge bg-green-100 text-green-700">Aktif</span>}
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        {p.type === 'percentage' ? `${p.value}%` : formatRupiah(p.value)} off
+                        {p.scope === 'all' ? ' • Semua menu' : p.scope === 'category' ? ` • Kategori: ${p.scopeTarget}` : p.scope === 'loyalty' ? ` • Loyalty (min ${p.loyaltyMinVisits} visit)` : ` • Menu tertentu`}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        <Calendar size={11} className="inline mr-1" />
+                        {new Date(p.startDate).toLocaleDateString('id-ID')} — {new Date(p.endDate).toLocaleDateString('id-ID')}
+                        {p.usageLimit && ` • ${p.usageCount}/${p.usageLimit} digunakan`}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => updatePromo(p.id, { isActive: !p.isActive })}
+                        className={`p-1.5 rounded-lg text-xs font-medium ${p.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}
+                      >
+                        {p.isActive ? 'ON' : 'OFF'}
+                      </button>
+                      <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => setDeleteId(p.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Loyalty Section */}
+      {activeSection === 'loyalty' && (
+        <div className="space-y-6">
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <Crown size={18} /> Pengaturan Loyalty Member
+              </h2>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={loyaltySettings.enabled}
+                  onChange={(e) => updateLoyaltySettings({ enabled: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+              </label>
+            </div>
+
+            {loyaltySettings.enabled && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <p className="text-xs text-amber-600 font-medium">🥉 Bronze</p>
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <label className="text-xs text-slate-500">Min. Kunjungan</label>
+                        <input type="number" value={loyaltySettings.tierBronzeMinVisits} onChange={(e) => updateLoyaltySettings({ tierBronzeMinVisits: parseInt(e.target.value) || 0 })} className="input text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">Diskon (%)</label>
+                        <input type="number" value={loyaltySettings.tierBronzeDiscount} onChange={(e) => updateLoyaltySettings({ tierBronzeDiscount: parseInt(e.target.value) || 0 })} className="input text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-slate-100 rounded-xl border border-slate-200">
+                    <p className="text-xs text-slate-600 font-medium">🥈 Silver</p>
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <label className="text-xs text-slate-500">Min. Kunjungan</label>
+                        <input type="number" value={loyaltySettings.tierSilverMinVisits} onChange={(e) => updateLoyaltySettings({ tierSilverMinVisits: parseInt(e.target.value) || 0 })} className="input text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">Diskon (%)</label>
+                        <input type="number" value={loyaltySettings.tierSilverDiscount} onChange={(e) => updateLoyaltySettings({ tierSilverDiscount: parseInt(e.target.value) || 0 })} className="input text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                    <p className="text-xs text-yellow-700 font-medium">🥇 Gold</p>
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <label className="text-xs text-slate-500">Min. Kunjungan</label>
+                        <input type="number" value={loyaltySettings.tierGoldMinVisits} onChange={(e) => updateLoyaltySettings({ tierGoldMinVisits: parseInt(e.target.value) || 0 })} className="input text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">Diskon (%)</label>
+                        <input type="number" value={loyaltySettings.tierGoldDiscount} onChange={(e) => updateLoyaltySettings({ tierGoldDiscount: parseInt(e.target.value) || 0 })} className="input text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-400">
+                  Diskon loyalty otomatis diterapkan saat pelanggan dipilih di POS berdasarkan jumlah kunjungan mereka.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Promo Form Modal */}
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={editId ? 'Edit Promo' : 'Tambah Promo'} maxWidth="max-w-xl">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Nama Promo</label>
+              <input value={formName} onChange={(e) => setFormName(e.target.value)} className="input" placeholder="Promo Akhir Pekan" />
+            </div>
+            <div>
+              <label className="label">Kode Voucher (opsional)</label>
+              <input value={formCode} onChange={(e) => setFormCode(e.target.value.toUpperCase())} className="input font-mono" placeholder="WEEKEND20" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Tipe Diskon</label>
+              <select value={formType} onChange={(e) => setFormType(e.target.value as PromoType)} className="input">
+                <option value="percentage">Persentase (%)</option>
+                <option value="fixed">Nominal Tetap (Rp)</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Nilai {formType === 'percentage' ? '(%)' : '(Rp)'}</label>
+              <input value={formValue} onChange={(e) => setFormValue(e.target.value)} className="input" type="number" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Berlaku Untuk</label>
+              <select value={formScope} onChange={(e) => setFormScope(e.target.value as PromoScope)} className="input">
+                <option value="all">Semua Menu</option>
+                <option value="category">Kategori Tertentu</option>
+                <option value="loyalty">Pelanggan Loyal</option>
+              </select>
+            </div>
+            {formScope === 'category' && (
+              <div>
+                <label className="label">Kategori</label>
+                <select value={formScopeTarget} onChange={(e) => setFormScopeTarget(e.target.value)} className="input">
+                  <option value="">Pilih kategori</option>
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {formScope === 'loyalty' && (
+              <div>
+                <label className="label">Min. Kunjungan</label>
+                <input value={formLoyaltyMinVisits} onChange={(e) => setFormLoyaltyMinVisits(e.target.value)} className="input" type="number" />
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Tanggal Mulai</label>
+              <input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} className="input" />
+            </div>
+            <div>
+              <label className="label">Tanggal Berakhir</label>
+              <input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} className="input" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="label">Min. Belanja (Rp)</label>
+              <input value={formMinPurchase} onChange={(e) => setFormMinPurchase(e.target.value)} className="input" type="number" placeholder="0" />
+            </div>
+            <div>
+              <label className="label">Maks. Diskon (Rp)</label>
+              <input value={formMaxDiscount} onChange={(e) => setFormMaxDiscount(e.target.value)} className="input" type="number" placeholder="Tanpa batas" />
+            </div>
+            <div>
+              <label className="label">Batas Penggunaan</label>
+              <input value={formUsageLimit} onChange={(e) => setFormUsageLimit(e.target.value)} className="input" type="number" placeholder="Unlimited" />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-3 border-t border-slate-100">
+            <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">Batal</button>
+            <button onClick={handleSave} className="btn-primary flex-1" disabled={!formName || !formValue || !formStartDate || !formEndDate}>
+              {editId ? 'Simpan' : 'Tambah'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => { if (deleteId) deletePromo(deleteId); }}
+        title="Hapus Promo"
+        message="Yakin ingin menghapus promo ini?"
+        confirmText="Ya, Hapus"
+      />
+    </div>
+  );
+}
