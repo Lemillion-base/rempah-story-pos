@@ -348,6 +348,8 @@ export async function syncSettings(settings: AppSettings) {
       printer_type: settings.printerType,
       printer_width: settings.printerWidth,
       auto_print_on_checkout: settings.autoPrintOnCheckout,
+      super_admin_pin: settings.superAdminPin,
+      demo_mode: settings.demoMode,
     });
     if (error) console.warn('[CloudSync] Settings sync error:', error.message);
   } catch (e) {
@@ -371,6 +373,8 @@ export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
       printerType: data.printer_type || 'browser',
       printerWidth: data.printer_width || '58mm',
       autoPrintOnCheckout: data.auto_print_on_checkout || false,
+      superAdminPin: data.super_admin_pin || '000000',
+      demoMode: data.demo_mode !== false, // default true
     };
   } catch (e) {
     console.warn('[CloudSync] Fetch settings failed:', e);

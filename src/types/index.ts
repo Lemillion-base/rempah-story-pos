@@ -101,6 +101,9 @@ export interface AppSettings {
   printerType: 'browser' | 'bluetooth'; // browser = window.print, bluetooth = Web Bluetooth API
   printerWidth: '58mm' | '80mm';
   autoPrintOnCheckout: boolean;
+  // Super Admin & Demo
+  superAdminPin: string; // PIN untuk akses Manajemen Data (hanya developer)
+  demoMode: boolean; // true = tampilkan demo accounts di login
 }
 
 // Shift Management

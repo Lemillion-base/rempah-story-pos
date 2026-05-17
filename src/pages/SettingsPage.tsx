@@ -50,6 +50,10 @@ export default function SettingsPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showFactoryConfirm, setShowFactoryConfirm] = useState(false);
+  // Super Admin access
+  const [superAdminUnlocked, setSuperAdminUnlocked] = useState(false);
+  const [superPinInput, setSuperPinInput] = useState('');
+  const [superPinError, setSuperPinError] = useState('');
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -425,54 +429,126 @@ export default function SettingsPage() {
         </div>
       </Modal>
 
-      {/* Data Management */}
+      {/* Data Management — Protected by Super Admin PIN */}
       <div className="card p-5 border-red-200">
         <h2 className="font-bold text-lg flex items-center gap-2 mb-4 text-red-700">
           <Database size={18} /> Manajemen Data
         </h2>
-        <div className="space-y-4">
-          {/* Clear Operational Data */}
-          <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-200">
-            <div>
-              <p className="font-medium text-sm">Bersihkan Data Transaksi</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Hapus semua transaksi, shift, pelanggan, promo, dan log. Menu & inventaris tetap.
-                Cocok untuk fresh start klien baru.
-              </p>
-            </div>
-            <button onClick={() => setShowClearConfirm(true)} className="btn-secondary text-xs text-amber-700 border-amber-300 whitespace-nowrap">
-              <Trash2 size={14} /> Bersihkan
-            </button>
-          </div>
 
-          {/* Reset to Default */}
-          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
-            <div>
-              <p className="font-medium text-sm">Reset ke Default (Demo)</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Kembalikan semua data ke keadaan awal (seed data). Semua perubahan hilang.
-                Cocok untuk reset demo setelah diuji coba.
-              </p>
+        {!superAdminUnlocked ? (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-500">
+              Section ini dilindungi. Masukkan Super Admin PIN untuk mengakses.
+            </p>
+            <div className="flex gap-2 max-w-xs">
+              <input
+                type="password"
+                value={superPinInput}
+                onChange={(e) => { setSuperPinInput(e.target.value.replace(/\D/g, '')); setSuperPinError(''); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (superPinInput === settings.superAdminPin) { setSuperAdminUnlocked(true); setSuperPinError(''); }
+                    else setSuperPinError('PIN salah');
+                  }
+                }}
+                placeholder="Super Admin PIN"
+                className="input font-mono text-center tracking-widest"
+                maxLength={6}
+              />
+              <button
+                onClick={() => {
+                  if (superPinInput === settings.superAdminPin) { setSuperAdminUnlocked(true); setSuperPinError(''); }
+                  else setSuperPinError('PIN salah');
+                }}
+                className="btn-primary text-sm"
+              >
+                Buka
+              </button>
             </div>
-            <button onClick={() => setShowResetConfirm(true)} className="btn-secondary text-xs text-blue-700 border-blue-300 whitespace-nowrap">
-              <RotateCcw size={14} /> Reset Demo
-            </button>
+            {superPinError && <p className="text-xs text-red-500">{superPinError}</p>}
           </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Demo Mode Toggle */}
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <p className="font-medium text-sm">Mode Demo</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Tampilkan info akun demo di halaman login. Matikan untuk produksi klien.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.demoMode}
+                  onChange={(e) => updateSettings({ demoMode: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+              </label>
+            </div>
 
-          {/* Factory Reset */}
-          <div className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200">
-            <div>
-              <p className="font-medium text-sm text-red-700">Factory Reset</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Hapus SEMUA data termasuk menu, inventaris, settings, dan cloud.
-                Tidak bisa dikembalikan. Gunakan dengan sangat hati-hati.
-              </p>
+            {/* Change Super Admin PIN */}
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <p className="font-medium text-sm">Ubah Super Admin PIN</p>
+                <p className="text-xs text-slate-500 mt-0.5">PIN saat ini: ••••••</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  placeholder="PIN baru"
+                  maxLength={6}
+                  className="input w-24 text-center font-mono text-sm"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    e.target.value = val;
+                    if (val.length >= 4) updateSettings({ superAdminPin: val });
+                  }}
+                />
+              </div>
             </div>
-            <button onClick={() => setShowFactoryConfirm(true)} className="btn-danger text-xs whitespace-nowrap">
-              <AlertTriangle size={14} /> Factory Reset
-            </button>
+
+            {/* Clear Operational Data */}
+            <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <div>
+                <p className="font-medium text-sm">Bersihkan Data Transaksi</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Hapus transaksi, shift, pelanggan, promo, log. Menu & inventaris tetap.
+                </p>
+              </div>
+              <button onClick={() => setShowClearConfirm(true)} className="btn-secondary text-xs text-amber-700 border-amber-300 whitespace-nowrap">
+                <Trash2 size={14} /> Bersihkan
+              </button>
+            </div>
+
+            {/* Reset to Default */}
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <div>
+                <p className="font-medium text-sm">Reset ke Default (Demo)</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Kembalikan semua data ke seed default. Untuk reset demo.
+                </p>
+              </div>
+              <button onClick={() => setShowResetConfirm(true)} className="btn-secondary text-xs text-blue-700 border-blue-300 whitespace-nowrap">
+                <RotateCcw size={14} /> Reset
+              </button>
+            </div>
+
+            {/* Factory Reset */}
+            <div className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200">
+              <div>
+                <p className="font-medium text-sm text-red-700">Factory Reset</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Hapus SEMUA data + cloud. Tidak bisa dikembalikan.
+                </p>
+              </div>
+              <button onClick={() => setShowFactoryConfirm(true)} className="btn-danger text-xs whitespace-nowrap">
+                <AlertTriangle size={14} /> Reset
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <ConfirmDialog

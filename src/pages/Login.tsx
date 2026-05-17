@@ -65,12 +65,14 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 p-3 bg-slate-50 rounded-xl text-xs text-slate-500 space-y-1">
-          <p className="font-medium text-slate-600">Demo Accounts:</p>
-          <p>Manager: manager / manager123</p>
-          <p>Kasir: kasir / kasir123</p>
-          <p>Acaraki: acaraki / acaraki123</p>
-        </div>
+        {settings.demoMode && (
+          <div className="mt-6 p-3 bg-slate-50 rounded-xl text-xs text-slate-500 space-y-1">
+            <p className="font-medium text-slate-600">Demo Accounts:</p>
+            <p>Manager: manager / manager123</p>
+            <p>Kasir: kasir / kasir123</p>
+            <p>Acaraki: acaraki / acaraki123</p>
+          </div>
+        )}
       </div>
     </div>
   );

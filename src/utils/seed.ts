@@ -145,4 +145,6 @@ export const seedSettings: AppSettings = {
   printerType: 'browser',
   printerWidth: '58mm',
   autoPrintOnCheckout: false,
+  superAdminPin: '000000',
+  demoMode: true,
 };
