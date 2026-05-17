@@ -9,6 +9,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
+import { smartUpsert, smartUpdate, smartDelete, smartInsert } from './offlineQueue';
 import type { 
   User, InventoryItem, Menu, Transaction, Customer, 
   CashierShift, Promo, AuditLogEntry, AppSettings 
@@ -43,61 +44,40 @@ function toCamel(obj: Record<string, any>): Record<string, any> {
 
 export async function syncTransaction(tx: Transaction) {
   if (!isSupabaseConfigured) return;
-  try {
-    const { error } = await supabase.from('transactions').upsert({
-      id: tx.id,
-      queue_number: tx.queueNumber,
-      date: tx.date,
-      items: tx.items,
-      subtotal: tx.subtotal,
-      discount: tx.discount,
-      total_amount: tx.totalAmount,
-      payment_method: tx.paymentMethod,
-      cash_received: tx.cashReceived,
-      change: tx.change,
-      kitchen_status: tx.kitchenStatus,
-      tx_status: tx.txStatus,
-      cashier_id: tx.cashierId,
-      cashier_name: tx.cashierName,
-      customer_id: tx.customerId,
-      customer_name: tx.customerName,
-      hpp: tx.hpp,
-    });
-    if (error) {
-      console.error('[CloudSync] Transaction sync ERROR:', error.message, error.details);
-    } else {
-      console.log('[CloudSync] Transaction synced:', tx.id, '#' + tx.queueNumber);
-    }
-  } catch (e) {
-    console.error('[CloudSync] Transaction sync EXCEPTION:', e);
-  }
+  await smartUpsert('transactions', {
+    id: tx.id,
+    queue_number: tx.queueNumber,
+    date: tx.date,
+    items: tx.items,
+    subtotal: tx.subtotal,
+    discount: tx.discount,
+    total_amount: tx.totalAmount,
+    payment_method: tx.paymentMethod,
+    cash_received: tx.cashReceived,
+    change: tx.change,
+    kitchen_status: tx.kitchenStatus,
+    tx_status: tx.txStatus,
+    cashier_id: tx.cashierId,
+    cashier_name: tx.cashierName,
+    customer_id: tx.customerId,
+    customer_name: tx.customerName,
+    hpp: tx.hpp,
+  });
 }
 
 export async function syncTransactionStatus(id: string, kitchenStatus: string) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('transactions').update({ kitchen_status: kitchenStatus }).eq('id', id);
-  } catch (e) {
-    console.warn('Sync kitchen status failed:', e);
-  }
+  await smartUpdate('transactions', { kitchen_status: kitchenStatus }, 'id', id);
 }
 
 export async function syncTransactionTxStatus(id: string, txStatus: string) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('transactions').update({ tx_status: txStatus }).eq('id', id);
-  } catch (e) {
-    console.warn('Sync tx status failed:', e);
-  }
+  await smartUpdate('transactions', { tx_status: txStatus }, 'id', id);
 }
 
 export async function deleteTransactionCloud(id: string) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('transactions').delete().eq('id', id);
-  } catch (e) {
-    console.warn('Delete transaction cloud failed:', e);
-  }
+  await smartDelete('transactions', 'id', id);
 }
 
 export async function fetchTransactionsFromCloud(): Promise<Transaction[] | null> {
@@ -166,41 +146,29 @@ export function unsubscribeChannel(channel: any) {
 
 export async function syncInventoryItem(item: InventoryItem) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('inventory').upsert({
-      id: item.id,
-      name: item.name,
-      stock: item.stock,
-      unit: item.unit,
-      cost_per_unit: item.costPerUnit,
-      min_stock: item.minStock,
-    });
-  } catch (e) {
-    console.warn('Sync inventory failed:', e);
-  }
+  await smartUpsert('inventory', {
+    id: item.id,
+    name: item.name,
+    stock: item.stock,
+    unit: item.unit,
+    cost_per_unit: item.costPerUnit,
+    min_stock: item.minStock,
+  });
 }
 
 export async function syncInventoryDeduction(deductions: Record<string, number>, items: InventoryItem[]) {
   if (!isSupabaseConfigured) return;
-  try {
-    for (const [id, amount] of Object.entries(deductions)) {
-      const item = items.find((i) => i.id === id);
-      if (item) {
-        await supabase.from('inventory').update({ stock: Math.max(0, item.stock - amount) }).eq('id', id);
-      }
+  for (const [id, amount] of Object.entries(deductions)) {
+    const item = items.find((i) => i.id === id);
+    if (item) {
+      await smartUpdate('inventory', { stock: Math.max(0, item.stock - amount) }, 'id', id);
     }
-  } catch (e) {
-    console.warn('Sync inventory deduction failed:', e);
   }
 }
 
 export async function deleteInventoryCloud(id: string) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('inventory').delete().eq('id', id);
-  } catch (e) {
-    console.warn('Delete inventory cloud failed:', e);
-  }
+  await smartDelete('inventory', 'id', id);
 }
 
 // ============================================================
@@ -209,31 +177,23 @@ export async function deleteInventoryCloud(id: string) {
 
 export async function syncMenu(menu: Menu) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('menus').upsert({
-      id: menu.id,
-      name: menu.name,
-      category: menu.category,
-      price: menu.price,
-      image: menu.image,
-      is_best_seller: menu.isBestSeller,
-      is_available: menu.isAvailable,
-      ingredients: menu.ingredients,
-      available_addons: menu.availableAddons,
-      description: menu.description,
-    });
-  } catch (e) {
-    console.warn('Sync menu failed:', e);
-  }
+  await smartUpsert('menus', {
+    id: menu.id,
+    name: menu.name,
+    category: menu.category,
+    price: menu.price,
+    image: menu.image,
+    is_best_seller: menu.isBestSeller,
+    is_available: menu.isAvailable,
+    ingredients: menu.ingredients,
+    available_addons: menu.availableAddons,
+    description: menu.description,
+  });
 }
 
 export async function deleteMenuCloud(id: string) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('menus').delete().eq('id', id);
-  } catch (e) {
-    console.warn('Delete menu cloud failed:', e);
-  }
+  await smartDelete('menus', 'id', id);
 }
 
 // ============================================================
@@ -242,29 +202,21 @@ export async function deleteMenuCloud(id: string) {
 
 export async function syncCustomer(customer: Customer) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('customers').upsert({
-      id: customer.id,
-      name: customer.name,
-      phone: customer.phone,
-      email: customer.email,
-      notes: customer.notes,
-      total_spent: customer.totalSpent,
-      visit_count: customer.visitCount,
-      last_visit: customer.lastVisit,
-    });
-  } catch (e) {
-    console.warn('Sync customer failed:', e);
-  }
+  await smartUpsert('customers', {
+    id: customer.id,
+    name: customer.name,
+    phone: customer.phone,
+    email: customer.email,
+    notes: customer.notes,
+    total_spent: customer.totalSpent,
+    visit_count: customer.visitCount,
+    last_visit: customer.lastVisit,
+  });
 }
 
 export async function deleteCustomerCloud(id: string) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('customers').delete().eq('id', id);
-  } catch (e) {
-    console.warn('Delete customer cloud failed:', e);
-  }
+  await smartDelete('customers', 'id', id);
 }
 
 // ============================================================
@@ -273,24 +225,20 @@ export async function deleteCustomerCloud(id: string) {
 
 export async function syncShift(shift: CashierShift) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('shifts').upsert({
-      id: shift.id,
-      user_id: shift.userId,
-      user_name: shift.userName,
-      opened_at: shift.openedAt,
-      closed_at: shift.closedAt,
-      opening_cash: shift.openingCash,
-      closing_cash: shift.closingCash,
-      expected_cash: shift.expectedCash,
-      cash_difference: shift.cashDifference,
-      total_sales: shift.totalSales,
-      total_transactions: shift.totalTransactions,
-      status: shift.status,
-    });
-  } catch (e) {
-    console.warn('Sync shift failed:', e);
-  }
+  await smartUpsert('shifts', {
+    id: shift.id,
+    user_id: shift.userId,
+    user_name: shift.userName,
+    opened_at: shift.openedAt,
+    closed_at: shift.closedAt,
+    opening_cash: shift.openingCash,
+    closing_cash: shift.closingCash,
+    expected_cash: shift.expectedCash,
+    cash_difference: shift.cashDifference,
+    total_sales: shift.totalSales,
+    total_transactions: shift.totalTransactions,
+    status: shift.status,
+  });
 }
 
 // ============================================================
@@ -299,20 +247,16 @@ export async function syncShift(shift: CashierShift) {
 
 export async function syncAuditLog(entry: AuditLogEntry) {
   if (!isSupabaseConfigured) return;
-  try {
-    await supabase.from('audit_logs').insert({
-      id: entry.id,
-      user_id: entry.userId,
-      user_name: entry.userName,
-      user_role: entry.userRole,
-      action: entry.action,
-      detail: entry.detail,
-      metadata: entry.metadata,
-      timestamp: entry.timestamp,
-    });
-  } catch (e) {
-    console.warn('Sync audit log failed:', e);
-  }
+  await smartInsert('audit_logs', {
+    id: entry.id,
+    user_id: entry.userId,
+    user_name: entry.userName,
+    user_role: entry.userRole,
+    action: entry.action,
+    detail: entry.detail,
+    metadata: entry.metadata,
+    timestamp: entry.timestamp,
+  });
 }
 
 // ============================================================
@@ -335,26 +279,21 @@ export async function checkConnection(): Promise<boolean> {
 
 export async function syncSettings(settings: AppSettings) {
   if (!isSupabaseConfigured) return;
-  try {
-    const { error } = await supabase.from('settings').upsert({
-      id: 1,
-      manager_pin: settings.managerPin,
-      store_name: settings.storeName,
-      store_logo: settings.storeLogo || null,
-      address: settings.address || null,
-      tax_percent: settings.taxPercent || 0,
-      categories: settings.categories,
-      printer_enabled: settings.printerEnabled,
-      printer_type: settings.printerType,
-      printer_width: settings.printerWidth,
-      auto_print_on_checkout: settings.autoPrintOnCheckout,
-      super_admin_pin: settings.superAdminPin,
-      demo_mode: settings.demoMode,
-    });
-    if (error) console.warn('[CloudSync] Settings sync error:', error.message);
-  } catch (e) {
-    console.warn('[CloudSync] Settings sync failed:', e);
-  }
+  await smartUpsert('settings', {
+    id: 1,
+    manager_pin: settings.managerPin,
+    store_name: settings.storeName,
+    store_logo: settings.storeLogo || null,
+    address: settings.address || null,
+    tax_percent: settings.taxPercent || 0,
+    categories: settings.categories,
+    printer_enabled: settings.printerEnabled,
+    printer_type: settings.printerType,
+    printer_width: settings.printerWidth,
+    auto_print_on_checkout: settings.autoPrintOnCheckout,
+    super_admin_pin: settings.superAdminPin,
+    demo_mode: settings.demoMode,
+  });
 }
 
 export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
