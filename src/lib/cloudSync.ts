@@ -313,10 +313,75 @@ export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
       printerWidth: data.printer_width || '58mm',
       autoPrintOnCheckout: data.auto_print_on_checkout || false,
       superAdminPin: data.super_admin_pin || '000000',
-      demoMode: data.demo_mode !== false, // default true
+      demoMode: data.demo_mode !== false,
     };
   } catch (e) {
     console.warn('[CloudSync] Fetch settings failed:', e);
+    return null;
+  }
+}
+
+// ============================================================
+// FETCH ALL SHARED DATA (for multi-device sync on load)
+// ============================================================
+
+export async function fetchCustomersFromCloud(): Promise<Customer[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      name: row.name,
+      phone: row.phone || undefined,
+      email: row.email || undefined,
+      notes: row.notes || undefined,
+      totalSpent: row.total_spent || 0,
+      visitCount: row.visit_count || 0,
+      lastVisit: row.last_visit || undefined,
+      createdAt: row.created_at,
+    })) || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchMenusFromCloud(): Promise<Menu[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('menus').select('*');
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      price: row.price,
+      image: row.image || undefined,
+      isBestSeller: row.is_best_seller || false,
+      isAvailable: row.is_available !== false,
+      ingredients: row.ingredients || {},
+      availableAddons: row.available_addons || [],
+      description: row.description || undefined,
+    })) || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchInventoryFromCloud(): Promise<InventoryItem[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('inventory').select('*');
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      name: row.name,
+      stock: row.stock,
+      unit: row.unit,
+      costPerUnit: row.cost_per_unit,
+      minStock: row.min_stock,
+    })) || null;
+  } catch {
     return null;
   }
 }

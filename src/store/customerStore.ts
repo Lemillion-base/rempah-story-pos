@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Customer } from '../types';
-import { syncCustomer, deleteCustomerCloud } from '../lib/cloudSync';
+import { syncCustomer, deleteCustomerCloud, fetchCustomersFromCloud } from '../lib/cloudSync';
 
 interface CustomerState {
   customers: Customer[];
@@ -9,6 +9,7 @@ interface CustomerState {
   updateCustomer: (id: string, data: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   recordVisit: (id: string, amount: number) => void;
+  loadFromCloud: () => Promise<void>;
 }
 
 export const useCustomerStore = create<CustomerState>()(
@@ -51,6 +52,13 @@ export const useCustomerStore = create<CustomerState>()(
         }));
         const updated = get().customers.find((c) => c.id === id);
         if (updated) syncCustomer(updated);
+      },
+
+      loadFromCloud: async () => {
+        const cloudData = await fetchCustomersFromCloud();
+        if (cloudData && cloudData.length > 0) {
+          set({ customers: cloudData });
+        }
       },
     }),
     { name: 'rempah-customers' }
