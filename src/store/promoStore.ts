@@ -51,24 +51,24 @@ export const usePromoStore = create<PromoState>()(
         })),
 
       getActivePromos: () => {
-        const now = new Date().toISOString();
+        const now = new Date();
         return get().promos.filter(
           (p) =>
             p.isActive &&
-            p.startDate <= now &&
-            p.endDate >= now &&
+            new Date(p.startDate) <= now &&
+            new Date(p.endDate) >= now &&
             (!p.usageLimit || p.usageCount < p.usageLimit)
         );
       },
 
       getPromoByCode: (code) => {
-        const now = new Date().toISOString();
+        const now = new Date();
         return get().promos.find(
           (p) =>
             p.code?.toLowerCase() === code.toLowerCase() &&
             p.isActive &&
-            p.startDate <= now &&
-            p.endDate >= now &&
+            new Date(p.startDate) <= now &&
+            new Date(p.endDate) >= now &&
             (!p.usageLimit || p.usageCount < p.usageLimit)
         );
       },

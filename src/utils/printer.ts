@@ -165,7 +165,12 @@ export async function connectBluetoothPrinter(): Promise<boolean> {
 
     if (!bluetoothDevice) return false;
 
-    const server = await bluetoothDevice.gatt!.connect();
+    const gatt = bluetoothDevice.gatt;
+    if (!gatt) {
+      alert('Printer tidak mendukung GATT. Coba pairing ulang.');
+      return false;
+    }
+    const server = await gatt.connect();
 
     // Try common thermal printer services
     const serviceUUIDs = [
@@ -343,7 +348,7 @@ function leftRight(left: string, right: string, width: '58mm' | '80mm'): string 
   return left + ' '.repeat(space) + right;
 }
 
-function padLeft(text: string, width: '58mm' | '80mm'): string {
-  // Used for right-aligning within a line that already has content
+function padLeft(text: string, _width: '58mm' | '80mm'): string {
+  // Right-align helper for receipt line items
   return '  ' + text;
 }

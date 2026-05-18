@@ -16,27 +16,8 @@ import type {
 } from '../types';
 import type { StockLogEntry } from '../store/stockLogStore';
 
-// ============================================================
-// HELPER: Convert between camelCase (app) and snake_case (DB)
-// ============================================================
-
-function toSnake(obj: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-    result[snakeKey] = value;
-  }
-  return result;
-}
-
-function toCamel(obj: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-    result[camelKey] = value;
-  }
-  return result;
-}
+// NOTE: camelCase↔snake_case mapping is done explicitly per sync function
+// for full control and visibility of field mappings.
 
 // ============================================================
 // TRANSACTIONS (most critical for KDS real-time)
@@ -211,6 +192,7 @@ export async function syncCustomer(customer: Customer) {
     total_spent: customer.totalSpent,
     visit_count: customer.visitCount,
     last_visit: customer.lastVisit,
+    created_at: customer.createdAt,
   });
 }
 
