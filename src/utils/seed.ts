@@ -8,7 +8,7 @@ import type {
 
 export const seedUsers: User[] = [
   {
-    id: uuid(),
+    id: 'seed-manager-001',
     name: 'Admin Manager',
     username: 'manager',
     password: 'manager123',
@@ -16,7 +16,7 @@ export const seedUsers: User[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: uuid(),
+    id: 'seed-kasir-001',
     name: 'Kasir 1',
     username: 'kasir',
     password: 'kasir123',
@@ -24,7 +24,7 @@ export const seedUsers: User[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: uuid(),
+    id: 'seed-acaraki-001',
     name: 'Acaraki Dapur',
     username: 'acaraki',
     password: 'acaraki123',

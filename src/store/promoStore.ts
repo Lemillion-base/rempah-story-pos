@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Promo, LoyaltySettings } from '../types';
+import { syncPromo, deletePromoCloud, fetchPromosFromCloud } from '../lib/cloudSync';
 
 interface PromoState {
   promos: Promo[];
@@ -14,6 +15,7 @@ interface PromoState {
   updateLoyaltySettings: (data: Partial<LoyaltySettings>) => void;
   getCustomerTier: (visitCount: number) => 'none' | 'bronze' | 'silver' | 'gold';
   getCustomerDiscount: (visitCount: number) => number;
+  loadFromCloud: () => Promise<void>;
 }
 
 export const usePromoStore = create<PromoState>()(
@@ -33,42 +35,53 @@ export const usePromoStore = create<PromoState>()(
         tierGoldDiscount: 15,
       },
 
-      addPromo: (promo) => set((s) => ({ promos: [...s.promos, promo] })),
+      addPromo: (promo) => {
+        set((s) => ({ promos: [...s.promos, promo] }));
+        syncPromo(promo);
+      },
 
-      updatePromo: (id, data) =>
+      updatePromo: (id, data) => {
         set((s) => ({
           promos: s.promos.map((p) => (p.id === id ? { ...p, ...data } : p)),
-        })),
+        }));
+        const updated = get().promos.find((p) => p.id === id);
+        if (updated) syncPromo(updated);
+      },
 
-      deletePromo: (id) =>
-        set((s) => ({ promos: s.promos.filter((p) => p.id !== id) })),
+      deletePromo: (id) => {
+        deletePromoCloud(id);
+        set((s) => ({ promos: s.promos.filter((p) => p.id !== id) }));
+      },
 
-      incrementUsage: (id) =>
+      incrementUsage: (id) => {
         set((s) => ({
           promos: s.promos.map((p) =>
             p.id === id ? { ...p, usageCount: p.usageCount + 1 } : p
           ),
-        })),
+        }));
+        const updated = get().promos.find((p) => p.id === id);
+        if (updated) syncPromo(updated);
+      },
 
       getActivePromos: () => {
-        const now = new Date().toISOString();
+        const now = new Date();
         return get().promos.filter(
           (p) =>
             p.isActive &&
-            p.startDate <= now &&
-            p.endDate >= now &&
+            new Date(p.startDate) <= now &&
+            new Date(p.endDate) >= now &&
             (!p.usageLimit || p.usageCount < p.usageLimit)
         );
       },
 
       getPromoByCode: (code) => {
-        const now = new Date().toISOString();
+        const now = new Date();
         return get().promos.find(
           (p) =>
             p.code?.toLowerCase() === code.toLowerCase() &&
             p.isActive &&
-            p.startDate <= now &&
-            p.endDate >= now &&
+            new Date(p.startDate) <= now &&
+            new Date(p.endDate) >= now &&
             (!p.usageLimit || p.usageCount < p.usageLimit)
         );
       },
@@ -94,6 +107,17 @@ export const usePromoStore = create<PromoState>()(
           case 'silver': return ls.tierSilverDiscount;
           case 'bronze': return ls.tierBronzeDiscount;
           default: return 0;
+        }
+      },
+
+      loadFromCloud: async () => {
+        const cloudPromos = await fetchPromosFromCloud();
+        if (cloudPromos && cloudPromos.length > 0) {
+          set((s) => {
+            const cloudIds = new Set(cloudPromos.map((p) => p.id));
+            const localOnly = s.promos.filter((p) => !cloudIds.has(p.id));
+            return { promos: [...cloudPromos, ...localOnly] };
+          });
         }
       },
     }),

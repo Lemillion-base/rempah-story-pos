@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS settings (
   printer_type TEXT DEFAULT 'browser',
   printer_width TEXT DEFAULT '58mm',
   auto_print_on_checkout BOOLEAN DEFAULT false,
+  super_admin_pin TEXT DEFAULT '000000',
+  demo_mode BOOLEAN DEFAULT true,
   loyalty_enabled BOOLEAN DEFAULT false,
   loyalty_settings JSONB DEFAULT '{}'
 );
@@ -164,9 +166,31 @@ INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
 -- Row Level Security (RLS)
--- For MVP, we allow all operations with anon key.
--- In production, implement proper auth with Supabase Auth.
 -- ============================================================
+-- 
+-- SECURITY WARNING: Current policies allow ALL operations with anon key.
+-- This is acceptable for MVP/single-store deployment behind a private network.
+-- 
+-- For production hardening, choose ONE of these strategies:
+--
+-- OPTION A: Supabase Auth (recommended)
+--   1. Enable Supabase Auth and create auth users
+--   2. Replace "Allow all" policies with auth.uid()-based policies
+--   3. Example:
+--      CREATE POLICY "Authenticated users only" ON transactions
+--        FOR ALL USING (auth.role() = 'authenticated');
+--
+-- OPTION B: Service Role Key (simpler)  
+--   1. Move all writes to Supabase Edge Functions
+--   2. Use service_role key server-side only
+--   3. Revoke anon key access to sensitive tables
+--
+-- OPTION C: API Key restriction (quickest)
+--   1. In Supabase Dashboard → Settings → API
+--   2. Add domain restriction to anon key
+--   3. Only your Vercel domain can use the key
+-- ============================================================
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE menus ENABLE ROW LEVEL SECURITY;
@@ -178,7 +202,8 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
--- Allow all operations for anon (MVP — tighten in production)
+-- MVP policies — allow all operations with anon key
+-- TODO: Replace with auth-based policies before scaling to multi-tenant
 CREATE POLICY "Allow all for anon" ON users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON inventory FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON menus FOR ALL USING (true) WITH CHECK (true);

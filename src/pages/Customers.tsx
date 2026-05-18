@@ -8,6 +8,7 @@ import { formatRupiah } from '../utils/format';
 import type { Customer } from '../types';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import PinModal from '../components/PinModal';
 import { Plus, Pencil, Trash2, Search, Users, Phone, Mail, MessageCircle, Send } from 'lucide-react';
 
 export default function Customers() {
@@ -19,6 +20,7 @@ export default function Customers() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null); // BUG-16: PIN check before delete
 
   const [formName, setFormName] = useState('');
   const [formPhone, setFormPhone] = useState('');
@@ -155,7 +157,17 @@ export default function Customers() {
                   <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-slate-100">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={() => setDeleteCustomerId(c.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+                  <button
+                    onClick={() => {
+                      // BUG-16: Non-Manager must verify PIN before deleting
+                      if (currentUser?.role !== 'Manager') {
+                        setPendingDeleteId(c.id);
+                      } else {
+                        setDeleteCustomerId(c.id);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -258,6 +270,17 @@ export default function Customers() {
         title="Hapus Pelanggan"
         message="Yakin ingin menghapus pelanggan ini? Data kunjungan dan belanja akan hilang."
         confirmText="Ya, Hapus"
+      />
+
+      {/* BUG-16: PIN verification for non-Manager customer delete */}
+      <PinModal
+        open={!!pendingDeleteId}
+        onClose={() => setPendingDeleteId(null)}
+        onSuccess={() => {
+          setDeleteCustomerId(pendingDeleteId);
+          setPendingDeleteId(null);
+        }}
+        title="Verifikasi PIN Manager"
       />
     </div>
   );

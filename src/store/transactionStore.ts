@@ -98,7 +98,30 @@ export const useTransactionStore = create<TransactionState>()(
 
       clearKdsDoneOrders: () => set({ lastKdsClearTime: new Date().toISOString() }),
 
-      loadFromCloud: (transactions) => set({ transactions }),
+      loadFromCloud: (cloudTransactions) => {
+        set((s) => {
+          const cloudIds = new Set(cloudTransactions.map((t) => t.id));
+          // Keep local transactions that are NOT in cloud (not yet synced)
+          const localOnly = s.transactions.filter((t) => !cloudIds.has(t.id));
+          // Merge: cloud data + local-only data
+          const merged = [...cloudTransactions, ...localOnly];
+          // Sort by date descending (newest first)
+          merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          // BUG-02 fix: Recalculate nextQueueNumber from merged data
+          // to prevent duplicate queue numbers across devices
+          const today = getTodayDateStr();
+          const todayTxs = merged.filter((t) => t.date.startsWith(today));
+          const maxQueue = todayTxs.reduce((max, t) => Math.max(max, t.queueNumber || 0), 0);
+          const newNextQueue = Math.max(s.nextQueueNumber, maxQueue + 1);
+
+          return {
+            transactions: merged,
+            nextQueueNumber: newNextQueue,
+            lastQueueDate: today,
+          };
+        });
+      },
     }),
     { name: 'rempah-transactions' }
   )

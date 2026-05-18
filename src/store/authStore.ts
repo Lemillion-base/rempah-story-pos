@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import type { User, Role } from '../types';
 import { seedUsers } from '../utils/seed';
 import { useAuditLogStore } from './auditLogStore';
+import { syncUser, deleteUserCloud, fetchUsersFromCloud } from '../lib/cloudSync';
 
 interface AuthState {
   users: User[];
@@ -16,6 +17,7 @@ interface AuthState {
   deleteUser: (id: string) => void;
   getRedirectPath: (role: Role) => string;
   migratePasswords: () => void;
+  loadFromCloud: () => Promise<void>;
 }
 
 const SALT_ROUNDS = 10;
@@ -75,6 +77,7 @@ export const useAuthStore = create<AuthState>()(
           password: bcrypt.hashSync(user.password, SALT_ROUNDS),
         };
         set((s) => ({ users: [...s.users, hashedUser] }));
+        syncUser(hashedUser);
       },
 
       updateUser: (id, data) => {
@@ -90,10 +93,14 @@ export const useAuthStore = create<AuthState>()(
               ? { ...s.currentUser, ...updateData }
               : s.currentUser,
         }));
+        const updated = get().users.find((u) => u.id === id);
+        if (updated) syncUser(updated);
       },
 
-      deleteUser: (id) =>
-        set((s) => ({ users: s.users.filter((u) => u.id !== id) })),
+      deleteUser: (id) => {
+        deleteUserCloud(id);
+        set((s) => ({ users: s.users.filter((u) => u.id !== id) }));
+      },
 
       getRedirectPath: (role) => {
         switch (role) {
@@ -105,6 +112,17 @@ export const useAuthStore = create<AuthState>()(
             return '/kitchen';
           default:
             return '/';
+        }
+      },
+
+      loadFromCloud: async () => {
+        const cloudUsers = await fetchUsersFromCloud();
+        if (cloudUsers && cloudUsers.length > 0) {
+          set((s) => {
+            const cloudIds = new Set(cloudUsers.map((u) => u.id));
+            const localOnly = s.users.filter((u) => !cloudIds.has(u.id));
+            return { users: [...cloudUsers, ...localOnly] };
+          });
         }
       },
     }),

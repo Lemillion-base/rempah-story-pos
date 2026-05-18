@@ -52,7 +52,7 @@ export default function POS() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }); // eslint-disable-line react-hooks/exhaustive-deps — intentionally re-binds to capture latest handleCheckout
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Semua');
@@ -155,6 +155,15 @@ export default function POS() {
     return Math.round(cart.getSubtotal() * pct / 100);
   }, [selectedCustomer, cart.items]);
 
+  // Preview queue number for checkout modal (read-only, no side effects)
+  const queuePreview = useMemo(() => {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const state = useTransactionStore.getState();
+    if (state.lastQueueDate !== dateStr) return 1;
+    return state.nextQueueNumber;
+  }, [showCheckout]); // recalculate when checkout modal opens
+
   const categories = useMemo(() => {
     const cats = ['Semua', 'Best Seller', ...new Set(menus.map((m) => m.category))];
     return [...new Set(cats)];
@@ -209,8 +218,6 @@ export default function POS() {
 
   const handleCheckout = () => {
     if (cart.items.length === 0) return;
-    const manualDiscount = parseInt(discountInput) || 0;
-    cart.setDiscount(manualDiscount + promoDiscount + loyaltyDiscount);
 
     // Validate stock availability
     const warnings = checkStockAvailability(cart.items, menus, inventory);
@@ -235,6 +242,10 @@ export default function POS() {
     const subtotal = cart.getSubtotal();
     const total = Math.max(0, subtotal - totalDiscount);
     const cash = parseInt(cashReceived) || 0;
+
+    // Safety guard: Cash payment must have sufficient funds
+    if (payMethod === 'Cash' && cash < total) return;
+
     const queueNum = getNextQueueNumber();
 
     const hpp = calculateTransactionHPP(cart.items, menus, inventory);
@@ -791,7 +802,7 @@ export default function POS() {
             <p className="text-3xl font-bold text-brand-700">
               {formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}
             </p>
-            <p className="text-xs text-slate-500 mt-1">Antrean #{getNextQueueNumber()}</p>
+            <p className="text-xs text-slate-500 mt-1">Antrean #{queuePreview}</p>
             {selectedCustomer && (
               <p className="text-xs text-brand-600 mt-1">Pelanggan: {selectedCustomer.name}</p>
             )}
@@ -869,8 +880,8 @@ export default function POS() {
             onClick={finalizeTransaction}
             disabled={
               payMethod === 'Cash' &&
-              parseInt(cashReceived) <
-                Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount)
+              (!cashReceived || (parseInt(cashReceived) || 0) <
+                Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))
             }
             className="btn-primary w-full text-base"
           >
