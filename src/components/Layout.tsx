@@ -402,7 +402,18 @@ export default function Layout() {
           </div>
 
           <button
-            onClick={handleCloseShift}
+            onClick={() => {
+              const closingCash = parseInt(closingCashInput) || 0;
+              const diff = Math.abs(closingCash - shiftStats.expectedCash);
+              const threshold = shiftStats.expectedCash * 0.1; // 10%
+              // BUG-08: Confirm if difference > 10% of expected
+              if (diff > threshold && shiftStats.expectedCash > 0) {
+                if (!window.confirm(
+                  `⚠️ Selisih kas ${formatRupiah(diff)} (${diff > 0 ? 'lebih' : 'kurang'}).\n\nApakah Anda yakin jumlah kas sudah benar?`
+                )) return;
+              }
+              handleCloseShift();
+            }}
             className="btn-primary w-full"
             disabled={!closingCashInput}
           >

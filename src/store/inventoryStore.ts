@@ -83,8 +83,9 @@ export const useInventoryStore = create<InventoryState>()(
             return i;
           }),
         }));
-        // Cloud sync deductions
-        syncInventoryDeduction(deductions, items);
+        // BUG-03 fix: Sync AFTER state update so cloud gets correct post-deduction stock
+        const updatedItems = get().items;
+        syncInventoryDeduction(deductions, updatedItems);
       },
 
       getLowStockItems: () => {

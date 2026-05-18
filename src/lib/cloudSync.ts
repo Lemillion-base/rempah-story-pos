@@ -367,3 +367,100 @@ export async function fetchInventoryFromCloud(): Promise<InventoryItem[] | null>
     return null;
   }
 }
+
+// ============================================================
+// USERS (BUG-10 fix: multi-device user sync)
+// ============================================================
+
+export async function syncUser(user: User) {
+  if (!isSupabaseConfigured) return;
+  await smartUpsert('users', {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    password: user.password,
+    role: user.role,
+    created_at: user.createdAt,
+  });
+}
+
+export async function deleteUserCloud(id: string) {
+  if (!isSupabaseConfigured) return;
+  await smartDelete('users', 'id', id);
+}
+
+export async function fetchUsersFromCloud(): Promise<User[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      name: row.name,
+      username: row.username,
+      password: row.password,
+      role: row.role,
+      createdAt: row.created_at,
+    })) || null;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
+// PROMOS (BUG-10 fix: multi-device promo sync)
+// ============================================================
+
+export async function syncPromo(promo: Promo) {
+  if (!isSupabaseConfigured) return;
+  await smartUpsert('promos', {
+    id: promo.id,
+    name: promo.name,
+    code: promo.code || null,
+    type: promo.type,
+    value: promo.value,
+    scope: promo.scope,
+    scope_target: promo.scopeTarget || null,
+    min_purchase: promo.minPurchase || null,
+    max_discount: promo.maxDiscount || null,
+    start_date: promo.startDate,
+    end_date: promo.endDate,
+    is_active: promo.isActive,
+    usage_limit: promo.usageLimit || null,
+    usage_count: promo.usageCount,
+    loyalty_min_visits: promo.loyaltyMinVisits || null,
+  });
+}
+
+export async function deletePromoCloud(id: string) {
+  if (!isSupabaseConfigured) return;
+  await smartDelete('promos', 'id', id);
+}
+
+export async function fetchPromosFromCloud(): Promise<Promo[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('promos').select('*');
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      name: row.name,
+      code: row.code || undefined,
+      type: row.type,
+      value: row.value,
+      scope: row.scope || 'all',
+      scopeTarget: row.scope_target || undefined,
+      minPurchase: row.min_purchase || undefined,
+      maxDiscount: row.max_discount || undefined,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      isActive: row.is_active !== false,
+      usageLimit: row.usage_limit || undefined,
+      usageCount: row.usage_count || 0,
+      loyaltyMinVisits: row.loyalty_min_visits || undefined,
+      createdAt: row.created_at,
+    })) || null;
+  } catch {
+    return null;
+  }
+}

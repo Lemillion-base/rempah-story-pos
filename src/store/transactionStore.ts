@@ -107,7 +107,19 @@ export const useTransactionStore = create<TransactionState>()(
           const merged = [...cloudTransactions, ...localOnly];
           // Sort by date descending (newest first)
           merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          return { transactions: merged };
+
+          // BUG-02 fix: Recalculate nextQueueNumber from merged data
+          // to prevent duplicate queue numbers across devices
+          const today = getTodayDateStr();
+          const todayTxs = merged.filter((t) => t.date.startsWith(today));
+          const maxQueue = todayTxs.reduce((max, t) => Math.max(max, t.queueNumber || 0), 0);
+          const newNextQueue = Math.max(s.nextQueueNumber, maxQueue + 1);
+
+          return {
+            transactions: merged,
+            nextQueueNumber: newNextQueue,
+            lastQueueDate: today,
+          };
         });
       },
     }),
