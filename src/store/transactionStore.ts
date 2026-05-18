@@ -98,7 +98,18 @@ export const useTransactionStore = create<TransactionState>()(
 
       clearKdsDoneOrders: () => set({ lastKdsClearTime: new Date().toISOString() }),
 
-      loadFromCloud: (transactions) => set({ transactions }),
+      loadFromCloud: (cloudTransactions) => {
+        set((s) => {
+          const cloudIds = new Set(cloudTransactions.map((t) => t.id));
+          // Keep local transactions that are NOT in cloud (not yet synced)
+          const localOnly = s.transactions.filter((t) => !cloudIds.has(t.id));
+          // Merge: cloud data + local-only data
+          const merged = [...cloudTransactions, ...localOnly];
+          // Sort by date descending (newest first)
+          merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          return { transactions: merged };
+        });
+      },
     }),
     { name: 'rempah-transactions' }
   )

@@ -57,7 +57,12 @@ export const useCustomerStore = create<CustomerState>()(
       loadFromCloud: async () => {
         const cloudData = await fetchCustomersFromCloud();
         if (cloudData && cloudData.length > 0) {
-          set({ customers: cloudData });
+          set((s) => {
+            const cloudIds = new Set(cloudData.map((c) => c.id));
+            // Keep local customers not yet in cloud
+            const localOnly = s.customers.filter((c) => !cloudIds.has(c.id));
+            return { customers: [...cloudData, ...localOnly] };
+          });
         }
       },
     }),

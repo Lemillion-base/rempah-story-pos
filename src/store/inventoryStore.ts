@@ -4,7 +4,7 @@ import { v4 as uuid } from 'uuid';
 import type { InventoryItem } from '../types';
 import { seedInventory } from '../utils/seed';
 import { useStockLogStore } from './stockLogStore';
-import { syncInventoryItem, syncInventoryDeduction, deleteInventoryCloud } from '../lib/cloudSync';
+import { syncInventoryItem, syncInventoryDeduction, deleteInventoryCloud, fetchInventoryFromCloud } from '../lib/cloudSync';
 
 interface InventoryState {
   items: InventoryItem[];
@@ -13,6 +13,7 @@ interface InventoryState {
   deleteItem: (id: string) => void;
   deductStock: (deductions: Record<string, number>, reason?: string) => void;
   getLowStockItems: () => InventoryItem[];
+  loadFromCloud: () => Promise<void>;
 }
 
 export const useInventoryStore = create<InventoryState>()(
@@ -88,6 +89,18 @@ export const useInventoryStore = create<InventoryState>()(
 
       getLowStockItems: () => {
         return get().items.filter((i) => i.stock < (i.minStock ?? 3));
+      },
+
+      loadFromCloud: async () => {
+        const cloudItems = await fetchInventoryFromCloud();
+        if (cloudItems && cloudItems.length > 0) {
+          set((s) => {
+            const cloudIds = new Set(cloudItems.map((i) => i.id));
+            // Keep local items not yet in cloud
+            const localOnly = s.items.filter((i) => !cloudIds.has(i.id));
+            return { items: [...cloudItems, ...localOnly] };
+          });
+        }
       },
     }),
     { name: 'rempah-inventory' }

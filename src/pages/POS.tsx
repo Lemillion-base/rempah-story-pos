@@ -235,6 +235,10 @@ export default function POS() {
     const subtotal = cart.getSubtotal();
     const total = Math.max(0, subtotal - totalDiscount);
     const cash = parseInt(cashReceived) || 0;
+
+    // Safety guard: Cash payment must have sufficient funds
+    if (payMethod === 'Cash' && cash < total) return;
+
     const queueNum = getNextQueueNumber();
 
     const hpp = calculateTransactionHPP(cart.items, menus, inventory);
@@ -869,8 +873,8 @@ export default function POS() {
             onClick={finalizeTransaction}
             disabled={
               payMethod === 'Cash' &&
-              parseInt(cashReceived) <
-                Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount)
+              (!cashReceived || (parseInt(cashReceived) || 0) <
+                Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))
             }
             className="btn-primary w-full text-base"
           >

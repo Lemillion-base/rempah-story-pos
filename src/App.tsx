@@ -7,6 +7,8 @@ import { useAuditLogStore } from './store/auditLogStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useCustomerStore } from './store/customerStore';
 import { useTransactionStore } from './store/transactionStore';
+import { useMenuStore } from './store/menuStore';
+import { useInventoryStore } from './store/inventoryStore';
 import { updateFavicon, updatePageTitle } from './utils/favicon';
 import { initOfflineQueue } from './lib/offlineQueue';
 import { fetchTransactionsFromCloud } from './lib/cloudSync';
@@ -66,6 +68,8 @@ export default function App() {
       updatePageTitle(s.storeName);
     });
     useCustomerStore.getState().loadFromCloud();
+    useMenuStore.getState().loadFromCloud();
+    useInventoryStore.getState().loadFromCloud();
     fetchTransactionsFromCloud().then((txs) => {
       if (txs && txs.length > 0) useTransactionStore.getState().loadFromCloud(txs);
     });

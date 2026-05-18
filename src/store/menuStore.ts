@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Menu } from '../types';
 import { seedMenus } from '../utils/seed';
-import { syncMenu, deleteMenuCloud } from '../lib/cloudSync';
+import { syncMenu, deleteMenuCloud, fetchMenusFromCloud } from '../lib/cloudSync';
 
 interface MenuState {
   menus: Menu[];
@@ -14,6 +14,7 @@ interface MenuState {
   getCategories: () => string[];
   addCategory: (cat: string) => void;
   deleteCategory: (cat: string) => void;
+  loadFromCloud: () => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>()(
@@ -59,6 +60,18 @@ export const useMenuStore = create<MenuState>()(
         set((s) => ({
           customCategories: s.customCategories.filter((c) => c !== cat),
         })),
+
+      loadFromCloud: async () => {
+        const cloudMenus = await fetchMenusFromCloud();
+        if (cloudMenus && cloudMenus.length > 0) {
+          set((s) => {
+            const cloudIds = new Set(cloudMenus.map((m) => m.id));
+            // Keep local menus not yet in cloud
+            const localOnly = s.menus.filter((m) => !cloudIds.has(m.id));
+            return { menus: [...cloudMenus, ...localOnly] };
+          });
+        }
+      },
     }),
     { name: 'rempah-menus' }
   )

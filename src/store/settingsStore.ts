@@ -31,7 +31,8 @@ export const useSettingsStore = create<SettingsState>()(
       loadFromCloud: async () => {
         const cloudSettings = await fetchSettingsFromCloud();
         if (cloudSettings) {
-          set({ settings: cloudSettings });
+          // Merge: keep local values as fallback, cloud overwrites where present
+          set((s) => ({ settings: { ...s.settings, ...cloudSettings } }));
         }
       },
     }),
