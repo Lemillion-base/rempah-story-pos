@@ -54,6 +54,7 @@ export default function SettingsPage() {
   const [superAdminUnlocked, setSuperAdminUnlocked] = useState(false);
   const [superPinInput, setSuperPinInput] = useState('');
   const [superPinError, setSuperPinError] = useState('');
+  const [newSuperPin, setNewSuperPin] = useState('');
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -489,23 +490,35 @@ export default function SettingsPage() {
             </div>
 
             {/* Change Super Admin PIN */}
-            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <div>
-                <p className="font-medium text-sm">Ubah Super Admin PIN</p>
-                <p className="text-xs text-slate-500 mt-0.5">PIN saat ini: ••••••</p>
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Ubah Super Admin PIN</p>
+                  <p className="text-xs text-slate-500 mt-0.5">PIN saat ini: ••••••</p>
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-3">
                 <input
                   type="password"
-                  placeholder="PIN baru"
+                  value={newSuperPin}
+                  onChange={(e) => setNewSuperPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="PIN baru (4-6 digit)"
                   maxLength={6}
-                  className="input w-24 text-center font-mono text-sm"
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    e.target.value = val;
-                    if (val.length >= 4) updateSettings({ superAdminPin: val });
-                  }}
+                  className="input w-40 text-center font-mono text-sm tracking-widest"
                 />
+                <button
+                  onClick={() => {
+                    if (newSuperPin.length >= 4) {
+                      updateSettings({ superAdminPin: newSuperPin });
+                      setNewSuperPin('');
+                      alert('Super Admin PIN berhasil diubah!');
+                    }
+                  }}
+                  disabled={newSuperPin.length < 4}
+                  className="btn-primary text-xs"
+                >
+                  <Save size={14} /> Simpan
+                </button>
               </div>
             </div>
 

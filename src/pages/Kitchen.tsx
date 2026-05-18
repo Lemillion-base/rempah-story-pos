@@ -65,20 +65,6 @@ export default function Kitchen() {
 
   const waitingOrders = activeOrders.filter((t) => t.kitchenStatus === 'Waiting');
 
-  // Sound alert when new order arrives
-  useEffect(() => {
-    if (waitingOrders.length > prevWaitingCount.current) {
-      playNewOrderSound();
-    }
-    prevWaitingCount.current = waitingOrders.length;
-  }, [waitingOrders.length]);
-
-  const getNextStatus = (current: KitchenStatus): KitchenStatus | null => {
-    if (current === 'Waiting') return 'Processing';
-    if (current === 'Processing') return 'Done';
-    return null;
-  };
-
   const getWaitingMinutes = (dateStr: string): number => {
     return Math.floor((now - new Date(dateStr).getTime()) / 60000);
   };
@@ -91,6 +77,36 @@ export default function Kitchen() {
   const overdueCount = activeOrders.filter(
     (t) => t.kitchenStatus === 'Waiting' && isOverdue(t.date)
   ).length;
+
+  // Sound: chime when new order arrives
+  useEffect(() => {
+    if (waitingOrders.length > prevWaitingCount.current) {
+      playNewOrderSound();
+    }
+    prevWaitingCount.current = waitingOrders.length;
+  }, [waitingOrders.length]);
+
+  // Sound: alarm for overdue orders
+  useEffect(() => {
+    if (overdueCount > 0) {
+      playAlertSound();
+    }
+  }, [overdueCount]);
+
+  // Re-trigger alarm periodically if overdue persists
+  useEffect(() => {
+    if (overdueCount === 0) return;
+    const interval = setInterval(() => {
+      if (overdueCount > 0) playAlertSound();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [overdueCount]);
+
+  const getNextStatus = (current: KitchenStatus): KitchenStatus | null => {
+    if (current === 'Waiting') return 'Processing';
+    if (current === 'Processing') return 'Done';
+    return null;
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -108,7 +124,9 @@ export default function Kitchen() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
         {columns.map(({ status, label, color, icon: Icon }) => {
-          const orders = activeOrders.filter((t) => t.kitchenStatus === status);
+          const orders = activeOrders
+            .filter((t) => t.kitchenStatus === status)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // oldest first
           return (
             <div key={status} className={`rounded-2xl border-2 ${color} flex flex-col min-h-0`}>
               <div className="p-4 flex items-center gap-2">
