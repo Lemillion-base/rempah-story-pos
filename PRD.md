@@ -1,9 +1,9 @@
 # Product Requirements Document (PRD)
 
 ## Project Name: POS Rempah Story
-## Product Version: 2.4 (Production)
+## Product Version: 2.5 (Production)
 ## Document Status: Production Ready
-## Last Updated: 17 Mei 2026
+## Last Updated: 18 Mei 2026
 ## Production URL: Deployed on Vercel
 ## Repository: https://github.com/Lemillion-base/rempah-story-pos
 
