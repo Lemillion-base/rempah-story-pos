@@ -92,11 +92,19 @@ export default function Layout() {
         new Date(t.date) >= new Date(activeShift.openedAt)
     );
     const totalSales = shiftTx.reduce((a, t) => a + t.totalAmount, 0);
-    const cashSales = shiftTx
-      .filter((t) => t.paymentMethod === 'Cash')
+
+    // Expected cash must include ALL cash transactions during shift (including voided)
+    // because money was physically received and is in the drawer
+    const allShiftTx = transactions.filter(
+      (t) =>
+        t.cashierId === currentUser.id &&
+        new Date(t.date) >= new Date(activeShift.openedAt)
+    );
+    const cashSales = allShiftTx
+      .filter((t) => t.paymentMethod === 'Cash' && t.txStatus !== 'Demo')
       .reduce((a, t) => a + t.totalAmount, 0);
-    const cashChange = shiftTx
-      .filter((t) => t.paymentMethod === 'Cash')
+    const cashChange = allShiftTx
+      .filter((t) => t.paymentMethod === 'Cash' && t.txStatus !== 'Demo')
       .reduce((a, t) => a + (t.change || 0), 0);
     const expectedCash = activeShift.openingCash + cashSales - cashChange;
     return { totalSales, totalTx: shiftTx.length, expectedCash };
@@ -151,6 +159,7 @@ export default function Layout() {
   };
 
   const handleAcarakiSkip = () => {
+    clearKdsDoneOrders();
     setShowAcarakiSummary(false);
     logout();
     navigate('/');

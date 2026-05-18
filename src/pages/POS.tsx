@@ -52,7 +52,7 @@ export default function POS() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }); // eslint-disable-line react-hooks/exhaustive-deps — intentionally re-binds to capture latest handleCheckout
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Semua');

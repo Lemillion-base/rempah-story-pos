@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS settings (
   printer_type TEXT DEFAULT 'browser',
   printer_width TEXT DEFAULT '58mm',
   auto_print_on_checkout BOOLEAN DEFAULT false,
+  super_admin_pin TEXT DEFAULT '000000',
+  demo_mode BOOLEAN DEFAULT true,
   loyalty_enabled BOOLEAN DEFAULT false,
   loyalty_settings JSONB DEFAULT '{}'
 );
