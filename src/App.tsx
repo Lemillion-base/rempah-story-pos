@@ -62,21 +62,21 @@ export default function App() {
     migratePasswords();
     initOfflineQueue();
 
-    // Load all shared data from cloud
+    // Load all shared data from cloud (fullSync=true: cloud is authoritative at boot)
     useSettingsStore.getState().loadFromCloud().then(() => {
       const s = useSettingsStore.getState().settings;
       updateFavicon(s.storeLogo);
       updatePageTitle(s.storeName);
     });
-    useCustomerStore.getState().loadFromCloud();
-    useMenuStore.getState().loadFromCloud();
-    useInventoryStore.getState().loadFromCloud();
-    useAuthStore.getState().loadFromCloud();
-    usePromoStore.getState().loadFromCloud();
+    useCustomerStore.getState().loadFromCloud(true);
+    useMenuStore.getState().loadFromCloud(true);
+    useInventoryStore.getState().loadFromCloud(true);
+    useAuthStore.getState().loadFromCloud(true);
+    usePromoStore.getState().loadFromCloud(true);
     // BUG-C3 fix: Load shifts from cloud
     useShiftStore.getState().loadFromCloud();
     fetchTransactionsFromCloud().then((txs) => {
-      if (txs && txs.length > 0) useTransactionStore.getState().loadFromCloud(txs);
+      if (txs && txs.length > 0) useTransactionStore.getState().loadFromCloud(txs, true);
     });
 
     // Cleanup old logs, then load from cloud

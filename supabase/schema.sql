@@ -136,9 +136,9 @@ CREATE TABLE IF NOT EXISTS stock_logs (
   date TIMESTAMPTZ DEFAULT now()
 );
 
--- 10. Settings table (single row)
+-- 10. Settings table (multi-row: id=1 app settings, id=2 loyalty, id=3 custom categories)
 CREATE TABLE IF NOT EXISTS settings (
-  id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  id INT PRIMARY KEY DEFAULT 1,
   manager_pin TEXT DEFAULT '1234',
   store_name TEXT DEFAULT 'Rempah Story',
   store_logo TEXT,
@@ -159,10 +159,60 @@ CREATE TABLE IF NOT EXISTS settings (
 INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
--- Enable Realtime for KDS (Kitchen Display System)
--- (Skip if already enabled — run manually if needed)
+-- Enable Realtime for ALL tables (required for multi-device sync)
+-- Run this in Supabase SQL Editor if real-time is not working
 -- ============================================================
--- ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
+-- IMPORTANT: You MUST run these commands to enable real-time sync!
+-- If tables are already in the publication, these will be skipped.
+
+DO $$
+BEGIN
+  -- Add all tables to realtime publication
+  ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE customers;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE menus;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE inventory;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE users;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE promos;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE shifts;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 -- Row Level Security (RLS)
