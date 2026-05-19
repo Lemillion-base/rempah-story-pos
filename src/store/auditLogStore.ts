@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
 import type { AuditLogEntry, AuditAction, Role } from '../types';
-import { syncAuditLog } from '../lib/cloudSync';
+import { syncAuditLog, fetchAuditLogsFromCloud } from '../lib/cloudSync';
 
 interface AuditLogState {
   logs: AuditLogEntry[];
@@ -11,6 +11,7 @@ interface AuditLogState {
   getLogsByAction: (action: AuditAction) => AuditLogEntry[];
   getLogsByDateRange: (from: Date, to: Date) => AuditLogEntry[];
   clearOldLogs: (daysToKeep?: number) => void;
+  loadFromCloud: () => Promise<void>;
 }
 
 export const useAuditLogStore = create<AuditLogState>()(
@@ -49,6 +50,20 @@ export const useAuditLogStore = create<AuditLogState>()(
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - daysToKeep);
         set((s) => ({ logs: s.logs.filter((l) => new Date(l.timestamp) >= cutoff) }));
+      },
+
+      // BUG-C4 fix: Load audit logs from cloud for multi-device visibility
+      loadFromCloud: async () => {
+        const cloudLogs = await fetchAuditLogsFromCloud();
+        if (cloudLogs && cloudLogs.length > 0) {
+          set((s) => {
+            const cloudIds = new Set(cloudLogs.map((l) => l.id));
+            const localOnly = s.logs.filter((l) => !cloudIds.has(l.id));
+            const merged = [...cloudLogs, ...localOnly];
+            merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            return { logs: merged.slice(0, 10000) };
+          });
+        }
       },
     }),
     { name: 'rempah-audit-logs' }

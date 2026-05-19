@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
 import { useMenuStore } from '../store/menuStore';
 import { useCartStore } from '../store/cartStore';
@@ -10,6 +10,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useToastStore } from '../store/toastStore';
 import { usePromoStore } from '../store/promoStore';
 import { useAuditLogStore } from '../store/auditLogStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
 import { calculateTransactionHPP } from '../utils/hpp';
 import { printReceipt, buildReceiptFromTransaction } from '../utils/printer';
@@ -44,15 +45,71 @@ export default function POS() {
   const { getActivePromos, getPromoByCode, incrementUsage, getCustomerDiscount } = usePromoStore();
   const { addLog } = useAuditLogStore();
 
+  // GAP-3 fix: Real-time sync for menus, inventory, and customers
+  // So Kasir sees changes from Manager's device even without navigating away
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const menuChannel = supabase
+      .channel('pos-menus-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menus' }, () => {
+        useMenuStore.getState().loadFromCloud(true);
+      })
+      .subscribe();
+
+    const invChannel = supabase
+      .channel('pos-inventory-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
+        useInventoryStore.getState().loadFromCloud(true);
+      })
+      .subscribe();
+
+    const custChannel = supabase
+      .channel('pos-customers-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+        useCustomerStore.getState().loadFromCloud(true);
+      })
+      .subscribe();
+
+    // Also listen for settings changes (GAP-2: store name, tax, etc.)
+    const settingsChannel = supabase
+      .channel('pos-settings-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
+        useSettingsStore.getState().loadFromCloud();
+        usePromoStore.getState().loadFromCloud(true); // loyalty settings also in settings table
+        useMenuStore.getState().loadFromCloud(true); // custom categories also in settings table
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(menuChannel);
+      supabase.removeChannel(invChannel);
+      supabase.removeChannel(custChannel);
+      supabase.removeChannel(settingsChannel);
+    };
+  }, []);
+
+  // BUG-C5 fix: useCallback + proper dependency array instead of re-binding every render
+  const handleCheckoutCb = useCallback(() => {
+    if (cart.items.length === 0) return;
+    const warnings = checkStockAvailability(cart.items, menus, inventory);
+    if (warnings.length > 0) {
+      setStockWarnings(warnings);
+      setShowStockWarning(true);
+      return;
+    }
+    setShowCheckout(true);
+  }, [cart.items, menus, inventory]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'F1') { e.preventDefault(); handleCheckout(); }
+      if (e.key === 'F1') { e.preventDefault(); handleCheckoutCb(); }
       if (e.key === 'Escape') { setShowCheckout(false); setSelectedMenu(null); setMobileCartOpen(false); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }); // eslint-disable-line react-hooks/exhaustive-deps — intentionally re-binds to capture latest handleCheckout
+  }, [handleCheckoutCb]);
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Semua');
@@ -112,7 +169,8 @@ export default function POS() {
     return discount;
   };
 
-  const promoDiscount = useMemo(() => calculatePromoDiscount(appliedPromoId, cart.getSubtotal()), [appliedPromoId, cart.items]);
+  // BUG-M1 fix: added selectedCustomerId to deps (calculatePromoDiscount checks customer for loyalty)
+  const promoDiscount = useMemo(() => calculatePromoDiscount(appliedPromoId, cart.getSubtotal()), [appliedPromoId, cart.items, selectedCustomerId]);
 
   const applyVoucherCode = () => {
     setPromoError('');
@@ -148,12 +206,13 @@ export default function POS() {
   };
 
   // Loyalty discount (auto-applied if customer selected)
+  // BUG-M2 fix: added getCustomerDiscount to deps (loyalty settings can change)
   const loyaltyDiscount = useMemo(() => {
     if (!selectedCustomer) return 0;
     const pct = getCustomerDiscount(selectedCustomer.visitCount);
     if (pct <= 0) return 0;
     return Math.round(cart.getSubtotal() * pct / 100);
-  }, [selectedCustomer, cart.items]);
+  }, [selectedCustomer, cart.items, getCustomerDiscount]);
 
   // Preview queue number for checkout modal (read-only, no side effects)
   const queuePreview = useMemo(() => {
@@ -216,19 +275,8 @@ export default function POS() {
     );
   };
 
-  const handleCheckout = () => {
-    if (cart.items.length === 0) return;
-
-    // Validate stock availability
-    const warnings = checkStockAvailability(cart.items, menus, inventory);
-    if (warnings.length > 0) {
-      setStockWarnings(warnings);
-      setShowStockWarning(true);
-      return;
-    }
-
-    setShowCheckout(true);
-  };
+  // handleCheckout now uses the memoized callback
+  const handleCheckout = handleCheckoutCb;
 
   const proceedCheckoutAnyway = () => {
     setShowStockWarning(false);
@@ -414,9 +462,21 @@ export default function POS() {
                 Keranjang
                 <span className="badge bg-brand-100 text-brand-700">{cart.items.length}</span>
               </h2>
-              <button onClick={() => setMobileCartOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
-                <ChevronDown size={20} />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* FEAT-4: Clear all cart button */}
+                {cart.items.length >= 2 && (
+                  <button
+                    onClick={() => { if (window.confirm('Kosongkan semua item di keranjang?')) cart.clearCart(); }}
+                    className="p-2 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition"
+                    title="Kosongkan Keranjang"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <button onClick={() => setMobileCartOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
+                  <ChevronDown size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Customer Selection */}
@@ -538,6 +598,16 @@ export default function POS() {
                 <span className="badge bg-brand-100 text-brand-700">{cart.items.length}</span>
               )}
             </h2>
+            {/* FEAT-4: Clear all cart button (desktop) */}
+            {cart.items.length >= 2 && (
+              <button
+                onClick={() => { if (window.confirm('Kosongkan semua item di keranjang?')) cart.clearCart(); }}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition"
+                title="Kosongkan Keranjang"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
           </div>
 
           {/* Customer Selection - Dropdown */}

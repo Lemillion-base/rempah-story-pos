@@ -73,12 +73,18 @@ export default function App() {
     useInventoryStore.getState().loadFromCloud();
     useAuthStore.getState().loadFromCloud();
     usePromoStore.getState().loadFromCloud();
+    // BUG-C3 fix: Load shifts from cloud
+    useShiftStore.getState().loadFromCloud();
     fetchTransactionsFromCloud().then((txs) => {
       if (txs && txs.length > 0) useTransactionStore.getState().loadFromCloud(txs);
     });
 
+    // Cleanup old logs, then load from cloud
+    // BUG-C4 fix: Load stock logs and audit logs from cloud
     useStockLogStore.getState().clearOldLogs(30);
+    useStockLogStore.getState().loadFromCloud();
     useAuditLogStore.getState().clearOldLogs(90);
+    useAuditLogStore.getState().loadFromCloud();
   }, []);
 
   return (

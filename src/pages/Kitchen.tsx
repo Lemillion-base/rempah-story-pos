@@ -41,7 +41,7 @@ export default function Kitchen() {
     const channel = subscribeToTransactions((payload: any) => {
       // Re-fetch all transactions when any change happens
       fetchTransactionsFromCloud().then((cloudTx) => {
-        if (cloudTx) loadFromCloud(cloudTx);
+        if (cloudTx) loadFromCloud(cloudTx, true); // fullSync: cloud is authoritative
       });
     });
 
@@ -54,9 +54,15 @@ export default function Kitchen() {
     return () => clearInterval(interval);
   }, []);
 
+  // Filter active orders — only show TODAY's transactions
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const activeOrders = transactions.filter((t) => {
     if (t.txStatus !== 'Selesai') return false;
-    // Hide Done orders that were cleared by Acaraki
+    // Only show today's orders
+    if (new Date(t.date) < today) return false;
+    // Hide Done orders that were cleared
     if (t.kitchenStatus === 'Done' && lastKdsClearTime && new Date(t.date) < new Date(lastKdsClearTime)) {
       return false;
     }

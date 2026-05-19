@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
 import type { CashierShift } from '../types';
-import { syncShift } from '../lib/cloudSync';
+import { syncShift, fetchShiftsFromCloud } from '../lib/cloudSync';
 
 interface ShiftState {
   shifts: CashierShift[];
@@ -11,6 +11,7 @@ interface ShiftState {
   closeShift: (closingCash: number, totalSales: number, totalTransactions: number, expectedCash: number) => void;
   getActiveShift: () => CashierShift | null;
   getShiftsByUser: (userId: string) => CashierShift[];
+  loadFromCloud: () => Promise<void>;
 }
 
 export const useShiftStore = create<ShiftState>()(
@@ -60,6 +61,19 @@ export const useShiftStore = create<ShiftState>()(
 
       getShiftsByUser: (userId) =>
         get().shifts.filter((s) => s.userId === userId),
+
+      // BUG-C3 fix: Load shifts from cloud for multi-device visibility
+      loadFromCloud: async () => {
+        const cloudShifts = await fetchShiftsFromCloud();
+        if (cloudShifts && cloudShifts.length > 0) {
+          set((s) => {
+            const cloudIds = new Set(cloudShifts.map((sh) => sh.id));
+            // Keep local shifts not yet in cloud
+            const localOnly = s.shifts.filter((sh) => !cloudIds.has(sh.id));
+            return { shifts: [...cloudShifts, ...localOnly] };
+          });
+        }
+      },
     }),
     { name: 'rempah-shifts' }
   )

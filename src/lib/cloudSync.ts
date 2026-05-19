@@ -12,7 +12,7 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { smartUpsert, smartUpdate, smartDelete, smartInsert } from './offlineQueue';
 import type { 
   User, InventoryItem, Menu, Transaction, Customer, 
-  CashierShift, Promo, AuditLogEntry, AppSettings 
+  CashierShift, Promo, AuditLogEntry, AppSettings, LoyaltySettings 
 } from '../types';
 import type { StockLogEntry } from '../store/stockLogStore';
 
@@ -139,10 +139,12 @@ export async function syncInventoryItem(item: InventoryItem) {
 
 export async function syncInventoryDeduction(deductions: Record<string, number>, items: InventoryItem[]) {
   if (!isSupabaseConfigured) return;
-  for (const [id, amount] of Object.entries(deductions)) {
+  // BUG-C1 fix: items already contain post-deduction stock values (deducted in inventoryStore).
+  // Previously this subtracted `amount` again, causing double deduction in cloud.
+  for (const [id] of Object.entries(deductions)) {
     const item = items.find((i) => i.id === id);
     if (item) {
-      await smartUpdate('inventory', { stock: Math.max(0, item.stock - amount) }, 'id', id);
+      await smartUpdate('inventory', { stock: item.stock }, 'id', id);
     }
   }
 }
@@ -299,6 +301,58 @@ export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
     };
   } catch (e) {
     console.warn('[CloudSync] Fetch settings failed:', e);
+    return null;
+  }
+}
+
+// ============================================================
+// LOYALTY SETTINGS (BUG-M5 fix: sync across devices)
+// Uses settings table row id=2 to store loyalty config as JSON
+// ============================================================
+
+export async function syncLoyaltySettings(ls: LoyaltySettings) {
+  if (!isSupabaseConfigured) return;
+  await smartUpsert('settings', {
+    id: 2,
+    store_name: '__loyalty_settings__',
+    manager_pin: '0000',
+    categories: ls,
+  });
+}
+
+export async function fetchLoyaltySettingsFromCloud(): Promise<LoyaltySettings | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('settings').select('categories').eq('id', 2).single();
+    if (error || !data?.categories) return null;
+    return data.categories as LoyaltySettings;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
+// CUSTOM CATEGORIES (GAP-1 fix: sync across devices)
+// Uses settings table row id=3 to store categories as JSON
+// ============================================================
+
+export async function syncCustomCategories(categories: string[]) {
+  if (!isSupabaseConfigured) return;
+  await smartUpsert('settings', {
+    id: 3,
+    store_name: '__custom_categories__',
+    manager_pin: '0000',
+    categories: categories,
+  });
+}
+
+export async function fetchCustomCategoriesFromCloud(): Promise<string[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('settings').select('categories').eq('id', 3).single();
+    if (error || !data?.categories) return null;
+    return data.categories as string[];
+  } catch {
     return null;
   }
 }
@@ -464,3 +518,98 @@ export async function fetchPromosFromCloud(): Promise<Promo[] | null> {
     return null;
   }
 }
+
+// ============================================================
+// SHIFTS (BUG-C3 fix: multi-device shift sync)
+// ============================================================
+
+export async function fetchShiftsFromCloud(): Promise<CashierShift[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('shifts').select('*').order('opened_at', { ascending: false }).limit(200);
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      userName: row.user_name,
+      openedAt: row.opened_at,
+      closedAt: row.closed_at || undefined,
+      openingCash: row.opening_cash,
+      closingCash: row.closing_cash ?? undefined,
+      expectedCash: row.expected_cash ?? undefined,
+      cashDifference: row.cash_difference ?? undefined,
+      totalSales: row.total_sales || 0,
+      totalTransactions: row.total_transactions || 0,
+      status: row.status,
+    })) || null;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
+// STOCK LOGS (BUG-C4 fix: cloud sync for stock_logs)
+// ============================================================
+
+export async function syncStockLog(entry: StockLogEntry) {
+  if (!isSupabaseConfigured) return;
+  await smartInsert('stock_logs', {
+    id: entry.id,
+    inventory_id: entry.inventoryId,
+    inventory_name: entry.inventoryName,
+    type: entry.type,
+    amount: entry.amount,
+    stock_before: entry.stockBefore,
+    stock_after: entry.stockAfter,
+    unit: entry.unit,
+    reason: entry.reason || null,
+    date: entry.date,
+  });
+}
+
+export async function fetchStockLogsFromCloud(): Promise<StockLogEntry[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('stock_logs').select('*').order('date', { ascending: false }).limit(500);
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      inventoryId: row.inventory_id,
+      inventoryName: row.inventory_name,
+      type: row.type,
+      amount: row.amount,
+      stockBefore: row.stock_before,
+      stockAfter: row.stock_after,
+      unit: row.unit,
+      reason: row.reason || undefined,
+      date: row.date,
+    })) || null;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
+// AUDIT LOGS (BUG-C4 fix: fetch audit logs from cloud)
+// ============================================================
+
+export async function fetchAuditLogsFromCloud(): Promise<AuditLogEntry[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(500);
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      userName: row.user_name,
+      userRole: row.user_role,
+      action: row.action,
+      detail: row.detail,
+      timestamp: row.timestamp,
+      metadata: row.metadata || undefined,
+    })) || null;
+  } catch {
+    return null;
+  }
+}
+

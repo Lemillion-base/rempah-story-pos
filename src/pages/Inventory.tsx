@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useInventoryStore } from '../store/inventoryStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
 import type { InventoryItem } from '../types';
 import Modal from '../components/Modal';
@@ -17,7 +18,19 @@ import {
 } from 'lucide-react';
 
 export default function Inventory() {
-  const { items: inventory, addItem, updateItem, deleteItem } = useInventoryStore();
+  const { items: inventory, addItem, updateItem, deleteItem, loadFromCloud } = useInventoryStore();
+
+  // Real-time sync for inventory
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const channel = supabase
+      .channel('inventory-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
+        loadFromCloud(true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'low'>('all');

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
 import { useCustomerStore } from '../store/customerStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
 import { useAuditLogStore } from '../store/auditLogStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
 import type { Customer } from '../types';
 import Modal from '../components/Modal';
@@ -12,10 +13,22 @@ import PinModal from '../components/PinModal';
 import { Plus, Pencil, Trash2, Search, Users, Phone, Mail, MessageCircle, Send } from 'lucide-react';
 
 export default function Customers() {
-  const { customers, addCustomer, updateCustomer, deleteCustomer } = useCustomerStore();
+  const { customers, addCustomer, updateCustomer, deleteCustomer, loadFromCloud } = useCustomerStore();
   const { settings } = useSettingsStore();
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
+
+  // Real-time sync for customers
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const channel = supabase
+      .channel('customers-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+        loadFromCloud(true); // fullSync: cloud is authoritative
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);

@@ -16,7 +16,7 @@ interface TransactionState {
   getActiveKitchenOrders: () => Transaction[];
   clearKdsDoneOrders: () => void;
   getNextQueueNumber: () => number;
-  loadFromCloud: (transactions: Transaction[]) => void;
+  loadFromCloud: (transactions: Transaction[], fullSync?: boolean) => void;
 }
 
 function getTodayDateStr(): string {
@@ -98,11 +98,25 @@ export const useTransactionStore = create<TransactionState>()(
 
       clearKdsDoneOrders: () => set({ lastKdsClearTime: new Date().toISOString() }),
 
-      loadFromCloud: (cloudTransactions) => {
+      loadFromCloud: (cloudTransactions, fullSync = false) => {
         set((s) => {
           const cloudIds = new Set(cloudTransactions.map((t) => t.id));
-          // Keep local transactions that are NOT in cloud (not yet synced)
-          const localOnly = s.transactions.filter((t) => !cloudIds.has(t.id));
+          
+          let localOnly: Transaction[];
+          if (fullSync) {
+            // Full sync mode (real-time triggered): cloud is authoritative.
+            // Only keep local transactions created in the last 30 seconds
+            // (grace period for transactions that haven't synced to cloud yet)
+            const gracePeriod = 30 * 1000; // 30 seconds
+            const cutoff = Date.now() - gracePeriod;
+            localOnly = s.transactions.filter(
+              (t) => !cloudIds.has(t.id) && new Date(t.date).getTime() > cutoff
+            );
+          } else {
+            // Initial load: keep all local transactions not in cloud
+            localOnly = s.transactions.filter((t) => !cloudIds.has(t.id));
+          }
+
           // Merge: cloud data + local-only data
           const merged = [...cloudTransactions, ...localOnly];
           // Sort by date descending (newest first)

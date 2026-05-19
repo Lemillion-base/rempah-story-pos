@@ -1,8 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
+import bcrypt from 'bcryptjs';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAuditLogStore } from '../store/auditLogStore';
+import { useShiftStore } from '../store/shiftStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { connectBluetoothPrinter, disconnectBluetoothPrinter, isBluetoothConnected } from '../utils/printer';
 import { resetToDefault, clearOperationalData, factoryReset } from '../utils/dataManager';
 import type { User, Role } from '../types';
@@ -25,9 +28,22 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { users, addUser, updateUser, deleteUser, currentUser } = useAuthStore();
+  const { users, addUser, updateUser, deleteUser, currentUser, loadFromCloud: loadUsersFromCloud } = useAuthStore();
   const { settings, updateSettings } = useSettingsStore();
   const { addLog } = useAuditLogStore();
+  const { shifts } = useShiftStore();
+
+  // Real-time sync for users
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const channel = supabase
+      .channel('users-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        loadUsersFromCloud(true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   // Store settings
   const [storeName, setStoreName] = useState(settings.storeName);
@@ -381,6 +397,13 @@ export default function SettingsPage() {
                       </button>
                       {u.id !== currentUser?.id && (
                         <button onClick={() => {
+                          // BUG-M7 fix: Check if user has active shift before deleting
+                          const hasActiveShift = shifts.some((s) => s.userId === u.id && s.status === 'open');
+                          if (hasActiveShift) {
+                            alert(`⚠️ User "${u.name}" masih memiliki shift aktif. Tutup shift terlebih dahulu.`);
+                            return;
+                          }
+                          if (!window.confirm(`Hapus user "${u.name}"? Tindakan ini tidak bisa dibatalkan.`)) return;
                           deleteUser(u.id);
                           if (currentUser) {
                             addLog(currentUser.id, currentUser.name, currentUser.role, 'delete_user', `Hapus user: ${u.name}`, { userId: u.id });
@@ -448,7 +471,10 @@ export default function SettingsPage() {
                 onChange={(e) => { setSuperPinInput(e.target.value.replace(/\D/g, '')); setSuperPinError(''); }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    if (superPinInput === settings.superAdminPin) { setSuperAdminUnlocked(true); setSuperPinError(''); }
+                    // BUG-M4: Support bcrypt-hashed super admin PIN
+                    const stored = settings.superAdminPin;
+                    const isMatch = stored.startsWith('$2') ? bcrypt.compareSync(superPinInput, stored) : superPinInput === stored;
+                    if (isMatch) { setSuperAdminUnlocked(true); setSuperPinError(''); }
                     else setSuperPinError('PIN salah');
                   }
                 }}
@@ -458,7 +484,10 @@ export default function SettingsPage() {
               />
               <button
                 onClick={() => {
-                  if (superPinInput === settings.superAdminPin) { setSuperAdminUnlocked(true); setSuperPinError(''); }
+                  // BUG-M4: Support bcrypt-hashed super admin PIN
+                  const stored = settings.superAdminPin;
+                  const isMatch = stored.startsWith('$2') ? bcrypt.compareSync(superPinInput, stored) : superPinInput === stored;
+                  if (isMatch) { setSuperAdminUnlocked(true); setSuperPinError(''); }
                   else setSuperPinError('PIN salah');
                 }}
                 className="btn-primary text-sm"

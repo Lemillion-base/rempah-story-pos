@@ -17,7 +17,7 @@ interface AuthState {
   deleteUser: (id: string) => void;
   getRedirectPath: (role: Role) => string;
   migratePasswords: () => void;
-  loadFromCloud: () => Promise<void>;
+  loadFromCloud: (fullSync?: boolean) => Promise<void>;
 }
 
 const SALT_ROUNDS = 10;
@@ -67,6 +67,11 @@ export const useAuthStore = create<AuthState>()(
         if (currentUser) {
           useAuditLogStore.getState().addLog(currentUser.id, currentUser.name, currentUser.role, 'logout', 'User logged out');
         }
+        // BUG-M3 fix: Clear cart on logout to prevent cart leaking between user sessions
+        // Lazy import to avoid potential circular dependency
+        import('./cartStore').then(({ useCartStore }) => {
+          useCartStore.getState().clearCart();
+        }).catch(() => { /* ignore */ });
         set({ currentUser: null });
       },
 
@@ -115,13 +120,33 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      loadFromCloud: async () => {
+      loadFromCloud: async (fullSync = false) => {
         const cloudUsers = await fetchUsersFromCloud();
         if (cloudUsers && cloudUsers.length > 0) {
           set((s) => {
             const cloudIds = new Set(cloudUsers.map((u) => u.id));
-            const localOnly = s.users.filter((u) => !cloudIds.has(u.id));
-            return { users: [...cloudUsers, ...localOnly] };
+            let localOnly: User[];
+            if (fullSync) {
+              // Real-time: cloud is authoritative for deletions
+              localOnly = []; // Trust cloud completely for users
+            } else {
+              localOnly = s.users.filter((u) => !cloudIds.has(u.id));
+            }
+            // BUG-C2 fix: Protect locally hashed passwords from plaintext cloud overwrite.
+            const mergedCloud = cloudUsers.map((cloudUser) => {
+              const localUser = s.users.find((u) => u.id === cloudUser.id);
+              if (localUser) {
+                const localIsHashed = localUser.password.startsWith('$2a$') || localUser.password.startsWith('$2b$');
+                const cloudIsHashed = cloudUser.password.startsWith('$2a$') || cloudUser.password.startsWith('$2b$');
+                if (localIsHashed && !cloudIsHashed) {
+                  const preserved = { ...cloudUser, password: localUser.password };
+                  syncUser(preserved);
+                  return preserved;
+                }
+              }
+              return cloudUser;
+            });
+            return { users: [...mergedCloud, ...localOnly] };
           });
         }
       },
