@@ -107,9 +107,24 @@ Tolong pelajari dulu sebelum mulai coding.
 [offlineQueue.ts] → jika offline, queue operasi
     ↓ (saat online)
 [Supabase PostgreSQL]
-    ↓ (real-time subscription)
-[Device lain] → fetchFromCloud → update local store
+    ↓ (real-time subscription - ALL tables)
+[Device lain] → loadFromCloud(fullSync=true) → update local store
 ```
+
+### Cloud Sync Coverage (100%):
+- **13 data types** di-push ke cloud (termasuk customCategories)
+- **10 stores** fetch dari cloud saat boot
+- **6 stores** support `fullSync` mode untuk delete propagation
+- **Real-time subscriptions** di SEMUA halaman:
+  - `POS.tsx`: menus, inventory, customers, settings
+  - `Kitchen.tsx`: transactions
+  - `Transactions.tsx`: transactions
+  - `Customers.tsx`: customers
+  - `Catalog.tsx`: menus
+  - `Inventory.tsx`: inventory
+  - `Promos.tsx`: promos
+  - `SettingsPage.tsx`: users
+- **fullSync pattern**: Saat real-time event, cloud = sumber kebenaran. Item yang dihapus di cloud dihapus dari lokal (grace period 30s untuk item baru).
 
 ### Konvensi Kode:
 - **Store pattern**: Zustand + persist + cloud sync di setiap mutasi
@@ -136,7 +151,8 @@ git push origin main → Vercel auto-deploy (1-2 menit)
 - Schema di `supabase/schema.sql`
 - Semua tabel di schema `public`
 - RLS enabled dengan policy "allow all" (MVP)
-- Real-time enabled untuk tabel `transactions`
+- Real-time enabled untuk SEMUA tabel (transactions, menus, inventory, customers, users, promos, settings)
+- `settings` table rows: id=1 (app settings), id=2 (loyalty settings), id=3 (custom categories)
 
 ---
 

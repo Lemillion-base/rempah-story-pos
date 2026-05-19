@@ -21,8 +21,9 @@
 **✅ SUDAH PRODUCTION.** Aplikasi sudah live di Vercel dengan:
 - HTTPS otomatis
 - Cloud database (Supabase) aktif
-- Real-time sync antar device berfungsi
+- Real-time sync antar device berfungsi (100% coverage — semua tabel)
 - PWA installable
+- Full cloud sync: delete propagation, fullSync mode, 13 data types
 
 ### Arsitektur Production:
 ```
@@ -172,14 +173,16 @@ Butuh bantuan? Hubungi: [WA Anda]
 ### ✅ Teknis (DONE)
 - [x] Deploy ke Vercel (production URL aktif)
 - [x] HTTPS aktif (otomatis di Vercel)
-- [x] Cloud sync berfungsi (Supabase real-time)
+- [x] Cloud sync berfungsi (Supabase real-time — 100% coverage)
+- [x] Real-time subscriptions di semua halaman (POS, KDS, Transaksi, Katalog, dll)
+- [x] Delete propagation antar device (fullSync pattern)
 - [x] PWA installable
 - [x] Password hashing (bcrypt)
 - [x] Error boundary (crash handling)
 - [x] Code-splitting (fast load)
-- [ ] Custom domain (opsional tapi profesional)
-- [ ] Test di device klien (tablet, HP, laptop)
-- [ ] Test printer thermal klien
+- [x] Custom categories cloud sync
+- [x] Konfirmasi void/cancel transaksi (Manager)
+- [x] Clear cart button (2+ items)
 
 ### ✅ Bisnis
 - [ ] Tentukan pricing model
