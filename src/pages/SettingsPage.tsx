@@ -598,7 +598,7 @@ export default function SettingsPage() {
         onClose={() => setShowClearConfirm(false)}
         onConfirm={clearOperationalData}
         title="Bersihkan Data Transaksi"
-        message="Semua transaksi, shift, pelanggan, promo, dan log akan dihapus permanen. Menu dan inventaris tetap. Lanjutkan?"
+        message="Semua transaksi, shift, pelanggan, promo, dan log akan dihapus permanen (lokal + cloud). Menu, inventaris, user, dan settings tetap dipertahankan. Lanjutkan?"
         confirmText="Ya, Bersihkan"
         variant="warning"
       />
@@ -608,7 +608,7 @@ export default function SettingsPage() {
         onClose={() => setShowResetConfirm(false)}
         onConfirm={resetToDefault}
         title="Reset ke Default"
-        message="Semua data akan dikembalikan ke keadaan awal (demo). Semua perubahan Anda akan hilang. Lanjutkan?"
+        message="Semua data (lokal + cloud) akan dikembalikan ke keadaan awal (demo). Akun, menu, dan settings kembali ke default. Lanjutkan?"
         confirmText="Ya, Reset"
         variant="warning"
       />
@@ -618,7 +618,7 @@ export default function SettingsPage() {
         onClose={() => setShowFactoryConfirm(false)}
         onConfirm={factoryReset}
         title="⚠️ Factory Reset"
-        message="SEMUA DATA akan dihapus permanen termasuk menu, inventaris, settings, dan data cloud. Tindakan ini TIDAK BISA dibatalkan. Yakin?"
+        message="SEMUA DATA akan dihapus permanen (lokal + cloud). Akun default (manager, kasir, acaraki), menu demo, dan settings default akan di-restore. Tindakan ini TIDAK BISA dibatalkan. Yakin?"
         confirmText="HAPUS SEMUA"
         variant="danger"
       />
