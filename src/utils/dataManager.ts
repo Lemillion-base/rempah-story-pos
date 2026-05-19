@@ -1,15 +1,28 @@
 /**
  * Data Manager — Reset demo data & clear production data
+ * 
+ * Three levels of reset:
+ * 1. resetToDefault: Reset to seed defaults (local + cloud), preserves nothing
+ * 2. clearOperationalData: Clear transactions/logs, preserves users/menus/inventory/settings
+ * 3. factoryReset: Full wipe + re-seed users/settings/menus/inventory to cloud
  */
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { syncUser, syncSettings, syncMenu, syncInventoryItem } from '../lib/cloudSync';
+import { seedUsers, seedMenus, seedInventory, seedSettings } from './seed';
 
 /**
  * Reset ke Default (Demo Mode)
- * Menghapus semua data localStorage dan reload.
- * Data akan kembali ke seed default.
+ * Menghapus SEMUA data (lokal + cloud) lalu re-seed data default.
+ * Setelah reload, data kembali ke seed default dan di-sync ke cloud.
  */
-export function resetToDefault() {
+export async function resetToDefault() {
+  // Clear cloud first, then re-seed
+  if (isSupabaseConfigured) {
+    await clearAllCloudData();
+    await reseedCloudData();
+  }
+
   // Clear all app localStorage keys
   const keysToRemove = [
     'rempah-auth',
@@ -68,11 +81,18 @@ export function clearOperationalData() {
 }
 
 /**
- * Clear ALL data (full factory reset)
- * Menghapus semua data termasuk menu, inventory, settings.
- * Sama seperti resetToDefault tapi juga clear cloud.
+ * Factory Reset — Full wipe + re-seed
+ * Menghapus SEMUA data (lokal + cloud) termasuk menu, inventory, settings.
+ * TETAPI: Re-seed akun default (manager, kasir, acaraki) + settings ke cloud
+ * agar admin masih bisa login setelah reset.
  */
-export function factoryReset() {
+export async function factoryReset() {
+  // Clear cloud, then re-seed essential data
+  if (isSupabaseConfigured) {
+    await clearAllCloudData();
+    await reseedCloudData();
+  }
+
   // Clear all localStorage
   const keysToRemove = [
     'rempah-auth',
@@ -89,15 +109,13 @@ export function factoryReset() {
   ];
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 
-  // Clear cloud data
-  if (isSupabaseConfigured) {
-    clearAllCloudData();
-  }
-
   window.location.reload();
 }
 
-// Cloud cleanup helpers
+// ============================================================
+// Cloud helpers
+// ============================================================
+
 async function clearCloudOperationalData() {
   try {
     await supabase.from('transactions').delete().neq('id', '');
@@ -121,10 +139,44 @@ async function clearAllCloudData() {
     await supabase.from('promos').delete().neq('id', '');
     await supabase.from('menus').delete().neq('id', '');
     await supabase.from('inventory').delete().neq('id', '');
-    // BUG-M6 fix: Also delete users and settings for true factory reset
     await supabase.from('users').delete().neq('id', '');
     await supabase.from('settings').delete().neq('id', 0);
   } catch (e) {
     console.warn('Cloud factory reset failed:', e);
+  }
+}
+
+/**
+ * Re-seed essential data to cloud after a full wipe.
+ * This ensures:
+ * - Admin accounts exist so users can still login
+ * - Default settings exist (store name, PIN, etc.)
+ * - Seed menus & inventory are available
+ * 
+ * On next boot, fullSync=true will see this data in cloud and keep it.
+ */
+async function reseedCloudData() {
+  try {
+    // 1. Re-seed users (most critical — admin must be able to login)
+    for (const user of seedUsers) {
+      await syncUser(user);
+    }
+
+    // 2. Re-seed settings
+    await syncSettings(seedSettings);
+
+    // 3. Re-seed menus
+    for (const menu of seedMenus) {
+      await syncMenu(menu);
+    }
+
+    // 4. Re-seed inventory
+    for (const item of seedInventory) {
+      await syncInventoryItem(item);
+    }
+
+    console.log('[DataManager] Cloud re-seeded with default data');
+  } catch (e) {
+    console.warn('[DataManager] Cloud re-seed failed:', e);
   }
 }
