@@ -43,6 +43,30 @@ function saveQueue(queue: QueueOperation[]) {
 
 export function addToQueue(op: Omit<QueueOperation, 'id' | 'timestamp' | 'retries'>) {
   const queue = getQueue();
+  
+  // BUG-M8 fix: Deduplicate — for upsert/update, replace existing pending op for same table+record
+  const recordId = op.data?.id || op.filter?.value;
+  if (recordId && (op.action === 'upsert' || op.action === 'update')) {
+    const existingIdx = queue.findIndex(
+      (q) => q.table === op.table && 
+             (q.action === 'upsert' || q.action === 'update') &&
+             (q.data?.id === recordId || q.filter?.value === recordId)
+    );
+    if (existingIdx !== -1) {
+      // Replace the stale operation with the latest data
+      queue[existingIdx] = {
+        ...queue[existingIdx],
+        data: op.action === 'update' ? { ...queue[existingIdx].data, ...op.data } : op.data,
+        filter: op.filter || queue[existingIdx].filter,
+        timestamp: new Date().toISOString(),
+        retries: 0,
+      };
+      saveQueue(queue);
+      updateQueueCount();
+      return;
+    }
+  }
+
   queue.push({
     ...op,
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import bcrypt from 'bcryptjs';
 import type { AppSettings } from '../types';
 import { seedSettings } from '../utils/seed';
 import { syncSettings, fetchSettingsFromCloud } from '../lib/cloudSync';
@@ -12,21 +13,49 @@ interface SettingsState {
   loadFromCloud: () => Promise<void>;
 }
 
+// Helper: check if a string is already a bcrypt hash
+function isBcryptHash(str: string): boolean {
+  return str.startsWith('$2a$') || str.startsWith('$2b$');
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       settings: seedSettings,
 
       updateSettings: (data) => {
-        set((s) => ({ settings: { ...s.settings, ...data } }));
-        const updated = { ...get().settings, ...data };
+        // BUG-M4 fix: Hash PINs before storing
+        const processed = { ...data };
+        if (processed.managerPin && !isBcryptHash(processed.managerPin)) {
+          processed.managerPin = bcrypt.hashSync(processed.managerPin, 8);
+        }
+        if (processed.superAdminPin && !isBcryptHash(processed.superAdminPin)) {
+          processed.superAdminPin = bcrypt.hashSync(processed.superAdminPin, 8);
+        }
+        set((s) => ({ settings: { ...s.settings, ...processed } }));
+        const updated = { ...get().settings, ...processed };
         syncSettings(updated);
         // Update favicon & title if logo/name changed
         if (data.storeLogo !== undefined) updateFavicon(data.storeLogo);
         if (data.storeName !== undefined) updatePageTitle(data.storeName);
       },
 
-      verifyPin: (pin) => get().settings.managerPin === pin,
+      // BUG-M4 fix: Compare PIN with bcrypt (supports both hashed and legacy plaintext)
+      verifyPin: (pin) => {
+        const stored = get().settings.managerPin;
+        if (isBcryptHash(stored)) {
+          return bcrypt.compareSync(pin, stored);
+        }
+        // Legacy plaintext comparison (auto-migrate)
+        if (stored === pin) {
+          // Migrate plaintext PIN to hash
+          const hashed = bcrypt.hashSync(pin, 8);
+          set((s) => ({ settings: { ...s.settings, managerPin: hashed } }));
+          syncSettings({ ...get().settings, managerPin: hashed });
+          return true;
+        }
+        return false;
+      },
 
       loadFromCloud: async () => {
         const cloudSettings = await fetchSettingsFromCloud();

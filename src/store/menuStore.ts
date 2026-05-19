@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Menu } from '../types';
 import { seedMenus } from '../utils/seed';
-import { syncMenu, deleteMenuCloud, fetchMenusFromCloud } from '../lib/cloudSync';
+import { syncMenu, deleteMenuCloud, fetchMenusFromCloud, syncCustomCategories, fetchCustomCategoriesFromCloud } from '../lib/cloudSync';
 
 interface MenuState {
   menus: Menu[];
@@ -14,7 +14,7 @@ interface MenuState {
   getCategories: () => string[];
   addCategory: (cat: string) => void;
   deleteCategory: (cat: string) => void;
-  loadFromCloud: () => Promise<void>;
+  loadFromCloud: (fullSync?: boolean) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>()(
@@ -49,27 +49,44 @@ export const useMenuStore = create<MenuState>()(
         return Array.from(new Set([...fromCustom, ...fromMenus]));
       },
 
-      addCategory: (cat) =>
-        set((s) => ({
-          customCategories: s.customCategories.includes(cat)
+      addCategory: (cat) => {
+        set((s) => {
+          const updated = s.customCategories.includes(cat)
             ? s.customCategories
-            : [...s.customCategories, cat],
-        })),
+            : [...s.customCategories, cat];
+          syncCustomCategories(updated); // GAP-1 fix: sync to cloud
+          return { customCategories: updated };
+        });
+      },
 
-      deleteCategory: (cat) =>
-        set((s) => ({
-          customCategories: s.customCategories.filter((c) => c !== cat),
-        })),
+      deleteCategory: (cat) => {
+        set((s) => {
+          const updated = s.customCategories.filter((c) => c !== cat);
+          syncCustomCategories(updated); // GAP-1 fix: sync to cloud
+          return { customCategories: updated };
+        });
+      },
 
-      loadFromCloud: async () => {
+      loadFromCloud: async (fullSync = false) => {
+        // Load menus
         const cloudMenus = await fetchMenusFromCloud();
         if (cloudMenus && cloudMenus.length > 0) {
           set((s) => {
             const cloudIds = new Set(cloudMenus.map((m) => m.id));
-            // Keep local menus not yet in cloud
-            const localOnly = s.menus.filter((m) => !cloudIds.has(m.id));
+            let localOnly: Menu[];
+            if (fullSync) {
+              localOnly = []; // In fullSync, trust cloud completely for menus
+            } else {
+              localOnly = s.menus.filter((m) => !cloudIds.has(m.id));
+            }
             return { menus: [...cloudMenus, ...localOnly] };
           });
+        }
+
+        // GAP-1 fix: Load custom categories from cloud
+        const cloudCategories = await fetchCustomCategoriesFromCloud();
+        if (cloudCategories && cloudCategories.length > 0) {
+          set({ customCategories: cloudCategories });
         }
       },
     }),

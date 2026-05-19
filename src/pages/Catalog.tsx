@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
 import { useMenuStore } from '../store/menuStore';
 import { useInventoryStore } from '../store/inventoryStore';
 import { useAuthStore } from '../store/authStore';
 import { useAuditLogStore } from '../store/auditLogStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
 import { calculateMenuHPP } from '../utils/hpp';
 import type { Menu, AddOn } from '../types';
@@ -23,10 +24,22 @@ import {
 } from 'lucide-react';
 
 export default function Catalog() {
-  const { menus, addMenu, updateMenu, deleteMenu, importMenus, getCategories, customCategories, addCategory, deleteCategory } = useMenuStore();
+  const { menus, addMenu, updateMenu, deleteMenu, importMenus, getCategories, customCategories, addCategory, deleteCategory, loadFromCloud } = useMenuStore();
   const { items: inventory } = useInventoryStore();
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
+
+  // Real-time sync for menus
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const channel = supabase
+      .channel('menus-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menus' }, () => {
+        loadFromCloud(true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('Semua');

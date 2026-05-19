@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { syncStockLog, fetchStockLogsFromCloud } from '../lib/cloudSync';
 
 export type StockLogType = 'deduct' | 'add' | 'adjust' | 'import';
 
@@ -21,6 +22,7 @@ interface StockLogState {
   addLog: (entry: StockLogEntry) => void;
   getLogsByItem: (inventoryId: string) => StockLogEntry[];
   clearOldLogs: (daysToKeep?: number) => void;
+  loadFromCloud: () => Promise<void>;
 }
 
 export const useStockLogStore = create<StockLogState>()(
@@ -28,8 +30,11 @@ export const useStockLogStore = create<StockLogState>()(
     (set, get) => ({
       logs: [],
 
-      addLog: (entry) =>
-        set((s) => ({ logs: [entry, ...s.logs].slice(0, 5000) })), // Keep max 5000 entries
+      addLog: (entry) => {
+        set((s) => ({ logs: [entry, ...s.logs].slice(0, 5000) })); // Keep max 5000 entries
+        // BUG-C4 fix: Sync stock logs to cloud
+        syncStockLog(entry);
+      },
 
       getLogsByItem: (inventoryId) =>
         get().logs.filter((l) => l.inventoryId === inventoryId),
@@ -38,6 +43,20 @@ export const useStockLogStore = create<StockLogState>()(
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - daysToKeep);
         set((s) => ({ logs: s.logs.filter((l) => new Date(l.date) >= cutoff) }));
+      },
+
+      // BUG-C4 fix: Load stock logs from cloud for multi-device visibility
+      loadFromCloud: async () => {
+        const cloudLogs = await fetchStockLogsFromCloud();
+        if (cloudLogs && cloudLogs.length > 0) {
+          set((s) => {
+            const cloudIds = new Set(cloudLogs.map((l) => l.id));
+            const localOnly = s.logs.filter((l) => !cloudIds.has(l.id));
+            const merged = [...cloudLogs, ...localOnly];
+            merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            return { logs: merged.slice(0, 5000) };
+          });
+        }
       },
     }),
     { name: 'rempah-stock-logs' }

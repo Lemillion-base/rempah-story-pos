@@ -121,6 +121,9 @@ async function clearAllCloudData() {
     await supabase.from('promos').delete().neq('id', '');
     await supabase.from('menus').delete().neq('id', '');
     await supabase.from('inventory').delete().neq('id', '');
+    // BUG-M6 fix: Also delete users and settings for true factory reset
+    await supabase.from('users').delete().neq('id', '');
+    await supabase.from('settings').delete().neq('id', 0);
   } catch (e) {
     console.warn('Cloud factory reset failed:', e);
   }

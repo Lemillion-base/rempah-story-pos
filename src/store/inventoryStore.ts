@@ -13,7 +13,7 @@ interface InventoryState {
   deleteItem: (id: string) => void;
   deductStock: (deductions: Record<string, number>, reason?: string) => void;
   getLowStockItems: () => InventoryItem[];
-  loadFromCloud: () => Promise<void>;
+  loadFromCloud: (fullSync?: boolean) => Promise<void>;
 }
 
 export const useInventoryStore = create<InventoryState>()(
@@ -92,13 +92,18 @@ export const useInventoryStore = create<InventoryState>()(
         return get().items.filter((i) => i.stock < (i.minStock ?? 3));
       },
 
-      loadFromCloud: async () => {
+      loadFromCloud: async (fullSync = false) => {
         const cloudItems = await fetchInventoryFromCloud();
         if (cloudItems && cloudItems.length > 0) {
           set((s) => {
             const cloudIds = new Set(cloudItems.map((i) => i.id));
-            // Keep local items not yet in cloud
-            const localOnly = s.items.filter((i) => !cloudIds.has(i.id));
+            let localOnly: InventoryItem[];
+            if (fullSync) {
+              // Real-time: cloud is authoritative
+              localOnly = []; // Trust cloud completely for inventory
+            } else {
+              localOnly = s.items.filter((i) => !cloudIds.has(i.id));
+            }
             return { items: [...cloudItems, ...localOnly] };
           });
         }

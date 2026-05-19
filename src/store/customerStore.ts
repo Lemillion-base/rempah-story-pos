@@ -9,7 +9,7 @@ interface CustomerState {
   updateCustomer: (id: string, data: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   recordVisit: (id: string, amount: number) => void;
-  loadFromCloud: () => Promise<void>;
+  loadFromCloud: (fullSync?: boolean) => Promise<void>;
 }
 
 export const useCustomerStore = create<CustomerState>()(
@@ -54,14 +54,30 @@ export const useCustomerStore = create<CustomerState>()(
         if (updated) syncCustomer(updated);
       },
 
-      loadFromCloud: async () => {
+      loadFromCloud: async (fullSync = false) => {
         const cloudData = await fetchCustomersFromCloud();
         if (cloudData && cloudData.length > 0) {
           set((s) => {
             const cloudIds = new Set(cloudData.map((c) => c.id));
-            // Keep local customers not yet in cloud
-            const localOnly = s.customers.filter((c) => !cloudIds.has(c.id));
+            let localOnly: Customer[];
+            if (fullSync) {
+              // Real-time triggered: cloud is authoritative, drop deleted items
+              const gracePeriod = 30 * 1000;
+              const cutoff = Date.now() - gracePeriod;
+              localOnly = s.customers.filter(
+                (c) => !cloudIds.has(c.id) && new Date(c.createdAt).getTime() > cutoff
+              );
+            } else {
+              localOnly = s.customers.filter((c) => !cloudIds.has(c.id));
+            }
             return { customers: [...cloudData, ...localOnly] };
+          });
+        } else if (fullSync && cloudData && cloudData.length === 0) {
+          // Cloud has zero customers — if fullSync, respect that (all deleted)
+          set((s) => {
+            const gracePeriod = 30 * 1000;
+            const cutoff = Date.now() - gracePeriod;
+            return { customers: s.customers.filter((c) => new Date(c.createdAt).getTime() > cutoff) };
           });
         }
       },

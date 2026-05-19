@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTransactionStore } from '../store/transactionStore';
 import { useAuthStore } from '../store/authStore';
 import { useAuditLogStore } from '../store/auditLogStore';
+import { subscribeToTransactions, unsubscribeChannel, fetchTransactionsFromCloud } from '../lib/cloudSync';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah, formatDate } from '../utils/format';
 import type { TxStatus } from '../types';
 import PinModal from '../components/PinModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import {
   ChevronDown,
   ChevronUp,
@@ -15,11 +18,27 @@ import {
 } from 'lucide-react';
 
 export default function Transactions() {
-  const { transactions, updateTxStatus, deleteTransaction } = useTransactionStore();
+  const { transactions, updateTxStatus, deleteTransaction, loadFromCloud } = useTransactionStore();
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pinAction, setPinAction] = useState<{ type: 'status' | 'delete'; id: string; status?: TxStatus } | null>(null);
+  // FEAT-5: Confirmation dialog state for Manager actions
+  const [confirmAction, setConfirmAction] = useState<{ type: 'status' | 'delete'; id: string; status?: TxStatus; queueNumber?: number } | null>(null);
+
+  // Real-time sync: subscribe to transaction changes from other devices
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    // Subscribe to real-time changes (INSERT, UPDATE, DELETE from any device)
+    const channel = subscribeToTransactions(() => {
+      fetchTransactionsFromCloud().then((cloudTx) => {
+        if (cloudTx) loadFromCloud(cloudTx, true); // fullSync: cloud is authoritative
+      });
+    });
+
+    return () => { if (channel) unsubscribeChannel(channel); };
+  }, []);
 
   const todayTx = transactions.filter((t) => {
     const d = new Date(t.date);
@@ -31,26 +50,39 @@ export default function Transactions() {
     );
   });
 
-  const handleStatusChange = (id: string, status: TxStatus) => {
+  const handleStatusChange = (id: string, status: TxStatus, queueNumber?: number) => {
     if (currentUser?.role === 'Manager') {
-      updateTxStatus(id, status);
-      if (currentUser) {
-        addLog(currentUser.id, currentUser.name, currentUser.role, 'void_transaction', `Ubah status transaksi ${id} menjadi ${status}`, { transactionId: id, newStatus: status });
-      }
+      // FEAT-5: Show confirmation dialog instead of instant execution
+      setConfirmAction({ type: 'status', id, status, queueNumber });
     } else {
       setPinAction({ type: 'status', id, status });
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string, queueNumber?: number) => {
     if (currentUser?.role === 'Manager') {
-      deleteTransaction(id);
-      if (currentUser) {
-        addLog(currentUser.id, currentUser.name, currentUser.role, 'delete_transaction', `Hapus transaksi ${id}`, { transactionId: id });
-      }
+      // FEAT-5: Show confirmation dialog instead of instant execution
+      setConfirmAction({ type: 'delete', id, queueNumber });
     } else {
       setPinAction({ type: 'delete', id });
     }
+  };
+
+  // FEAT-5: Execute after Manager confirms
+  const onConfirmAction = () => {
+    if (!confirmAction) return;
+    if (confirmAction.type === 'status' && confirmAction.status) {
+      updateTxStatus(confirmAction.id, confirmAction.status);
+      if (currentUser) {
+        addLog(currentUser.id, currentUser.name, currentUser.role, 'void_transaction', `Ubah status transaksi #${confirmAction.queueNumber || '?'} menjadi ${confirmAction.status}`, { transactionId: confirmAction.id, newStatus: confirmAction.status });
+      }
+    } else if (confirmAction.type === 'delete') {
+      deleteTransaction(confirmAction.id);
+      if (currentUser) {
+        addLog(currentUser.id, currentUser.name, currentUser.role, 'delete_transaction', `Hapus transaksi #${confirmAction.queueNumber || '?'}`, { transactionId: confirmAction.id });
+      }
+    }
+    setConfirmAction(null);
   };
 
   const onPinSuccess = () => {
@@ -78,6 +110,16 @@ export default function Transactions() {
       case 'Demo':
         return <span className="badge bg-purple-100 text-purple-700"><FlaskConical size={12} /> Demo</span>;
     }
+  };
+
+  // FEAT-5: Build confirmation message
+  const getConfirmMessage = () => {
+    if (!confirmAction) return '';
+    if (confirmAction.type === 'delete') {
+      return `Hapus transaksi #${confirmAction.queueNumber || '?'} secara permanen? Data tidak bisa dikembalikan.`;
+    }
+    const statusLabel = confirmAction.status === 'Cancel' ? 'CANCEL (void)' : confirmAction.status;
+    return `Ubah status transaksi #${confirmAction.queueNumber || '?'} menjadi "${statusLabel}"?`;
   };
 
   return (
@@ -145,7 +187,7 @@ export default function Transactions() {
                   <div className="flex gap-2 pt-2 border-t border-slate-100">
                     {tx.txStatus !== 'Selesai' && (
                       <button
-                        onClick={() => handleStatusChange(tx.id, 'Selesai')}
+                        onClick={() => handleStatusChange(tx.id, 'Selesai', tx.queueNumber)}
                         className="btn-secondary text-xs"
                       >
                         <CheckCircle2 size={14} /> Selesai
@@ -153,7 +195,7 @@ export default function Transactions() {
                     )}
                     {tx.txStatus !== 'Cancel' && (
                       <button
-                        onClick={() => handleStatusChange(tx.id, 'Cancel')}
+                        onClick={() => handleStatusChange(tx.id, 'Cancel', tx.queueNumber)}
                         className="btn-secondary text-xs text-red-600"
                       >
                         <Ban size={14} /> Cancel
@@ -161,14 +203,14 @@ export default function Transactions() {
                     )}
                     {tx.txStatus !== 'Demo' && (
                       <button
-                        onClick={() => handleStatusChange(tx.id, 'Demo')}
+                        onClick={() => handleStatusChange(tx.id, 'Demo', tx.queueNumber)}
                         className="btn-secondary text-xs text-purple-600"
                       >
                         <FlaskConical size={14} /> Demo
                       </button>
                     )}
                     <button
-                      onClick={() => handleDelete(tx.id)}
+                      onClick={() => handleDelete(tx.id, tx.queueNumber)}
                       className="btn-secondary text-xs text-red-600 ml-auto"
                     >
                       <Trash2 size={14} /> Hapus
@@ -181,10 +223,22 @@ export default function Transactions() {
         </div>
       )}
 
+      {/* PIN Modal for Kasir */}
       <PinModal
         open={!!pinAction}
         onClose={() => setPinAction(null)}
         onSuccess={onPinSuccess}
+      />
+
+      {/* FEAT-5: Confirmation Dialog for Manager */}
+      <ConfirmDialog
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={onConfirmAction}
+        title={confirmAction?.type === 'delete' ? '⚠️ Hapus Transaksi' : 'Ubah Status Transaksi'}
+        message={getConfirmMessage()}
+        confirmText={confirmAction?.type === 'delete' ? 'Ya, Hapus' : 'Ya, Ubah Status'}
+        variant={confirmAction?.type === 'delete' || confirmAction?.status === 'Cancel' ? 'danger' : 'warning'}
       />
     </div>
   );

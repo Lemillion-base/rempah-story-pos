@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Promo, LoyaltySettings } from '../types';
-import { syncPromo, deletePromoCloud, fetchPromosFromCloud } from '../lib/cloudSync';
+import { syncPromo, deletePromoCloud, fetchPromosFromCloud, syncLoyaltySettings, fetchLoyaltySettingsFromCloud } from '../lib/cloudSync';
 
 interface PromoState {
   promos: Promo[];
@@ -15,7 +15,7 @@ interface PromoState {
   updateLoyaltySettings: (data: Partial<LoyaltySettings>) => void;
   getCustomerTier: (visitCount: number) => 'none' | 'bronze' | 'silver' | 'gold';
   getCustomerDiscount: (visitCount: number) => number;
-  loadFromCloud: () => Promise<void>;
+  loadFromCloud: (fullSync?: boolean) => Promise<void>;
 }
 
 export const usePromoStore = create<PromoState>()(
@@ -86,8 +86,12 @@ export const usePromoStore = create<PromoState>()(
         );
       },
 
-      updateLoyaltySettings: (data) =>
-        set((s) => ({ loyaltySettings: { ...s.loyaltySettings, ...data } })),
+      // BUG-M5 fix: Sync loyalty settings to cloud when updated
+      updateLoyaltySettings: (data) => {
+        set((s) => ({ loyaltySettings: { ...s.loyaltySettings, ...data } }));
+        const updated = { ...get().loyaltySettings, ...data };
+        syncLoyaltySettings(updated);
+      },
 
       getCustomerTier: (visitCount) => {
         const ls = get().loyaltySettings;
@@ -110,14 +114,24 @@ export const usePromoStore = create<PromoState>()(
         }
       },
 
-      loadFromCloud: async () => {
+      loadFromCloud: async (fullSync = false) => {
         const cloudPromos = await fetchPromosFromCloud();
         if (cloudPromos && cloudPromos.length > 0) {
           set((s) => {
             const cloudIds = new Set(cloudPromos.map((p) => p.id));
-            const localOnly = s.promos.filter((p) => !cloudIds.has(p.id));
+            let localOnly: Promo[];
+            if (fullSync) {
+              localOnly = []; // Trust cloud completely for promos
+            } else {
+              localOnly = s.promos.filter((p) => !cloudIds.has(p.id));
+            }
             return { promos: [...cloudPromos, ...localOnly] };
           });
+        }
+        // BUG-M5 fix: Load loyalty settings from cloud
+        const cloudLoyalty = await fetchLoyaltySettingsFromCloud();
+        if (cloudLoyalty) {
+          set({ loyaltySettings: cloudLoyalty });
         }
       },
     }),

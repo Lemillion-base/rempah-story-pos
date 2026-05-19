@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
 import { usePromoStore } from '../store/promoStore';
 import { useMenuStore } from '../store/menuStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
 import type { Promo, PromoType, PromoScope } from '../types';
 import Modal from '../components/Modal';
@@ -19,8 +20,20 @@ import {
 } from 'lucide-react';
 
 export default function Promos() {
-  const { promos, addPromo, updatePromo, deletePromo, loyaltySettings, updateLoyaltySettings } = usePromoStore();
+  const { promos, addPromo, updatePromo, deletePromo, loyaltySettings, updateLoyaltySettings, loadFromCloud } = usePromoStore();
   const { getCategories } = useMenuStore();
+
+  // Real-time sync for promos
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const channel = supabase
+      .channel('promos-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'promos' }, () => {
+        loadFromCloud(true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const [activeSection, setActiveSection] = useState<'promos' | 'loyalty'>('promos');
   const [showForm, setShowForm] = useState(false);
