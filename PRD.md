@@ -1,9 +1,9 @@
 # Product Requirements Document (PRD)
 
 ## Project Name: POS Rempah Story
-## Product Version: 2.5 (Production)
+## Product Version: 3.0 (Production)
 ## Document Status: Production Ready
-## Last Updated: 18 Mei 2026
+## Last Updated: 19 Mei 2026
 ## Production URL: Deployed on Vercel
 ## Repository: https://github.com/Lemillion-base/rempah-story-pos
 
@@ -129,6 +129,8 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Menu Availability Filter**: Menu dengan `isAvailable: false` otomatis tersembunyi dari grid POS.
 - **Keyboard Shortcuts**: F1 = Bayar, Escape = Tutup modal.
 - **Toast Notifications**: Feedback visual saat tambah ke cart dan transaksi berhasil.
+- **Clear Cart (FEAT-4)**: Tombol kosongkan keranjang di header cart (muncul jika item ≥ 2) dengan konfirmasi. Tersedia di mobile dan desktop.
+- **Real-time Sync (GAP-3 fix)**: POS subscribe ke tabel menus, inventory, customers, dan settings. Perubahan dari device lain (Manager) langsung ter-reflect tanpa reload.
 
 ### 3.4. Modul KDS / Acaraki (Dapur)
 - **Kanban Board 3 kolom**:
@@ -143,6 +145,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   - Banner global di atas: "X pesanan menunggu > 5 menit!"
 - **Sound Alert**: Bunyi alarm custom (`/sounds/kds-alarm.wav`) otomatis saat pesanan baru masuk ke Waiting. File audio bisa diganti sesuai keinginan.
 - **Reset KDS**: Setelah Acaraki print & logout, kolom "Done" di-reset (pesanan lama tidak tampil lagi)
+- **Filter Hari Ini**: KDS hanya menampilkan transaksi hari ini. Transaksi dari hari sebelumnya tidak muncul.
 - **Logout Acaraki**: Modal ringkasan pesanan selesai hari ini + opsi Print / Lewati
 
 ### 3.5. Modul Riwayat Transaksi
@@ -151,6 +154,8 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Ubah Status / Void**: Selesai, Cancel, Demo
 - **Hapus Permanen**
 - **Keamanan**: Non-manager wajib input PIN Manager (modal custom, bukan browser prompt)
+- **Konfirmasi Void (FEAT-5)**: Manager mendapat ConfirmDialog sebelum void/cancel/delete transaksi (warna merah untuk delete/cancel, kuning untuk ubah status lain)
+- **Real-time Sync**: Transaksi yang dihapus/diubah di device lain langsung ter-reflect
 
 ### 3.6. Modul Dashboard (Manager)
 - **Stats Cards**: Pendapatan hari ini, jumlah transaksi, menu terlaris, laba kotor
@@ -287,6 +292,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Password hashing**: bcryptjs (10 salt rounds). Auto-migrasi dari plain text saat pertama load.
 - **Audit log**: Semua aksi user tercatat (login, CRUD, transaksi, shift)
 - **Konfirmasi dialog**: Semua aksi destruktif (hapus) memerlukan konfirmasi
+- **Void confirmation**: Manager mendapat ConfirmDialog sebelum void/cancel transaksi
 - **Username uniqueness**: Validasi duplikat saat tambah/edit user
 
 ### 4.3. Performa
@@ -309,7 +315,18 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Auto-retry**: Saat internet kembali, antrian otomatis di-flush ke Supabase
 - **Max 5 retries**: Operasi yang gagal 5x dihapus dari antrian
 - **Flush on app start**: Pending items dari sesi sebelumnya langsung di-retry
-- **Real-time sync**: Supabase real-time subscriptions untuk KDS multi-device
+- **Real-time sync**: Supabase real-time subscriptions di SEMUA halaman
+  - POS: menus, inventory, customers, settings
+  - Kitchen: transactions
+  - Transactions: transactions
+  - Customers: customers
+  - Catalog: menus
+  - Inventory: inventory
+  - Promos: promos
+  - Settings: users
+- **fullSync pattern**: Saat real-time event, `loadFromCloud(true)` menjadikan cloud sebagai sumber kebenaran. Item yang dihapus di cloud dihapus dari lokal (grace period 30 detik)
+- **Cloud sync coverage**: 13 data types, 10 stores, 6 stores dengan fullSync, 100% halaman dengan real-time
+- **Custom Categories Sync**: Disimpan di settings table (id=3) sebagai JSON, sync antar device
 
 ### 4.4. Print & Thermal Printer
 - **Browser Print**: `window.open` + CSS `@page` optimized untuk thermal paper (58mm/80mm)
@@ -332,7 +349,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   id: string (UUID)
   name: string
   username: string (unique)
-  password: string (plain text — future: hash)
+  password: string (bcrypt hashed — auto-migrasi dari plain text)
   role: 'Manager' | 'Kasir' | 'Acaraki'
   createdAt: string (ISO)
 }
@@ -653,6 +670,11 @@ Fitur berikut sudah disiapkan arsitekturnya untuk fase pengembangan selanjutnya:
 - ~~PWA~~ ✅ (Installable, offline-capable)
 - ~~Loyalty Program~~ ✅ (Tier system + auto-discount)
 - ~~Audit Log~~ ✅ (All user actions tracked)
+- ~~Cloud Sync 100%~~ ✅ (Real-time subscriptions di semua halaman, fullSync, delete propagation)
+- ~~Void Confirmation~~ ✅ (ConfirmDialog untuk Manager)
+- ~~Clear Cart~~ ✅ (1-klik kosongkan keranjang)
+- ~~KDS Today Filter~~ ✅ (Hanya transaksi hari ini)
+- ~~Custom Categories Sync~~ ✅ (Cloud sync via settings table)
 
 ---
 
@@ -756,4 +778,4 @@ git push origin main
 
 ---
 
-*Document ini mencakup seluruh fitur yang sudah diimplementasi pada aplikasi POS Rempah Story v2.0. Gunakan sebagai referensi lengkap untuk pengembangan lebih lanjut.*
+*Document ini mencakup seluruh fitur yang sudah diimplementasi pada aplikasi POS Rempah Story v3.0. Gunakan sebagai referensi lengkap untuk pengembangan lebih lanjut.*

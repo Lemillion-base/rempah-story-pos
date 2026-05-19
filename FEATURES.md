@@ -17,6 +17,7 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 - Filter kategori + pencarian cepat
 - Kustomisasi pesanan: suhu (hangat/dingin), level gula, add-ons
 - Keranjang belanja dengan quantity controls
+- **Kosongkan keranjang 1-klik** (muncul jika item ≥ 2, dengan konfirmasi)
 - Diskon manual (nominal Rupiah)
 - Input kode voucher atau pilih promo aktif
 - Pilih pelanggan dari daftar CRM (dropdown)
@@ -27,6 +28,7 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 - Validasi stok sebelum checkout (warning jika bahan kurang)
 - Keyboard shortcut: F1 = Bayar, Esc = Batal
 - Mobile: keranjang minimize/maximize (floating bar)
+- **Real-time sync**: perubahan menu/inventory/customer/settings dari device lain langsung ter-reflect
 
 ### 2. 🍳 Kitchen Display System (KDS)
 - Kanban board 3 kolom: Menunggu → Proses → Selesai
@@ -36,6 +38,7 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 - Tombol 1-klik untuk pindah status
 - Sound alarm custom (file .wav bisa diganti)
 - Real-time sync: pesanan dari kasir langsung muncul di KDS (multi-device)
+- **Hanya menampilkan transaksi hari ini** (transaksi lama tidak tampil)
 - Reset tampilan saat Acaraki logout + print ringkasan
 
 ### 3. 💰 Manajemen Shift & Kas
@@ -114,6 +117,7 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 - Konfirmasi dialog untuk semua aksi destruktif
 - Validasi username unik
 - **Audit Log**: semua aksi user tercatat (login, CRUD, transaksi, shift)
+- **Konfirmasi void/cancel**: Manager mendapat dialog konfirmasi sebelum void/cancel transaksi
 - Export audit log ke CSV
 
 ### 12. ⚙️ Settings & Konfigurasi
@@ -153,9 +157,10 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 | Aspek | Implementasi |
 |-------|-------------|
 | **Local-first** | Data di localStorage, instant response, no loading |
-| **Cloud sync** | Background sync ke Supabase (PostgreSQL) |
+| **Cloud sync** | Background sync ke Supabase (PostgreSQL) — 100% coverage |
 | **Offline queue** | Operasi gagal di-queue, auto-retry saat online |
-| **Real-time** | Supabase subscriptions untuk KDS multi-device |
+| **Real-time** | Supabase subscriptions di SEMUA halaman (POS, KDS, Transaksi, Katalog, Inventaris, Promo, CRM, Settings) |
+| **fullSync** | Delete propagation antar device — cloud = sumber kebenaran |
 | **Code-splitting** | React.lazy() per halaman, fast initial load |
 | **Error boundary** | Crash tidak white-screen, ada recovery UI |
 | **Type-safe** | Full TypeScript, 0 compile errors |
@@ -220,4 +225,4 @@ Cocok untuk:
 
 ---
 
-*Dokumen ini menggambarkan fitur aplikasi POS Rempah Story v2.4 yang sudah live di production.*
+*Dokumen ini menggambarkan fitur aplikasi POS Rempah Story v3.0 yang sudah live di production.*
