@@ -59,8 +59,8 @@ export default function SettingsPage() {
   const [userPassword, setUserPassword] = useState('');
   const [userRole, setUserRole] = useState<Role>('Kasir');
 
-  // PIN
-  const [pin, setPin] = useState(settings.managerPin);
+  // PIN — BUG-NEW-02 fix: always start empty to avoid showing bcrypt hash
+  const [pin, setPin] = useState('');
 
   // Data management confirm dialogs
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -228,18 +228,27 @@ export default function SettingsPage() {
         </h2>
         <div className="flex gap-3 items-end">
           <div className="flex-1 max-w-xs">
-            <label className="label">Kombinasi PIN (4-6 digit)</label>
+            <label className="label">PIN Baru (4-6 digit)</label>
             <input
               type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               className="input font-mono text-center tracking-widest"
               maxLength={6}
+              placeholder="Masukkan PIN baru"
             />
+            <p className="text-xs text-slate-400 mt-1">PIN saat ini tersimpan aman (terenkripsi). Masukkan PIN baru untuk mengubah.</p>
           </div>
           <button
-            onClick={() => updateSettings({ managerPin: pin })}
+            onClick={() => {
+              if (pin.length >= 4) {
+                updateSettings({ managerPin: pin });
+                setPin('');
+                alert('PIN Manager berhasil diubah!');
+              }
+            }}
             className="btn-primary"
+            disabled={pin.length < 4}
           >
             <Save size={16} /> Simpan PIN
           </button>

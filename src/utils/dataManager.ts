@@ -10,6 +10,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { syncUser, syncSettings, syncMenu, syncInventoryItem } from '../lib/cloudSync';
 import { seedUsers, seedMenus, seedInventory, seedSettings } from './seed';
+import bcrypt from 'bcryptjs';
 
 /**
  * Reset ke Default (Demo Mode)
@@ -158,8 +159,13 @@ async function clearAllCloudData() {
 async function reseedCloudData() {
   try {
     // 1. Re-seed users (most critical — admin must be able to login)
+    // BUG-NEW-03 fix: Hash passwords before sending to cloud
     for (const user of seedUsers) {
-      await syncUser(user);
+      const hashedUser = {
+        ...user,
+        password: bcrypt.hashSync(user.password, 8),
+      };
+      await syncUser(hashedUser);
     }
 
     // 2. Re-seed settings

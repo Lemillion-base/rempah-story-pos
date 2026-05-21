@@ -5,6 +5,7 @@ import type { User, Role } from '../types';
 import { seedUsers } from '../utils/seed';
 import { useAuditLogStore } from './auditLogStore';
 import { syncUser, deleteUserCloud, fetchUsersFromCloud } from '../lib/cloudSync';
+import { useCartStore } from './cartStore';
 
 interface AuthState {
   users: User[];
@@ -67,11 +68,9 @@ export const useAuthStore = create<AuthState>()(
         if (currentUser) {
           useAuditLogStore.getState().addLog(currentUser.id, currentUser.name, currentUser.role, 'logout', 'User logged out');
         }
-        // BUG-M3 fix: Clear cart on logout to prevent cart leaking between user sessions
-        // Lazy import to avoid potential circular dependency
-        import('./cartStore').then(({ useCartStore }) => {
-          useCartStore.getState().clearCart();
-        }).catch(() => { /* ignore */ });
+        // BUG-NEW-01 fix: Clear cart SYNCHRONOUSLY before nulling user
+        // to prevent next user from seeing previous user's cart
+        useCartStore.getState().clearCart();
         set({ currentUser: null });
       },
 

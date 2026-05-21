@@ -44,7 +44,6 @@ export default function Reports() {
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
-  const [filterYear, setFilterYear] = useState(String(new Date().getFullYear()));
 
   const { transactions } = useTransactionStore();
   const { items: inventory } = useInventoryStore();
@@ -83,7 +82,7 @@ export default function Reports() {
           return true;
       }
     });
-  }, [transactions, dateFilterType, customDateFrom, customDateTo, filterMonth, filterYear]);
+  }, [transactions, dateFilterType, customDateFrom, customDateTo, filterMonth]);
 
   // P&L calculations
   const totalRevenue = filteredTx.reduce((a, t) => a + t.totalAmount, 0);

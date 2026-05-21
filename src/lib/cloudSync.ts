@@ -483,6 +483,8 @@ export async function syncPromo(promo: Promo) {
     usage_limit: promo.usageLimit || null,
     usage_count: promo.usageCount,
     loyalty_min_visits: promo.loyaltyMinVisits || null,
+    // BUG-NEW-07 fix: Include createdAt to prevent null column in cloud
+    created_at: promo.createdAt || new Date().toISOString(),
   });
 }
 

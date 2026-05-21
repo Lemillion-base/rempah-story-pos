@@ -70,7 +70,20 @@ export const useShiftStore = create<ShiftState>()(
             const cloudIds = new Set(cloudShifts.map((sh) => sh.id));
             // Keep local shifts not yet in cloud
             const localOnly = s.shifts.filter((sh) => !cloudIds.has(sh.id));
-            return { shifts: [...cloudShifts, ...localOnly] };
+
+            // BUG-NEW-05 fix: Check if activeShift was closed from another device
+            let updatedActiveShift = s.activeShift;
+            if (updatedActiveShift) {
+              const cloudVersion = cloudShifts.find((sh) => sh.id === updatedActiveShift!.id);
+              if (cloudVersion && cloudVersion.status === 'closed') {
+                updatedActiveShift = null;
+              }
+            }
+
+            return {
+              shifts: [...cloudShifts, ...localOnly],
+              activeShift: updatedActiveShift,
+            };
           });
         }
       },
