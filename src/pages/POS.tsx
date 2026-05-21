@@ -385,7 +385,7 @@ export default function POS() {
                 className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${
                   category === cat
                     ? 'bg-brand-600 text-white'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                 }`}
               >
                 {cat}
@@ -403,22 +403,22 @@ export default function POS() {
                 <button
                   key={menu.id}
                   onClick={() => openCustomize(menu)}
-                  className="card p-4 text-left hover:shadow-md hover:border-brand-200 transition group"
+                  className="card p-4 text-left hover:shadow-md hover:border-brand-200 dark:hover:border-brand-800 transition group animate-fade-in"
                 >
-                  <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-brand-100 to-brand-200 mb-3 flex items-center justify-center overflow-hidden">
+                  <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-brand-100 to-brand-200 dark:from-brand-900/30 dark:to-brand-950/40 mb-3 flex items-center justify-center overflow-hidden">
                     {menu.image ? (
                       <img src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-2xl font-bold text-brand-400">{initials}</span>
+                      <span className="text-2xl font-bold text-brand-400 dark:text-brand-300">{initials}</span>
                     )}
                   </div>
                   {menu.isBestSeller && (
-                    <span className="badge bg-amber-100 text-amber-700 mb-1">⭐ Best Seller</span>
+                    <span className="badge bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 mb-1">⭐ Best Seller</span>
                   )}
-                  <h3 className="font-semibold text-sm leading-tight mb-1 group-hover:text-brand-700 transition">
+                  <h3 className="font-semibold text-sm leading-tight mb-1 text-slate-800 dark:text-slate-200 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition">
                     {menu.name}
                   </h3>
-                  <p className="text-brand-600 font-bold text-sm">{formatRupiah(menu.price)}</p>
+                  <p className="text-brand-600 dark:text-brand-450 font-bold text-sm">{formatRupiah(menu.price)}</p>
                 </button>
               );
             })}
@@ -433,7 +433,7 @@ export default function POS() {
 
       {/* Mobile: Floating Cart Bar (minimized) */}
       {cart.items.length > 0 && !mobileCartOpen && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 p-3 bg-white border-t border-slate-200 shadow-lg">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700/50 shadow-lg">
           <button
             onClick={() => setMobileCartOpen(true)}
             className="w-full flex items-center justify-between bg-brand-600 text-white rounded-xl px-4 py-3"
@@ -454,26 +454,26 @@ export default function POS() {
       {mobileCartOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex flex-col">
           <div className="absolute inset-0 bg-black/30" onClick={() => setMobileCartOpen(false)} />
-          <div className="relative mt-auto bg-white rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl animate-in slide-in-from-bottom duration-200">
+          <div className="relative mt-auto bg-white dark:bg-slate-850 rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl animate-in slide-in-from-bottom duration-200">
             {/* Cart Header */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <ShoppingBag size={20} className="text-brand-600" />
+                <ShoppingBag size={20} className="text-brand-600 dark:text-brand-400" />
                 Keranjang
-                <span className="badge bg-brand-100 text-brand-700">{cart.items.length}</span>
+                <span className="badge bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300">{cart.items.length}</span>
               </h2>
               <div className="flex items-center gap-1">
                 {/* FEAT-4: Clear all cart button */}
                 {cart.items.length >= 2 && (
                   <button
                     onClick={() => { if (window.confirm('Kosongkan semua item di keranjang?')) cart.clearCart(); }}
-                    className="p-2 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition"
+                    className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-650 transition"
                     title="Kosongkan Keranjang"
                   >
                     <Trash2 size={16} />
                   </button>
                 )}
-                <button onClick={() => setMobileCartOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
+                <button onClick={() => setMobileCartOpen(false)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400">
                   <ChevronDown size={20} />
                 </button>
               </div>
@@ -498,16 +498,16 @@ export default function POS() {
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.items.map((item) => (
-                <div key={item.lineId} className="bg-slate-50 rounded-xl p-3">
+                <div key={item.lineId} className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
                   <div className="flex justify-between items-start mb-1">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="font-medium text-sm text-slate-850 dark:text-slate-200 truncate">{item.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {item.temperature} • Gula {item.sugar}
                         {item.addons.length > 0 && ` • +${item.addons.map((a) => a.name).join(', ')}`}
                       </p>
                     </div>
-                    <button onClick={() => cart.removeItem(item.lineId)} className="p-1 text-red-400 hover:text-red-600">
+                    <button onClick={() => cart.removeItem(item.lineId)} className="p-1 text-red-400 hover:text-red-650 transition">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -515,26 +515,26 @@ export default function POS() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { if (item.quantity <= 1) cart.removeItem(item.lineId); else cart.updateQuantity(item.lineId, item.quantity - 1); }}
-                        className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
+                        className="w-7 h-7 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
                       >
                         <Minus size={12} />
                       </button>
-                      <span className="text-sm font-semibold w-5 text-center">{item.quantity}</span>
+                      <span className="text-sm font-semibold w-5 text-center text-slate-800 dark:text-slate-200">{item.quantity}</span>
                       <button
                         onClick={() => cart.updateQuantity(item.lineId, item.quantity + 1)}
-                        className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
+                        className="w-7 h-7 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
                       >
                         <Plus size={12} />
                       </button>
                     </div>
-                    <p className="font-semibold text-sm text-brand-700">{formatRupiah(item.subtotal)}</p>
+                    <p className="font-semibold text-sm text-brand-700 dark:text-brand-400">{formatRupiah(item.subtotal)}</p>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Cart Footer */}
-            <div className="p-4 border-t border-slate-100 space-y-3">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
               {/* Promo/Voucher */}
               <div className="space-y-2">
                 <div className="flex gap-2">
@@ -557,8 +557,8 @@ export default function POS() {
                   </select>
                 )}
                 {appliedPromoId && (
-                  <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg text-xs">
-                    <span className="text-green-700 font-medium">✓ {activePromos.find(p => p.id === appliedPromoId)?.name} (-{formatRupiah(promoDiscount)})</span>
+                  <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 rounded-lg text-xs">
+                    <span className="text-green-700 dark:text-green-400 font-medium">✓ {activePromos.find(p => p.id === appliedPromoId)?.name} (-{formatRupiah(promoDiscount)})</span>
                     <button onClick={clearPromo} className="text-red-500 hover:underline">Hapus</button>
                   </div>
                 )}
@@ -575,13 +575,13 @@ export default function POS() {
               </div>
               {/* BUG-NEW-06 fix: Show loyalty discount in mobile cart */}
               {loyaltyDiscount > 0 && (
-                <div className="p-2 bg-amber-50 rounded-lg text-xs text-amber-700 font-medium">
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg text-xs text-amber-700 dark:text-amber-400 font-medium">
                   👑 Loyalty discount: -{formatRupiah(loyaltyDiscount)}
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg">
+              <div className="flex justify-between font-bold text-lg text-slate-800 dark:text-slate-205">
                 <span>Total</span>
-                <span className="text-brand-700">
+                <span className="text-brand-700 dark:text-brand-400">
                   {formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}
                 </span>
               </div>
@@ -592,23 +592,21 @@ export default function POS() {
           </div>
         </div>
       )}
-
-      {/* Desktop: Cart Sidebar */}
-      <div className="hidden lg:flex w-96 bg-white border-l border-slate-100 flex-col">
-        <div className="p-4 border-b border-slate-100">
+      <div className="hidden lg:flex w-96 bg-white dark:bg-slate-800 border-l border-slate-100 dark:border-slate-700/50 flex-col">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-700/50">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <ShoppingBag size={20} className="text-brand-600" />
+            <h2 className="font-bold text-lg flex items-center gap-2 text-slate-850 dark:text-slate-200">
+              <ShoppingBag size={20} className="text-brand-600 dark:text-brand-400" />
               Keranjang
               {cart.items.length > 0 && (
-                <span className="badge bg-brand-100 text-brand-700">{cart.items.length}</span>
+                <span className="badge bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300">{cart.items.length}</span>
               )}
             </h2>
             {/* FEAT-4: Clear all cart button (desktop) */}
             {cart.items.length >= 2 && (
               <button
                 onClick={() => { if (window.confirm('Kosongkan semua item di keranjang?')) cart.clearCart(); }}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition"
+                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-600 transition"
                 title="Kosongkan Keranjang"
               >
                 <Trash2 size={15} />
@@ -635,24 +633,24 @@ export default function POS() {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {cart.items.length === 0 ? (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-slate-400 dark:text-slate-500">
               <ShoppingBag size={40} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">Keranjang kosong</p>
             </div>
           ) : (
             cart.items.map((item) => (
-              <div key={item.lineId} className="bg-slate-50 rounded-xl p-3">
+              <div key={item.lineId} className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
                 <div className="flex justify-between items-start mb-1">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{item.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-medium text-sm text-slate-800 dark:text-slate-200 truncate">{item.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {item.temperature} • Gula {item.sugar}
                       {item.addons.length > 0 && ` • +${item.addons.map((a) => a.name).join(', ')}`}
                     </p>
                   </div>
                   <button
                     onClick={() => cart.removeItem(item.lineId)}
-                    className="p-1 text-red-400 hover:text-red-600"
+                    className="p-1 text-red-400 hover:text-red-650 transition"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -664,19 +662,19 @@ export default function POS() {
                         if (item.quantity <= 1) cart.removeItem(item.lineId);
                         else cart.updateQuantity(item.lineId, item.quantity - 1);
                       }}
-                      className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
                     >
                       <Minus size={12} />
                     </button>
-                    <span className="text-sm font-semibold w-5 text-center">{item.quantity}</span>
+                    <span className="text-sm font-semibold w-5 text-center text-slate-800 dark:text-slate-200">{item.quantity}</span>
                     <button
                       onClick={() => cart.updateQuantity(item.lineId, item.quantity + 1)}
-                      className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
                     >
                       <Plus size={12} />
                     </button>
                   </div>
-                  <p className="font-semibold text-sm text-brand-700">{formatRupiah(item.subtotal)}</p>
+                  <p className="font-semibold text-sm text-brand-700 dark:text-brand-400">{formatRupiah(item.subtotal)}</p>
                 </div>
               </div>
             ))
@@ -685,7 +683,7 @@ export default function POS() {
 
         {/* Cart Footer */}
         {cart.items.length > 0 && (
-          <div className="p-4 border-t border-slate-100 space-y-3">
+          <div className="p-4 border-t border-slate-100 dark:border-slate-850 space-y-3">
             {/* Promo/Voucher */}
             <div className="space-y-2">
               <div className="flex gap-2">
@@ -708,13 +706,13 @@ export default function POS() {
                 </select>
               )}
               {appliedPromoId && (
-                <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg text-xs">
-                  <span className="text-green-700 font-medium">✓ {activePromos.find(p => p.id === appliedPromoId)?.name} (-{formatRupiah(promoDiscount)})</span>
+                <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 rounded-lg text-xs">
+                  <span className="text-green-700 dark:text-green-400 font-medium">✓ {activePromos.find(p => p.id === appliedPromoId)?.name} (-{formatRupiah(promoDiscount)})</span>
                   <button onClick={clearPromo} className="text-red-500 hover:underline">Hapus</button>
                 </div>
               )}
               {loyaltyDiscount > 0 && (
-                <div className="p-2 bg-amber-50 rounded-lg text-xs text-amber-700 font-medium">
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg text-xs text-amber-700 dark:text-amber-400 font-medium">
                   👑 Loyalty discount: -{formatRupiah(loyaltyDiscount)}
                 </div>
               )}
@@ -730,8 +728,8 @@ export default function POS() {
               />
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Subtotal</span>
-              <span className="font-medium">{formatRupiah(cart.getSubtotal())}</span>
+              <span className="text-slate-500 dark:text-slate-400">Subtotal</span>
+              <span className="font-medium text-slate-800 dark:text-slate-200">{formatRupiah(cart.getSubtotal())}</span>
             </div>
             {(parseInt(discountInput) > 0 || promoDiscount > 0 || loyaltyDiscount > 0) && (
               <div className="flex justify-between text-sm">
@@ -739,9 +737,9 @@ export default function POS() {
                 <span className="text-red-500">-{formatRupiah((parseInt(discountInput) || 0) + promoDiscount + loyaltyDiscount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-lg">
+            <div className="flex justify-between font-bold text-lg text-slate-800 dark:text-slate-200">
               <span>Total</span>
-              <span className="text-brand-700">
+              <span className="text-brand-700 dark:text-brand-400">
                 {formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}
               </span>
             </div>
@@ -763,7 +761,7 @@ export default function POS() {
           <div className="space-y-5">
             {/* Temperature */}
             <div>
-              <label className="label">Suhu</label>
+              <label className="label text-slate-700 dark:text-slate-300">Suhu</label>
               <div className="flex gap-2">
                 {(['Hangat', 'Dingin'] as Temperature[]).map((t) => (
                   <button
@@ -772,7 +770,7 @@ export default function POS() {
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition ${
                       temp === t
                         ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-705'
                     }`}
                   >
                     {t === 'Hangat' ? '🔥' : '🧊'} {t}
@@ -783,7 +781,7 @@ export default function POS() {
 
             {/* Sugar Level */}
             <div>
-              <label className="label">Level Gula</label>
+              <label className="label text-slate-700 dark:text-slate-300">Level Gula</label>
               <div className="flex gap-2">
                 {(['Normal', 'Less', 'None'] as SugarLevel[]).map((s) => (
                   <button
@@ -792,7 +790,7 @@ export default function POS() {
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition ${
                       sugar === s
                         ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-705'
                     }`}
                   >
                     {s}
@@ -804,7 +802,7 @@ export default function POS() {
             {/* Add-ons */}
             {selectedMenu.availableAddons.length > 0 && (
               <div>
-                <label className="label">Add-ons</label>
+                <label className="label text-slate-700 dark:text-slate-300">Add-ons</label>
                 <div className="space-y-2">
                   {selectedMenu.availableAddons.map((addon) => {
                     const active = selectedAddons.find((a) => a.name === addon.name);
@@ -814,12 +812,12 @@ export default function POS() {
                         onClick={() => toggleAddon(addon)}
                         className={`w-full flex items-center justify-between p-3 rounded-xl border transition ${
                           active
-                            ? 'bg-brand-50 border-brand-300'
-                            : 'bg-white border-slate-200 hover:bg-slate-50'
+                            ? 'bg-brand-50 dark:bg-brand-950/20 border-brand-300 dark:border-brand-900/50'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-705'
                         }`}
                       >
-                        <span className="text-sm font-medium">{addon.name}</span>
-                        <span className="text-sm text-brand-600">+{formatRupiah(addon.price)}</span>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{addon.name}</span>
+                        <span className="text-sm text-brand-600 dark:text-brand-400 font-bold">+{formatRupiah(addon.price)}</span>
                       </button>
                     );
                   })}
@@ -829,18 +827,18 @@ export default function POS() {
 
             {/* Quantity */}
             <div>
-              <label className="label">Jumlah</label>
+              <label className="label text-slate-700 dark:text-slate-300">Jumlah</label>
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setQty(Math.max(1, qty - 1))}
-                  className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center"
+                  className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-750 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center transition"
                 >
                   <Minus size={16} />
                 </button>
-                <span className="text-xl font-bold w-8 text-center">{qty}</span>
+                <span className="text-xl font-bold w-8 text-center text-slate-800 dark:text-slate-200">{qty}</span>
                 <button
                   onClick={() => setQty(qty + 1)}
-                  className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center"
+                  className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-750 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center transition"
                 >
                   <Plus size={16} />
                 </button>
@@ -848,10 +846,10 @@ export default function POS() {
             </div>
 
             {/* Total & Add */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
               <div>
-                <p className="text-sm text-slate-500">Total</p>
-                <p className="text-xl font-bold text-brand-700">
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total</p>
+                <p className="text-xl font-bold text-brand-700 dark:text-brand-400">
                   {formatRupiah(
                     (selectedMenu.price + selectedAddons.reduce((a, b) => a + b.price, 0)) * qty
                   )}
@@ -873,20 +871,20 @@ export default function POS() {
         maxWidth="max-w-md"
       >
         <div className="space-y-5">
-          <div className="bg-brand-50 rounded-xl p-4 text-center">
-            <p className="text-sm text-slate-600">Total Pembayaran</p>
-            <p className="text-3xl font-bold text-brand-700">
+          <div className="bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/30 rounded-xl p-4 text-center">
+            <p className="text-sm text-slate-600 dark:text-slate-400">Total Pembayaran</p>
+            <p className="text-3xl font-bold text-brand-700 dark:text-brand-400">
               {formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}
             </p>
-            <p className="text-xs text-slate-500 mt-1">Antrean #{queuePreview}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-450 mt-1">Antrean #{queuePreview}</p>
             {selectedCustomer && (
-              <p className="text-xs text-brand-600 mt-1">Pelanggan: {selectedCustomer.name}</p>
+              <p className="text-xs text-brand-600 dark:text-brand-400 mt-1">Pelanggan: {selectedCustomer.name}</p>
             )}
           </div>
 
           {/* Payment Method */}
           <div>
-            <label className="label">Metode Pembayaran</label>
+            <label className="label text-slate-700 dark:text-slate-300">Metode Pembayaran</label>
             <div className="grid grid-cols-3 gap-2">
               {([
                 { method: 'Cash' as PaymentMethod, icon: Banknote, label: 'Cash' },
@@ -899,7 +897,7 @@ export default function POS() {
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition ${
                     payMethod === method
                       ? 'bg-brand-600 text-white border-brand-600'
-                      : 'bg-white border-slate-200 hover:bg-slate-50'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   <Icon size={20} />
@@ -912,7 +910,7 @@ export default function POS() {
           {/* Cash Calculator */}
           {payMethod === 'Cash' && (
             <div>
-              <label className="label">Uang Diterima</label>
+              <label className="label text-slate-700 dark:text-slate-300">Uang Diterima</label>
               <input
                 type="text"
                 value={cashReceived}
@@ -922,10 +920,10 @@ export default function POS() {
                 autoFocus
               />
               {parseInt(cashReceived) > 0 && (
-                <div className="mt-3 p-3 bg-green-50 rounded-xl">
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 rounded-xl">
                   <div className="flex justify-between">
-                    <span className="text-sm text-green-700">Kembalian</span>
-                    <span className="font-bold text-green-700">
+                    <span className="text-sm text-green-700 dark:text-green-400">Kembalian</span>
+                    <span className="font-bold text-green-700 dark:text-green-400">
                       {formatRupiah(
                         Math.max(
                           0,
@@ -974,15 +972,15 @@ export default function POS() {
         maxWidth="max-w-md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-650 dark:text-slate-350">
             Beberapa bahan baku tidak mencukupi untuk pesanan ini:
           </p>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {stockWarnings.map((w) => (
-              <div key={w.ingredientId} className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+              <div key={w.ingredientId} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-xl">
                 <div>
-                  <p className="font-medium text-sm text-red-800">{w.ingredientName}</p>
-                  <p className="text-xs text-red-600">
+                  <p className="font-medium text-sm text-red-800 dark:text-red-300">{w.ingredientName}</p>
+                  <p className="text-xs text-red-650 dark:text-red-400">
                     Butuh: {w.required.toFixed(2)} {w.unit} • Tersedia: {w.available.toFixed(2)} {w.unit}
                   </p>
                 </div>
@@ -990,7 +988,7 @@ export default function POS() {
               </div>
             ))}
           </div>
-          <div className="flex gap-3 pt-3 border-t border-slate-100">
+          <div className="flex gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button onClick={() => setShowStockWarning(false)} className="btn-secondary flex-1">
               Kembali
             </button>

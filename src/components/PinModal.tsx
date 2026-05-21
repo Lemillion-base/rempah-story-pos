@@ -37,7 +37,7 @@ export default function PinModal({ open, onClose, onSuccess, title }: PinModalPr
         <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
           <ShieldAlert className="text-amber-600" size={28} />
         </div>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 dark:text-slate-350 dark:text-slate-350 dark:text-slate-300">
           Masukkan PIN Manager untuk melanjutkan tindakan ini.
         </p>
         <input

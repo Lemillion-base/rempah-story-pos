@@ -7,7 +7,7 @@
     height: 100%;
   }
   body {
-    @apply bg-brand-50 text-slate-800 antialiased;
+    @apply bg-brand-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
   * {
@@ -23,22 +23,22 @@
     @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm;
   }
   .btn-secondary {
-    @apply btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50;
+    @apply btn bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700;
   }
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
   .btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100;
+    @apply btn text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800;
   }
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-slate-100;
+    @apply bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/50;
   }
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-500 transition;
+    @apply w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-500 transition;
   }
   .label {
-    @apply block text-sm font-medium text-slate-700 mb-1.5;
+    @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5;
   }
   .badge {
     @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
@@ -63,3 +63,32 @@
   to { transform: translateY(0); }
 }
 .animate-in.slide-in-from-bottom { animation: slide-in-bottom 0.2s ease-out; }
+
+/* Heatmap */
+.heatmap-cell {
+  @apply rounded-md text-[10px] font-medium flex items-center justify-center transition-all duration-200;
+  aspect-ratio: 1;
+  min-width: 28px;
+}
+.heatmap-cell:hover {
+  transform: scale(1.15);
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Progress bar animation */
+@keyframes progress-fill {
+  from { width: 0%; }
+}
+.animate-progress {
+  animation: progress-fill 0.8s ease-out;
+}
+
+/* Fade in stagger for analytics cards */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out both;
+}
