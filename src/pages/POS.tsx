@@ -573,6 +573,12 @@ export default function POS() {
                   className="input text-sm flex-1"
                 />
               </div>
+              {/* BUG-NEW-06 fix: Show loyalty discount in mobile cart */}
+              {loyaltyDiscount > 0 && (
+                <div className="p-2 bg-amber-50 rounded-lg text-xs text-amber-700 font-medium">
+                  👑 Loyalty discount: -{formatRupiah(loyaltyDiscount)}
+                </div>
+              )}
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
                 <span className="text-brand-700">
