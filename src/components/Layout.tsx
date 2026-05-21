@@ -6,6 +6,7 @@ import { useTransactionStore } from '../store/transactionStore';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { useCloudStatus } from '../hooks/useCloudStatus';
 import { formatRupiah, formatDate } from '../utils/format';
+import { useState, useMemo, useEffect } from 'react';
 import Modal from './Modal';
 import {
   LayoutDashboard,
@@ -24,8 +25,9 @@ import {
   Wallet,
   Gift,
   Shield,
+  Sun,
+  Moon,
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
 
 const navItems = {
   Manager: [
@@ -59,6 +61,23 @@ export default function Layout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'));
 
   // Close shift modal
   const [showCloseShift, setShowCloseShift] = useState(false);
@@ -219,11 +238,11 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-100 flex flex-col transition-all duration-200 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700/50 flex flex-col transition-all duration-200 ${
           sidebarCollapsed ? 'w-[68px]' : 'w-64'
         } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className={`p-4 border-b border-slate-100 flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+        <div className={`p-4 border-b border-slate-100 dark:border-slate-700/50 flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
           {settings.storeLogo ? (
             <img src={settings.storeLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain flex-shrink-0" />
           ) : (
@@ -231,8 +250,8 @@ export default function Layout() {
           )}
           {!sidebarCollapsed && (
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-brand-700 truncate">{settings.storeName}</h1>
-              <p className="text-xs text-slate-500">POS System</p>
+              <h1 className="text-base font-bold text-brand-700 dark:text-brand-400 truncate">{settings.storeName}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">POS System</p>
             </div>
           )}
         </div>
@@ -249,8 +268,8 @@ export default function Layout() {
                   sidebarCollapsed ? 'justify-center' : ''
                 } ${
                   isActive
-                    ? 'bg-brand-100 text-brand-700'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300'
+                    : 'text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                 }`
               }
             >
@@ -262,12 +281,12 @@ export default function Layout() {
 
         {/* Shift indicator */}
         {activeShift && !sidebarCollapsed && (
-          <div className="mx-3 mb-2 p-2.5 bg-green-50 border border-green-200 rounded-xl">
-            <div className="flex items-center gap-2 text-green-700">
+          <div className="mx-3 mb-2 p-2.5 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 rounded-xl">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
               <Wallet size={14} />
               <span className="text-xs font-medium">Shift Aktif</span>
             </div>
-            <p className="text-xs text-green-600 mt-1">
+            <p className="text-xs text-green-600 dark:text-green-500 mt-1">
               Modal: {formatRupiah(activeShift.openingCash)}
             </p>
           </div>
@@ -276,9 +295,9 @@ export default function Layout() {
         {/* Cloud sync status */}
         {!sidebarCollapsed && cloudStatus !== 'disabled' && (
           <div className={`mx-3 mb-2 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs ${
-            cloudStatus === 'connected' ? 'bg-blue-50 text-blue-600' :
-            cloudStatus === 'disconnected' ? 'bg-red-50 text-red-600' :
-            'bg-slate-50 text-slate-400'
+            cloudStatus === 'connected' ? 'bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400' :
+            cloudStatus === 'disconnected' ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400' :
+            'bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
               cloudStatus === 'connected' ? 'bg-blue-500' :
@@ -289,34 +308,41 @@ export default function Layout() {
           </div>
         )}
 
-        {/* Collapse toggle (desktop only) */}
-        <div className="hidden lg:flex justify-center p-2 border-t border-slate-100">
+        {/* Collapse & Theme toggles */}
+        <div className={`hidden lg:flex items-center border-t border-slate-100 dark:border-slate-700/50 p-2 ${sidebarCollapsed ? 'flex-col gap-2' : 'justify-between px-4'}`}>
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition"
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition"
             title={sidebarCollapsed ? 'Perluas sidebar' : 'Sembunyikan sidebar'}
           >
             {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition"
+            title={theme === 'light' ? 'Mode Gelap' : 'Mode Terang'}
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
         </div>
 
         {/* User info */}
-        <div className={`p-3 border-t border-slate-100 ${sidebarCollapsed ? 'flex flex-col items-center' : ''}`}>
+        <div className={`p-3 border-t border-slate-100 dark:border-slate-700/50 ${sidebarCollapsed ? 'flex flex-col items-center' : ''}`}>
           {!sidebarCollapsed && (
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full bg-brand-200 flex items-center justify-center text-brand-700 font-bold text-sm flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-brand-200 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 flex items-center justify-center font-bold text-sm flex-shrink-0">
                 {currentUser.name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{currentUser.name}</p>
-                <p className="text-xs text-slate-500">{currentUser.role}</p>
+                <p className="text-sm font-medium dark:text-slate-200 truncate">{currentUser.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser.role}</p>
               </div>
             </div>
           )}
           <button
             onClick={handleLogout}
             title={sidebarCollapsed ? 'Tutup Shift & Keluar' : undefined}
-            className={`btn-ghost text-sm text-red-600 hover:bg-red-50 ${sidebarCollapsed ? 'p-2' : 'w-full'}`}
+            className={`btn-ghost text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 ${sidebarCollapsed ? 'p-2' : 'w-full'}`}
           >
             <LogOut size={16} />
             {!sidebarCollapsed && <span>{activeShift ? 'Tutup Shift' : 'Keluar'}</span>}
@@ -327,16 +353,25 @@ export default function Layout() {
       {/* Main */}
       <main className="flex-1 flex flex-col min-w-0 h-full">
         {/* Mobile header */}
-        <header className="lg:hidden flex items-center gap-3 p-4 bg-white border-b border-slate-100">
-          <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-2">
-            <MenuIcon size={20} />
+        <header className="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700/50">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-2">
+              <MenuIcon size={20} />
+            </button>
+            {settings.storeLogo ? (
+              <img src={settings.storeLogo} alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
+            ) : (
+              <span className="text-lg">🌿</span>
+            )}
+            <h1 className="text-lg font-bold text-brand-700 dark:text-brand-400">{settings.storeName}</h1>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition"
+            title={theme === 'light' ? 'Mode Gelap' : 'Mode Terang'}
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
-          {settings.storeLogo ? (
-            <img src={settings.storeLogo} alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
-          ) : (
-            <span className="text-lg">🌿</span>
-          )}
-          <h1 className="text-lg font-bold text-brand-700">{settings.storeName}</h1>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">

@@ -30,7 +30,7 @@ export default function ConfirmDialog({
         }`}>
           <AlertTriangle className={variant === 'danger' ? 'text-red-600' : 'text-amber-600'} size={28} />
         </div>
-        <p className="text-sm text-slate-600">{message}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
         <div className="flex gap-3">
           <button onClick={onClose} className="btn-secondary flex-1">
             {cancelText}
