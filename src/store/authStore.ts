@@ -121,32 +121,40 @@ export const useAuthStore = create<AuthState>()(
 
       loadFromCloud: async (fullSync = false) => {
         const cloudUsers = await fetchUsersFromCloud();
-        if (cloudUsers && cloudUsers.length > 0) {
-          set((s) => {
-            const cloudIds = new Set(cloudUsers.map((u) => u.id));
-            let localOnly: User[];
-            if (fullSync) {
-              // Real-time: cloud is authoritative for deletions
-              localOnly = []; // Trust cloud completely for users
-            } else {
-              localOnly = s.users.filter((u) => !cloudIds.has(u.id));
-            }
-            // BUG-C2 fix: Protect locally hashed passwords from plaintext cloud overwrite.
-            const mergedCloud = cloudUsers.map((cloudUser) => {
-              const localUser = s.users.find((u) => u.id === cloudUser.id);
-              if (localUser) {
-                const localIsHashed = localUser.password.startsWith('$2a$') || localUser.password.startsWith('$2b$');
-                const cloudIsHashed = cloudUser.password.startsWith('$2a$') || cloudUser.password.startsWith('$2b$');
-                if (localIsHashed && !cloudIsHashed) {
-                  const preserved = { ...cloudUser, password: localUser.password };
-                  syncUser(preserved);
-                  return preserved;
-                }
+        if (cloudUsers !== null) {
+          if (cloudUsers.length > 0) {
+            set((s) => {
+              const cloudIds = new Set(cloudUsers.map((u) => u.id));
+              let localOnly: User[];
+              if (fullSync) {
+                // Real-time: cloud is authoritative for deletions
+                localOnly = []; // Trust cloud completely for users
+              } else {
+                localOnly = s.users.filter((u) => !cloudIds.has(u.id));
               }
-              return cloudUser;
+              // BUG-C2 fix: Protect locally hashed passwords from plaintext cloud overwrite.
+              const mergedCloud = cloudUsers.map((cloudUser) => {
+                const localUser = s.users.find((u) => u.id === cloudUser.id);
+                if (localUser) {
+                  const localIsHashed = localUser.password.startsWith('$2a$') || localUser.password.startsWith('$2b$');
+                  const cloudIsHashed = cloudUser.password.startsWith('$2a$') || cloudUser.password.startsWith('$2b$');
+                  if (localIsHashed && !cloudIsHashed) {
+                    const preserved = { ...cloudUser, password: localUser.password };
+                    syncUser(preserved);
+                    return preserved;
+                  }
+                }
+                return cloudUser;
+              });
+              return { users: [...mergedCloud, ...localOnly] };
             });
-            return { users: [...mergedCloud, ...localOnly] };
-          });
+          } else {
+            // Cloud is empty, seed it with local users
+            const localUsers = get().users;
+            for (const user of localUsers) {
+              await syncUser(user);
+            }
+          }
         }
       },
     }),

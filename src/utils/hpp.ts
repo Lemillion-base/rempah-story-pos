@@ -8,6 +8,9 @@ export const calculateMenuHPP = (
   menu: Menu,
   inventory: InventoryItem[]
 ): number => {
+  if (!menu.ingredients || Object.keys(menu.ingredients).length === 0) {
+    return menu.manualHpp || 0;
+  }
   let total = 0;
   for (const [invId, amount] of Object.entries(menu.ingredients)) {
     const inv = inventory.find((i) => i.id === invId);

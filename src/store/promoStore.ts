@@ -116,22 +116,34 @@ export const usePromoStore = create<PromoState>()(
 
       loadFromCloud: async (fullSync = false) => {
         const cloudPromos = await fetchPromosFromCloud();
-        if (cloudPromos && cloudPromos.length > 0) {
-          set((s) => {
-            const cloudIds = new Set(cloudPromos.map((p) => p.id));
-            let localOnly: Promo[];
-            if (fullSync) {
-              localOnly = []; // Trust cloud completely for promos
-            } else {
-              localOnly = s.promos.filter((p) => !cloudIds.has(p.id));
+        if (cloudPromos !== null) {
+          if (cloudPromos.length > 0) {
+            set((s) => {
+              const cloudIds = new Set(cloudPromos.map((p) => p.id));
+              let localOnly: Promo[];
+              if (fullSync) {
+                localOnly = []; // Trust cloud completely for promos
+              } else {
+                localOnly = s.promos.filter((p) => !cloudIds.has(p.id));
+              }
+              return { promos: [...cloudPromos, ...localOnly] };
+            });
+          } else {
+            // Cloud is empty, seed it with local promos
+            const localPromos = get().promos;
+            for (const promo of localPromos) {
+              await syncPromo(promo);
             }
-            return { promos: [...cloudPromos, ...localOnly] };
-          });
+          }
         }
         // BUG-M5 fix: Load loyalty settings from cloud
         const cloudLoyalty = await fetchLoyaltySettingsFromCloud();
-        if (cloudLoyalty) {
+        if (cloudLoyalty !== null) {
           set({ loyaltySettings: cloudLoyalty });
+        } else {
+          // Cloud has no loyalty settings, sync our local ones
+          const localLoyalty = get().loyaltySettings;
+          await syncLoyaltySettings(localLoyalty);
         }
       },
     }),

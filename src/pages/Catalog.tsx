@@ -62,6 +62,7 @@ export default function Catalog() {
   const [formImage, setFormImage] = useState('');
   const [formIngredients, setFormIngredients] = useState<{ invId: string; amount: string }[]>([]);
   const [formAddons, setFormAddons] = useState<{ name: string; price: string }[]>([]);
+  const [formManualHpp, setFormManualHpp] = useState('');
 
   const allCategories = getCategories();
   const filterCategories = ['Semua', ...allCategories];
@@ -88,6 +89,7 @@ export default function Catalog() {
     setFormImage('');
     setFormIngredients([]);
     setFormAddons([]);
+    setFormManualHpp('');
     setShowForm(true);
   };
 
@@ -107,6 +109,7 @@ export default function Catalog() {
     setFormAddons(
       menu.availableAddons.map((a) => ({ name: a.name, price: String(a.price) }))
     );
+    setFormManualHpp(menu.manualHpp ? String(menu.manualHpp) : '');
     setShowForm(true);
   };
 
@@ -127,6 +130,7 @@ export default function Catalog() {
       image: formImage || undefined,
       ingredients,
       availableAddons: addons,
+      manualHpp: parseInt(formManualHpp) || 0,
     };
 
     if (editId) {
@@ -153,7 +157,7 @@ export default function Catalog() {
 
   // CSV Export
   const handleExport = () => {
-    const header = 'name,category,price,isBestSeller,ingredients,addons\n';
+    const header = 'name,category,price,isBestSeller,ingredients,addons,manualHpp\n';
     const rows = menus.map((m) =>
       [
         `"${m.name}"`,
@@ -162,6 +166,7 @@ export default function Catalog() {
         m.isBestSeller || false,
         `"${JSON.stringify(m.ingredients)}"`,
         `"${JSON.stringify(m.availableAddons)}"`,
+        m.manualHpp || 0,
       ].join(',')
     );
     const csv = header + rows.join('\n');
@@ -194,9 +199,13 @@ export default function Catalog() {
             isBestSeller: parts[3] === 'true',
             ingredients: JSON.parse(clean(parts[4] || '{}')),
             availableAddons: JSON.parse(clean(parts[5] || '[]')),
+            manualHpp: parseInt(parts[6]) || 0,
           };
         });
       importMenus(imported);
+      if (currentUser) {
+        addLog(currentUser.id, currentUser.name, currentUser.role, 'update_menu', `Import menu dari CSV`);
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -431,6 +440,37 @@ export default function Catalog() {
               <Plus size={14} /> Tambah Bahan
             </button>
           </div>
+
+          {/* HPP Manual (Only visible if no ingredients are added) */}
+          {formIngredients.length === 0 ? (
+            <div>
+              <label className="label">HPP Manual (Rp)</label>
+              <input
+                value={formManualHpp}
+                onChange={(e) => setFormManualHpp(e.target.value.replace(/\D/g, ''))}
+                placeholder="Masukkan HPP untuk produk jadi (misal: Air Mineral)"
+                className="input"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                Gunakan HPP Manual jika produk tidak diproduksi dari komposisi bahan baku.
+              </span>
+            </div>
+          ) : (
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">HPP Terhitung (dari Komposisi):</span>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                {formatRupiah(
+                  formIngredients.reduce((total, ing) => {
+                    const item = inventory.find((i) => i.id === ing.invId);
+                    return total + (item ? item.costPerUnit * (parseFloat(ing.amount) || 0) : 0);
+                  }, 0)
+                )}
+              </p>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                HPP Manual dinonaktifkan karena komposisi bahan digunakan.
+              </span>
+            </div>
+          )}
 
           {/* Add-ons */}
           <div>
