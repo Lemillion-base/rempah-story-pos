@@ -130,7 +130,7 @@ export default function Catalog() {
       image: formImage || undefined,
       ingredients,
       availableAddons: addons,
-      manualHpp: parseInt(formManualHpp) || 0,
+      manualHpp: Object.keys(ingredients).length > 0 ? 0 : (parseInt(formManualHpp) || 0),
     };
 
     if (editId) {
@@ -401,7 +401,7 @@ export default function Catalog() {
 
           {/* Ingredients */}
           <div>
-            <label className="label">Komposisi Bahan (HPP)</label>
+            <label className="label">Komposisi Bahan (Opsional)</label>
             {formIngredients.map((ing, idx) => (
               <div key={idx} className="flex gap-2 mb-2">
                 <select
@@ -510,20 +510,7 @@ export default function Catalog() {
             </button>
           </div>
 
-          {/* HPP Preview */}
-          {formIngredients.length > 0 && (
-            <div className="p-3 bg-amber-50 rounded-xl text-sm">
-              <span className="font-medium">HPP Estimasi: </span>
-              <span className="font-bold text-amber-700">
-                {formatRupiah(
-                  formIngredients.reduce((total, ing) => {
-                    const inv = inventory.find((i) => i.id === ing.invId);
-                    return total + (inv ? inv.costPerUnit * (parseFloat(ing.amount) || 0) : 0);
-                  }, 0)
-                )}
-              </span>
-            </div>
-          )}
+
 
           <div className="flex gap-3 pt-3 border-t border-slate-100">
             <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">Batal</button>
