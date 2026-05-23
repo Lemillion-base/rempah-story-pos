@@ -94,18 +94,26 @@ export const useInventoryStore = create<InventoryState>()(
 
       loadFromCloud: async (fullSync = false) => {
         const cloudItems = await fetchInventoryFromCloud();
-        if (cloudItems && cloudItems.length > 0) {
-          set((s) => {
-            const cloudIds = new Set(cloudItems.map((i) => i.id));
-            let localOnly: InventoryItem[];
-            if (fullSync) {
-              // Real-time: cloud is authoritative
-              localOnly = []; // Trust cloud completely for inventory
-            } else {
-              localOnly = s.items.filter((i) => !cloudIds.has(i.id));
+        if (cloudItems !== null) {
+          if (cloudItems.length > 0) {
+            set((s) => {
+              const cloudIds = new Set(cloudItems.map((i) => i.id));
+              let localOnly: InventoryItem[];
+              if (fullSync) {
+                // Real-time: cloud is authoritative
+                localOnly = []; // Trust cloud completely for inventory
+              } else {
+                localOnly = s.items.filter((i) => !cloudIds.has(i.id));
+              }
+              return { items: [...cloudItems, ...localOnly] };
+            });
+          } else {
+            // Cloud is empty, seed it with local items
+            const localItems = get().items;
+            for (const item of localItems) {
+              await syncInventoryItem(item);
             }
-            return { items: [...cloudItems, ...localOnly] };
-          });
+          }
         }
       },
     }),

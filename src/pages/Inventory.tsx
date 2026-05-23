@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useInventoryStore } from '../store/inventoryStore';
+import { useAuthStore } from '../store/authStore';
+import { useAuditLogStore } from '../store/auditLogStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
 import type { InventoryItem } from '../types';
@@ -19,6 +21,8 @@ import {
 
 export default function Inventory() {
   const { items: inventory, addItem, updateItem, deleteItem, loadFromCloud } = useInventoryStore();
+  const { currentUser } = useAuthStore();
+  const { addLog } = useAuditLogStore();
 
   // Real-time sync for inventory
   useEffect(() => {
@@ -92,8 +96,15 @@ export default function Inventory() {
     };
     if (editId) {
       updateItem(editId, data);
+      if (currentUser) {
+        addLog(currentUser.id, currentUser.name, currentUser.role, 'update_inventory', `Edit bahan baku: ${invName} (${invStock} ${invUnit})`, { itemId: editId });
+      }
     } else {
-      addItem({ id: invSlug || invName.toLowerCase().replace(/\s+/g, '-'), ...data });
+      const slug = invSlug || invName.toLowerCase().replace(/\s+/g, '-');
+      addItem({ id: slug, ...data });
+      if (currentUser) {
+        addLog(currentUser.id, currentUser.name, currentUser.role, 'create_inventory', `Tambah bahan baku: ${invName} (${invStock} ${invUnit})`, { itemId: slug });
+      }
     }
     setShowForm(false);
   };
@@ -103,6 +114,9 @@ export default function Inventory() {
     inventory.forEach((item) => {
       updateItem(item.id, { minStock: val });
     });
+    if (currentUser) {
+      addLog(currentUser.id, currentUser.name, currentUser.role, 'update_inventory', `Update min. stok semua bahan baku menjadi: ${val}`, { globalMinStock: val });
+    }
     setShowMinStockSetting(false);
   };
 
@@ -155,6 +169,9 @@ export default function Inventory() {
             addItem({ id, name, stock, unit, costPerUnit, minStock });
           }
         });
+      if (currentUser) {
+        addLog(currentUser.id, currentUser.name, currentUser.role, 'update_inventory', `Import bahan baku dari CSV`);
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -411,7 +428,16 @@ export default function Inventory() {
       <ConfirmDialog
         open={!!deleteInvId}
         onClose={() => setDeleteInvId(null)}
-        onConfirm={() => { if (deleteInvId) deleteItem(deleteInvId); }}
+        onConfirm={() => {
+          if (deleteInvId) {
+            const item = inventory.find((i) => i.id === deleteInvId);
+            const itemName = item?.name || '';
+            deleteItem(deleteInvId);
+            if (currentUser) {
+              addLog(currentUser.id, currentUser.name, currentUser.role, 'delete_inventory', `Hapus bahan baku: ${itemName}`, { itemId: deleteInvId });
+            }
+          }
+        }}
         title="Hapus Bahan"
         message="Yakin ingin menghapus bahan baku ini?"
         confirmText="Ya, Hapus"

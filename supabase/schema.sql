@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS menus (
   ingredients JSONB DEFAULT '{}',
   available_addons JSONB DEFAULT '[]',
   description TEXT,
+  manual_hpp FLOAT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

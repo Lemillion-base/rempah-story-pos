@@ -70,23 +70,37 @@ export const useMenuStore = create<MenuState>()(
       loadFromCloud: async (fullSync = false) => {
         // Load menus
         const cloudMenus = await fetchMenusFromCloud();
-        if (cloudMenus && cloudMenus.length > 0) {
-          set((s) => {
-            const cloudIds = new Set(cloudMenus.map((m) => m.id));
-            let localOnly: Menu[];
-            if (fullSync) {
-              localOnly = []; // In fullSync, trust cloud completely for menus
-            } else {
-              localOnly = s.menus.filter((m) => !cloudIds.has(m.id));
+        if (cloudMenus !== null) {
+          if (cloudMenus.length > 0) {
+            set((s) => {
+              const cloudIds = new Set(cloudMenus.map((m) => m.id));
+              let localOnly: Menu[];
+              if (fullSync) {
+                localOnly = []; // In fullSync, trust cloud completely for menus
+              } else {
+                localOnly = s.menus.filter((m) => !cloudIds.has(m.id));
+              }
+              return { menus: [...cloudMenus, ...localOnly] };
+            });
+          } else {
+            // Cloud is empty, seed it with local menus
+            const localMenus = get().menus;
+            for (const menu of localMenus) {
+              await syncMenu(menu);
             }
-            return { menus: [...cloudMenus, ...localOnly] };
-          });
+          }
         }
 
         // GAP-1 fix: Load custom categories from cloud
         const cloudCategories = await fetchCustomCategoriesFromCloud();
-        if (cloudCategories && cloudCategories.length > 0) {
-          set({ customCategories: cloudCategories });
+        if (cloudCategories !== null) {
+          if (cloudCategories.length > 0) {
+            set({ customCategories: cloudCategories });
+          } else {
+            // Cloud is empty, sync local custom categories
+            const localCategories = get().customCategories;
+            await syncCustomCategories(localCategories);
+          }
         }
       },
     }),

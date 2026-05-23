@@ -67,7 +67,7 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 ### 6. 📦 Manajemen Katalog & Harga
 - CRUD menu lengkap dengan foto produk
 - Kategori dropdown (bisa tambah/hapus kategori)
-- Kalkulasi HPP otomatis berdasarkan komposisi bahan
+- Kalkulasi HPP otomatis berdasarkan komposisi bahan ATAU input HPP Manual jika produk tidak menggunakan bahan baku (produk jadi)
 - Add-ons per menu (nama + harga)
 - Toggle ketersediaan menu (aktif/nonaktif tanpa hapus)
 - Import/Export CSV untuk update massal

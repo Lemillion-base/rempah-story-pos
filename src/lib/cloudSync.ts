@@ -171,6 +171,7 @@ export async function syncMenu(menu: Menu) {
     ingredients: menu.ingredients,
     available_addons: menu.availableAddons,
     description: menu.description,
+    manual_hpp: menu.manualHpp || 0,
   });
 }
 
@@ -398,6 +399,7 @@ export async function fetchMenusFromCloud(): Promise<Menu[] | null> {
       ingredients: row.ingredients || {},
       availableAddons: row.available_addons || [],
       description: row.description || undefined,
+      manualHpp: row.manual_hpp || 0,
     })) || null;
   } catch {
     return null;

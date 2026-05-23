@@ -36,6 +36,7 @@ export interface Menu {
   ingredients: Record<string, number>; // { inventory_id: amount }
   availableAddons: AddOn[];
   description?: string;
+  manualHpp?: number;
 }
 
 export type Temperature = 'Hangat' | 'Dingin';
@@ -166,7 +167,7 @@ export type AuditAction =
   | 'create_transaction' | 'void_transaction' | 'delete_transaction'
   | 'create_menu' | 'update_menu' | 'delete_menu' | 'toggle_menu'
   | 'create_user' | 'update_user' | 'delete_user'
-  | 'update_inventory' | 'deduct_inventory'
+  | 'create_inventory' | 'update_inventory' | 'delete_inventory' | 'deduct_inventory'
   | 'open_shift' | 'close_shift'
   | 'update_settings' | 'create_promo' | 'update_promo' | 'delete_promo'
   | 'create_customer' | 'update_customer' | 'delete_customer';

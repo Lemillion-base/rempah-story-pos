@@ -174,8 +174,9 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   - Best Seller toggle
   - **Upload Foto Produk** (base64, maks 500KB)
   - Komposisi Bahan (pilih dari inventaris + jumlah) → HPP otomatis
+  - **HPP Manual (Opsi)**: Input HPP manual jika produk tidak menggunakan Komposisi Bahan (produk jadi seperti minuman botol atau makanan ringan)
   - Add-ons (nama + harga)
-  - Preview HPP estimasi real-time
+  - Preview HPP estimasi real-time (atau input manual HPP)
 - **Manajemen Kategori**: Modal terpisah untuk tambah/hapus kategori
 - **Import/Export CSV**: Download & upload katalog menu lengkap
 
