@@ -5,6 +5,7 @@ import { useMenuStore } from '../store/menuStore';
 import { useCustomerStore } from '../store/customerStore';
 import { useStockLogStore } from '../store/stockLogStore';
 import { formatRupiah, isSameDay } from '../utils/format';
+import { calculateMenuHPP } from '../utils/hpp';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -280,11 +281,9 @@ export default function Dashboard() {
           map[item.menuId] = { name: item.name, qty: 0, revenue: 0, hpp: 0 };
         }
         
-        // Calculate HPP based on exact transaction HPP proportion or menu recipe
-        const baseHpp = menuObj.price > 0 ? (item.basePrice / menuObj.price) * Object.entries(menuObj.ingredients).reduce((acc, [ingId, qty]) => {
-          const ing = inventory.find((i) => i.id === ingId);
-          return acc + (ing ? ing.costPerUnit * qty : 0);
-        }, 0) : 0;
+        // Calculate HPP using shared utility (supports both ingredients and manualHpp)
+        const menuHpp = calculateMenuHPP(menuObj, inventory);
+        const baseHpp = menuObj.price > 0 ? (item.basePrice / menuObj.price) * menuHpp : 0;
 
         map[item.menuId].qty += item.quantity;
         map[item.menuId].revenue += item.subtotal;

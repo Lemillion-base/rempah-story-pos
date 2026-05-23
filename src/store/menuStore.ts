@@ -41,7 +41,13 @@ export const useMenuStore = create<MenuState>()(
         set((s) => ({ menus: s.menus.filter((m) => m.id !== id) }));
       },
 
-      importMenus: (menus) => set({ menus }),
+      importMenus: (menus) => {
+        set({ menus });
+        // Sync all imported menus to cloud
+        for (const menu of menus) {
+          syncMenu(menu);
+        }
+      },
 
       getCategories: () => {
         const fromMenus = new Set(get().menus.map((m) => m.category));

@@ -56,29 +56,37 @@ export const useCustomerStore = create<CustomerState>()(
 
       loadFromCloud: async (fullSync = false) => {
         const cloudData = await fetchCustomersFromCloud();
-        if (cloudData && cloudData.length > 0) {
-          set((s) => {
-            const cloudIds = new Set(cloudData.map((c) => c.id));
-            let localOnly: Customer[];
-            if (fullSync) {
-              // Real-time triggered: cloud is authoritative, drop deleted items
+        if (cloudData !== null) {
+          if (cloudData.length > 0) {
+            set((s) => {
+              const cloudIds = new Set(cloudData.map((c) => c.id));
+              let localOnly: Customer[];
+              if (fullSync) {
+                // Real-time triggered: cloud is authoritative, drop deleted items
+                const gracePeriod = 30 * 1000;
+                const cutoff = Date.now() - gracePeriod;
+                localOnly = s.customers.filter(
+                  (c) => !cloudIds.has(c.id) && new Date(c.createdAt).getTime() > cutoff
+                );
+              } else {
+                localOnly = s.customers.filter((c) => !cloudIds.has(c.id));
+              }
+              return { customers: [...cloudData, ...localOnly] };
+            });
+          } else if (fullSync) {
+            // Cloud has zero customers — if fullSync, respect that (all deleted)
+            set((s) => {
               const gracePeriod = 30 * 1000;
               const cutoff = Date.now() - gracePeriod;
-              localOnly = s.customers.filter(
-                (c) => !cloudIds.has(c.id) && new Date(c.createdAt).getTime() > cutoff
-              );
-            } else {
-              localOnly = s.customers.filter((c) => !cloudIds.has(c.id));
+              return { customers: s.customers.filter((c) => new Date(c.createdAt).getTime() > cutoff) };
+            });
+          } else {
+            // Cloud is empty on initial load, seed it with local customers
+            const localCustomers = get().customers;
+            for (const customer of localCustomers) {
+              await syncCustomer(customer);
             }
-            return { customers: [...cloudData, ...localOnly] };
-          });
-        } else if (fullSync && cloudData && cloudData.length === 0) {
-          // Cloud has zero customers — if fullSync, respect that (all deleted)
-          set((s) => {
-            const gracePeriod = 30 * 1000;
-            const cutoff = Date.now() - gracePeriod;
-            return { customers: s.customers.filter((c) => new Date(c.createdAt).getTime() > cutoff) };
-          });
+          }
         }
       },
     }),
