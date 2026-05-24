@@ -273,7 +273,7 @@ export default function Inventory() {
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
               <tr>
                 <th className="text-left p-3 font-semibold">ID</th>
                 <th className="text-left p-3 font-semibold">Nama Bahan</th>
@@ -290,7 +290,7 @@ export default function Inventory() {
               {filtered.slice((page - 1) * perPage, page * perPage).map((item) => {
                 const isLow = item.stock < (item.minStock ?? 3);
                 return (
-                  <tr key={item.id} className={`border-b border-slate-50 ${isLow ? 'bg-red-50/50' : 'hover:bg-slate-50'}`}>
+                  <tr key={item.id} className={`border-b border-slate-50 dark:border-slate-700/40 ${isLow ? 'bg-red-50/50 dark:bg-red-950/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
                     <td className="p-3 font-mono text-xs text-slate-400">{item.id}</td>
                     <td className="p-3 font-medium">{item.name}</td>
                     <td className="p-3 text-right font-medium">{item.stock}</td>

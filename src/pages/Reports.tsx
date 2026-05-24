@@ -580,7 +580,7 @@ export default function Reports() {
             ) : (
               <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-100 sticky top-0">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700 sticky top-0">
                     <tr>
                       <th className="text-left p-3 font-semibold">No.</th>
                       <th className="text-left p-3 font-semibold">Tanggal</th>
@@ -594,7 +594,7 @@ export default function Reports() {
                   </thead>
                   <tbody>
                     {filteredTx.map((t) => (
-                      <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50">
+                      <tr key={t.id} className="border-b border-slate-50 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                         <td className="p-3 font-bold text-brand-700">#{t.queueNumber}</td>
                         <td className="p-3 text-xs text-slate-500">{formatDate(t.date)}</td>
                         <td className="p-3 text-sm">{t.cashierName}</td>
@@ -678,7 +678,7 @@ export default function Reports() {
             </div>
             <div className="overflow-x-auto max-h-96 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-100 sticky top-0">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700 sticky top-0">
                   <tr>
                     <th className="text-left p-3 font-semibold">Nama</th>
                     <th className="text-right p-3 font-semibold">Stok</th>
@@ -727,7 +727,7 @@ export default function Reports() {
             ) : (
               <div className="space-y-4">
                 {shiftReport.map((emp) => (
-                  <div key={emp.name} className="p-4 bg-slate-50 rounded-xl">
+                  <div key={emp.name} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-brand-200 flex items-center justify-center text-brand-700 font-bold">
@@ -802,7 +802,7 @@ export default function Reports() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-100">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
                     <tr>
                       <th className="text-left p-3 font-semibold">Kasir</th>
                       <th className="text-left p-3 font-semibold">Waktu Buka</th>

@@ -30,19 +30,19 @@ const actionLabels: Record<string, string> = {
 };
 
 const actionColors: Record<string, string> = {
-  login: 'bg-green-100 text-green-700',
-  logout: 'bg-slate-100 text-slate-700',
-  create_transaction: 'bg-blue-100 text-blue-700',
-  void_transaction: 'bg-red-100 text-red-700',
-  delete_transaction: 'bg-red-100 text-red-700',
-  create_menu: 'bg-green-100 text-green-700',
-  update_menu: 'bg-amber-100 text-amber-700',
-  delete_menu: 'bg-red-100 text-red-700',
-  toggle_menu: 'bg-purple-100 text-purple-700',
-  create_user: 'bg-green-100 text-green-700',
-  delete_user: 'bg-red-100 text-red-700',
-  open_shift: 'bg-blue-100 text-blue-700',
-  close_shift: 'bg-indigo-100 text-indigo-700',
+  login: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  logout: 'bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300',
+  create_transaction: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+  void_transaction: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
+  delete_transaction: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
+  create_menu: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  update_menu: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+  delete_menu: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
+  toggle_menu: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
+  create_user: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  delete_user: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
+  open_shift: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+  close_shift: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300',
 };
 
 export default function AuditLog() {
@@ -142,7 +142,7 @@ export default function AuditLog() {
       <div className="card overflow-hidden">
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100 sticky top-0">
+            <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700 sticky top-0">
               <tr>
                 <th className="text-left p-3 font-semibold">Waktu</th>
                 <th className="text-left p-3 font-semibold">User</th>
@@ -153,24 +153,24 @@ export default function AuditLog() {
             </thead>
             <tbody>
               {paginated.map((log) => (
-                <tr key={log.id} className="border-b border-slate-50 hover:bg-slate-50">
-                  <td className="p-3 text-xs text-slate-500 whitespace-nowrap">{formatDate(log.timestamp)}</td>
+                <tr key={log.id} className="border-b border-slate-50 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                  <td className="p-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatDate(log.timestamp)}</td>
                   <td className="p-3 font-medium">{log.userName}</td>
                   <td className="p-3">
                     <span className={`badge ${
-                      log.userRole === 'Manager' ? 'bg-purple-100 text-purple-700' :
-                      log.userRole === 'Kasir' ? 'bg-blue-100 text-blue-700' :
-                      'bg-green-100 text-green-700'
+                      log.userRole === 'Manager' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
+                      log.userRole === 'Kasir' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                      'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
                     }`}>
                       {log.userRole}
                     </span>
                   </td>
                   <td className="p-3">
-                    <span className={`badge ${actionColors[log.action] || 'bg-slate-100 text-slate-700'}`}>
+                    <span className={`badge ${actionColors[log.action] || 'bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300'}`}>
                       {actionLabels[log.action] || log.action}
                     </span>
                   </td>
-                  <td className="p-3 text-slate-600 text-xs max-w-[300px] truncate">{log.detail}</td>
+                  <td className="p-3 text-slate-600 dark:text-slate-400 text-xs max-w-[300px] truncate">{log.detail}</td>
                 </tr>
               ))}
               {paginated.length === 0 && (
@@ -183,7 +183,7 @@ export default function AuditLog() {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-3 border-t border-slate-100">
+          <div className="flex items-center justify-between p-3 border-t border-slate-100 dark:border-slate-700">
             <p className="text-xs text-slate-500">
               Hal {page}/{totalPages}
             </p>
