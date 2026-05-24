@@ -66,7 +66,7 @@ export default function Login() {
         </form>
 
         {settings.demoMode && (
-          <div className="mt-6 p-3 bg-slate-50 rounded-xl text-xs text-slate-500 space-y-1">
+          <div className="mt-6 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs text-slate-500 dark:text-slate-400 space-y-1">
             <p className="font-medium text-slate-600">Demo Accounts:</p>
             <p>Manager: manager / manager123</p>
             <p>Kasir: kasir / kasir123</p>

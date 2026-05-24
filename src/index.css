@@ -50,6 +50,26 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #e2d5c2; border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: #c5a77e; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* Dark mode: global table styling */
+.dark thead.bg-slate-50 {
+  background-color: rgb(30 41 59 / 0.8) !important; /* slate-800/80 */
+  border-color: rgb(51 65 85 / 0.7) !important;
+}
+.dark thead.bg-slate-50 th {
+  color: rgb(203 213 225) !important; /* slate-300 */
+}
+.dark tr.border-b.border-slate-50 {
+  border-color: rgb(51 65 85 / 0.4) !important;
+}
+.dark tr:hover.hover\:bg-slate-50:hover {
+  background-color: rgb(51 65 85 / 0.3) !important;
+}
+.dark .bg-slate-50:not(thead):not(tr) {
+  background-color: rgb(30 41 59 / 0.5);
+}
 
 /* Animations */
 @keyframes slide-in-right {

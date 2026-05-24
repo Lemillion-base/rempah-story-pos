@@ -158,7 +158,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
           {/* Logo */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50">
+            <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-800">
               {storeLogo ? (
                 <img src={storeLogo} alt="Logo" className="w-full h-full object-contain" />
               ) : (
@@ -377,7 +377,7 @@ export default function SettingsPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
               <tr>
                 <th className="text-left p-3 font-semibold">Nama</th>
                 <th className="text-left p-3 font-semibold">Username</th>
@@ -387,21 +387,21 @@ export default function SettingsPage() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-b border-slate-50">
+                <tr key={u.id} className="border-b border-slate-50 dark:border-slate-700/40">
                   <td className="p-3 font-medium">{u.name}</td>
-                  <td className="p-3 text-slate-500">{u.username}</td>
+                  <td className="p-3 text-slate-500 dark:text-slate-400">{u.username}</td>
                   <td className="p-3">
                     <span className={`badge ${
-                      u.role === 'Manager' ? 'bg-purple-100 text-purple-700' :
-                      u.role === 'Kasir' ? 'bg-blue-100 text-blue-700' :
-                      'bg-green-100 text-green-700'
+                      u.role === 'Manager' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
+                      u.role === 'Kasir' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                      'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
                     }`}>
                       {u.role}
                     </span>
                   </td>
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => openEditUser(u)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                      <button onClick={() => openEditUser(u)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
                         <Pencil size={14} />
                       </button>
                       {u.id !== currentUser?.id && (
@@ -509,7 +509,7 @@ export default function SettingsPage() {
         ) : (
           <div className="space-y-4">
             {/* Demo Mode Toggle */}
-            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
               <div>
                 <p className="font-medium text-sm">Mode Demo</p>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -528,7 +528,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Change Super Admin PIN */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-sm">Ubah Super Admin PIN</p>

@@ -259,7 +259,7 @@ export default function Catalog() {
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
               <tr>
                 <th className="text-left p-3 font-semibold">Nama</th>
                 <th className="text-left p-3 font-semibold">Kategori</th>
@@ -274,15 +274,15 @@ export default function Catalog() {
                 const hpp = calculateMenuHPP(menu, inventory);
                 const margin = menu.price - hpp;
                 return (
-                  <tr key={menu.id} className="border-b border-slate-50 hover:bg-slate-50">
+                  <tr key={menu.id} className="border-b border-slate-50 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="p-3 font-medium">
                       {menu.name}
                       {menu.isBestSeller && <span className="ml-2 text-amber-500">⭐</span>}
                       {menu.isAvailable === false && <span className="ml-2 badge bg-slate-100 text-slate-500 text-xs">Nonaktif</span>}
                     </td>
-                    <td className="p-3 text-slate-500">{menu.category}</td>
+                    <td className="p-3 text-slate-500 dark:text-slate-400">{menu.category}</td>
                     <td className="p-3 text-right font-medium">{formatRupiah(menu.price)}</td>
-                    <td className="p-3 text-right text-slate-500">{formatRupiah(hpp)}</td>
+                    <td className="p-3 text-right text-slate-500 dark:text-slate-400">{formatRupiah(hpp)}</td>
                     <td className="p-3 text-right text-green-600 font-medium">{formatRupiah(margin)}</td>
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -547,7 +547,7 @@ export default function Catalog() {
             {customCategories.map((cat) => {
               const menuCount = menus.filter((m) => m.category === cat).length;
               return (
-                <div key={cat} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                <div key={cat} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                   <div>
                     <span className="font-medium text-sm">{cat}</span>
                     <span className="text-xs text-slate-400 ml-2">({menuCount} menu)</span>

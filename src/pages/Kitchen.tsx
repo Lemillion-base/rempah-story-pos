@@ -10,9 +10,9 @@ import type { KitchenStatus } from '../types';
 import { Clock, Flame, CheckCircle2, ArrowRight, AlertTriangle } from 'lucide-react';
 
 const columns: { status: KitchenStatus; label: string; color: string; icon: any }[] = [
-  { status: 'Waiting', label: 'Antrean Menunggu', color: 'border-amber-400 bg-amber-50', icon: Clock },
-  { status: 'Processing', label: 'Sedang Diproses', color: 'border-blue-400 bg-blue-50', icon: Flame },
-  { status: 'Done', label: 'Selesai', color: 'border-green-400 bg-green-50', icon: CheckCircle2 },
+  { status: 'Waiting', label: 'Antrean Menunggu', color: 'border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-600/50', icon: Clock },
+  { status: 'Processing', label: 'Sedang Diproses', color: 'border-blue-400 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-600/50', icon: Flame },
+  { status: 'Done', label: 'Selesai', color: 'border-green-400 bg-green-50 dark:bg-green-950/30 dark:border-green-600/50', icon: CheckCircle2 },
 ];
 
 const ALERT_THRESHOLD_MS = 5 * 60 * 1000; // 5 menit
@@ -119,9 +119,9 @@ export default function Kitchen() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">🍳 Kitchen Display System</h1>
         {overdueCount > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-red-100 border border-red-300 rounded-xl animate-pulse">
+          <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-950/50 border border-red-300 dark:border-red-700 rounded-xl animate-pulse">
             <AlertTriangle size={18} className="text-red-600" />
-            <span className="text-sm font-bold text-red-700">
+            <span className="text-sm font-bold text-red-700 dark:text-red-400">
               {overdueCount} pesanan menunggu &gt; 5 menit!
             </span>
           </div>
@@ -138,7 +138,7 @@ export default function Kitchen() {
               <div className="p-4 flex items-center gap-2">
                 <Icon size={20} />
                 <h2 className="font-bold text-lg">{label}</h2>
-                <span className="badge bg-white/80 text-slate-700 ml-auto">{orders.length}</span>
+                <span className="badge bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 ml-auto">{orders.length}</span>
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -151,17 +151,17 @@ export default function Kitchen() {
                       key={order.id}
                       className={`rounded-xl p-4 shadow-sm transition-all ${
                         overdue
-                          ? 'bg-red-50 border-2 border-red-300 animate-pulse'
-                          : 'bg-white'
+                          ? 'bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700 animate-pulse'
+                          : 'bg-white dark:bg-slate-800'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-2xl font-extrabold text-brand-700">
+                          <span className="text-2xl font-extrabold text-brand-700 dark:text-brand-400">
                             #{order.queueNumber}
                           </span>
                           {overdue && (
-                            <span className="badge bg-red-100 text-red-700 text-xs">
+                            <span className="badge bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-400 text-xs">
                               <AlertTriangle size={10} /> {waitMins} mnt
                             </span>
                           )}
@@ -185,15 +185,15 @@ export default function Kitchen() {
                       </div>
 
                       {/* Shift/Cashier info */}
-                      <p className="text-xs text-slate-400 mb-2">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">
                         {formatTime(order.date)} • {order.cashierName}
                       </p>
 
                       <div className="space-y-2">
                         {order.items.map((item) => (
-                          <div key={item.lineId} className="border-l-4 border-brand-300 pl-3">
-                            <p className="font-bold text-base">{item.name}</p>
-                            <p className="text-sm text-slate-600 font-semibold">
+                          <div key={item.lineId} className="border-l-4 border-brand-300 dark:border-brand-600 pl-3">
+                            <p className="font-bold text-base dark:text-slate-100">{item.name}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 font-semibold">
                               {item.temperature} • Gula {item.sugar} • x{item.quantity}
                             </p>
                             {item.addons.length > 0 && (

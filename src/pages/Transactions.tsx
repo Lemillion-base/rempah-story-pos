@@ -136,7 +136,7 @@ export default function Transactions() {
             <div key={tx.id} className="card overflow-hidden">
               <button
                 onClick={() => setExpanded(expanded === tx.id ? null : tx.id)}
-                className="w-full p-4 flex items-center gap-4 text-left hover:bg-slate-50 transition"
+                className="w-full p-4 flex items-center gap-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition"
               >
                 <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center font-bold text-brand-700">
                   #{tx.queueNumber}
