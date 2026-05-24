@@ -674,22 +674,22 @@ export default function Dashboard() {
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-5">
-                <div className="bg-brand-50/50 dark:bg-brand-950/20 rounded-xl p-3.5 text-center border border-brand-100 dark:border-brand-900/30">
+                <div className="bg-brand-50/50 dark:bg-brand-900/20 rounded-xl p-3.5 text-center border border-brand-100 dark:border-brand-700/40">
                   <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Member</p>
-                  <p className="text-2xl font-bold text-brand-700 dark:text-brand-400 mt-1">{customerRetention.total}</p>
+                  <p className="text-2xl font-bold text-brand-700 dark:text-brand-300 mt-1">{customerRetention.total}</p>
                 </div>
-                <div className="bg-green-50/50 dark:bg-green-950/20 rounded-xl p-3.5 text-center border border-green-100 dark:border-green-900/30">
+                <div className="bg-green-50/50 dark:bg-green-900/20 rounded-xl p-3.5 text-center border border-green-100 dark:border-green-700/40">
                   <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Muka Lama</p>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-400 mt-1">{customerRetention.returning}</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1">{customerRetention.returning}</p>
                 </div>
-                <div className="bg-blue-50/50 dark:bg-blue-950/20 rounded-xl p-3.5 text-center border border-blue-100 dark:border-blue-900/30">
+                <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-xl p-3.5 text-center border border-blue-100 dark:border-blue-700/40">
                   <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Retention</p>
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">{customerRetention.retentionRate}%</p>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">{customerRetention.retentionRate}%</p>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-semibold text-sm text-slate-700 dark:text-slate-350 mb-2">⭐ Pelanggan Paling Loyal (Kunjungan Terbanyak)</h4>
+                <h4 className="font-semibold text-sm text-slate-700 dark:text-slate-300 mb-2">⭐ Pelanggan Paling Loyal (Kunjungan Terbanyak)</h4>
                 <div className="space-y-2">
                   {customerRetention.topLoyal.map((cust, idx) => (
                     <div key={cust.id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
