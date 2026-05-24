@@ -445,12 +445,12 @@ export default function Reports() {
             </div>
             <div className="card p-5">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
                   <DollarSign className="text-purple-600" size={22} />
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Laba Kotor</p>
-                  <p className="text-xl font-bold text-purple-700">{formatRupiah(grossProfit)}</p>
+                  <p className="text-xl font-bold text-purple-700 dark:text-purple-400">{formatRupiah(grossProfit)}</p>
                 </div>
               </div>
             </div>
@@ -471,28 +471,28 @@ export default function Reports() {
           <div className="card p-5">
             <h3 className="font-bold text-lg mb-4">Laporan Laba Rugi</h3>
             <div className="space-y-3">
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">Total Pendapatan (Revenue)</span>
-                <span className="font-bold text-green-700">{formatRupiah(totalRevenue)}</span>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+                <span className="text-slate-600 dark:text-slate-400">Total Pendapatan (Revenue)</span>
+                <span className="font-bold text-green-700 dark:text-green-400">{formatRupiah(totalRevenue)}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100 pl-4">
-                <span className="text-slate-500">- Diskon yang diberikan</span>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 pl-4">
+                <span className="text-slate-500 dark:text-slate-400">- Diskon yang diberikan</span>
                 <span className="text-red-500">({formatRupiah(totalDiscount)})</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100 pl-4">
-                <span className="text-slate-500">- Harga Pokok Penjualan (HPP)</span>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 pl-4">
+                <span className="text-slate-500 dark:text-slate-400">- Harga Pokok Penjualan (HPP)</span>
                 <span className="text-red-500">({formatRupiah(totalHPP)})</span>
               </div>
-              <div className="flex justify-between py-3 bg-purple-50 rounded-xl px-4 font-bold">
+              <div className="flex justify-between py-3 bg-purple-50 dark:bg-purple-950/30 rounded-xl px-4 font-bold">
                 <span>Laba Kotor</span>
-                <span className="text-purple-700">{formatRupiah(grossProfit)}</span>
+                <span className="text-purple-700 dark:text-purple-400">{formatRupiah(grossProfit)}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">Jumlah Transaksi</span>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+                <span className="text-slate-600 dark:text-slate-400">Jumlah Transaksi</span>
                 <span className="font-medium">{filteredTx.length}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">Rata-rata per Transaksi</span>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+                <span className="text-slate-600 dark:text-slate-400">Rata-rata per Transaksi</span>
                 <span className="font-medium">{formatRupiah(avgTransaction)}</span>
               </div>
             </div>
@@ -658,12 +658,12 @@ export default function Reports() {
               </h3>
               <div className="space-y-2">
                 {lowStockItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-100 dark:border-red-900/40">
                     <div>
                       <p className="font-medium text-sm">{item.name}</p>
-                      <p className="text-xs text-slate-500">Min. stok: {item.minStock ?? 3} {item.unit}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Min. stok: {item.minStock ?? 3} {item.unit}</p>
                     </div>
-                    <span className="badge bg-red-100 text-red-700 font-bold">
+                    <span className="badge bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold">
                       {item.stock} {item.unit}
                     </span>
                   </div>
@@ -673,7 +673,7 @@ export default function Reports() {
           )}
 
           <div className="card overflow-hidden">
-            <div className="p-4 border-b border-slate-100">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
               <h3 className="font-bold">Daftar Stok Bahan Baku</h3>
             </div>
             <div className="overflow-x-auto max-h-96 overflow-y-auto">
@@ -693,18 +693,18 @@ export default function Reports() {
                   {inventory.map((item) => {
                     const isLow = item.stock < (item.minStock ?? 3);
                     return (
-                      <tr key={item.id} className={`border-b border-slate-50 ${isLow ? 'bg-red-50/50' : ''}`}>
+                      <tr key={item.id} className={`border-b border-slate-50 dark:border-slate-700/40 ${isLow ? 'bg-red-50/50 dark:bg-red-950/20' : ''}`}>
                         <td className="p-3 font-medium">{item.name}</td>
                         <td className="p-3 text-right font-medium">{item.stock}</td>
-                        <td className="p-3 text-slate-500">{item.unit}</td>
-                        <td className="p-3 text-right text-slate-500">{item.minStock ?? 3}</td>
+                        <td className="p-3 text-slate-500 dark:text-slate-400">{item.unit}</td>
+                        <td className="p-3 text-right text-slate-500 dark:text-slate-400">{item.minStock ?? 3}</td>
                         <td className="p-3 text-right">{formatRupiah(item.costPerUnit)}</td>
                         <td className="p-3 text-right font-medium">{formatRupiah(item.stock * item.costPerUnit)}</td>
                         <td className="p-3 text-center">
                           {isLow ? (
-                            <span className="badge bg-red-100 text-red-700">Rendah</span>
+                            <span className="badge bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">Rendah</span>
                           ) : (
-                            <span className="badge bg-green-100 text-green-700">Aman</span>
+                            <span className="badge bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">Aman</span>
                           )}
                         </td>
                       </tr>
