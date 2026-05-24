@@ -16,6 +16,38 @@ import type {
 } from '../types';
 import type { StockLogEntry } from '../store/stockLogStore';
 
+// ============================================================
+// DATABASE MIGRATIONS — run once on app startup
+// ============================================================
+
+/**
+ * Ensures that the database schema is up-to-date.
+ * Attempts to add missing columns. Safe to call multiple times.
+ */
+export async function runMigrations() {
+  if (!isSupabaseConfigured) return;
+  try {
+    // Migration 1: Add manual_hpp column to menus table
+    // Try selecting it — if the column doesn't exist, Supabase returns error
+    const { error } = await supabase.from('menus').select('manual_hpp').limit(1);
+    if (error && error.message.includes('manual_hpp')) {
+      console.warn('[Migration] Column "manual_hpp" missing in menus table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE menus ADD COLUMN IF NOT EXISTS manual_hpp FLOAT DEFAULT 0;');
+      // Mark migration as needed so syncMenu can work around it
+      migrationNeeded.manualHpp = true;
+    }
+  } catch (e) {
+    console.warn('[Migration] Could not verify schema:', e);
+  }
+}
+
+// Track which migrations are needed so sync functions can adapt
+const migrationNeeded = { manualHpp: false };
+export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
+  return migrationNeeded[key];
+}
+
 // NOTE: camelCase↔snake_case mapping is done explicitly per sync function
 // for full control and visibility of field mappings.
 
@@ -160,7 +192,7 @@ export async function deleteInventoryCloud(id: string) {
 
 export async function syncMenu(menu: Menu) {
   if (!isSupabaseConfigured) return;
-  await smartUpsert('menus', {
+  const data: Record<string, any> = {
     id: menu.id,
     name: menu.name,
     category: menu.category,
@@ -171,8 +203,12 @@ export async function syncMenu(menu: Menu) {
     ingredients: menu.ingredients,
     available_addons: menu.availableAddons,
     description: menu.description,
-    manual_hpp: menu.manualHpp || 0,
-  });
+  };
+  // Only include manual_hpp if the column exists in DB
+  if (!migrationNeeded.manualHpp) {
+    data.manual_hpp = menu.manualHpp || 0;
+  }
+  await smartUpsert('menus', data);
 }
 
 export async function deleteMenuCloud(id: string) {

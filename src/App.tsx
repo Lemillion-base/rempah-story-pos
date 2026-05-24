@@ -12,7 +12,7 @@ import { useInventoryStore } from './store/inventoryStore';
 import { usePromoStore } from './store/promoStore';
 import { updateFavicon, updatePageTitle } from './utils/favicon';
 import { initOfflineQueue } from './lib/offlineQueue';
-import { fetchTransactionsFromCloud } from './lib/cloudSync';
+import { fetchTransactionsFromCloud, runMigrations } from './lib/cloudSync';
 import Layout from './components/Layout';
 import OpenShiftModal from './components/OpenShiftModal';
 import ToastContainer from './components/ToastContainer';
@@ -68,8 +68,11 @@ export default function App() {
       updateFavicon(s.storeLogo);
       updatePageTitle(s.storeName);
     });
+    // Run database migrations first, then load cloud data
+    runMigrations().then(() => {
+      useMenuStore.getState().loadFromCloud(true);
+    });
     useCustomerStore.getState().loadFromCloud(true);
-    useMenuStore.getState().loadFromCloud(true);
     useInventoryStore.getState().loadFromCloud(true);
     useAuthStore.getState().loadFromCloud(true);
     usePromoStore.getState().loadFromCloud(true);
