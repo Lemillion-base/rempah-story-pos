@@ -164,7 +164,7 @@ export function subscribeToUsers(callback: (payload: any) => void) {
   if (!isSupabaseConfigured) return null;
   
   const channel = supabase
-    .channel('users-realtime')
+    .channel('auth-users-realtime')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'users' },
