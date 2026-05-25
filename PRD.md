@@ -1,9 +1,9 @@
 # Product Requirements Document (PRD)
 
 ## Project Name: POS Rempah Story
-## Product Version: 3.0 (Production)
+## Product Version: 3.1 (Production)
 ## Document Status: Production Ready
-## Last Updated: 19 Mei 2026
+## Last Updated: 25 Mei 2026
 ## Production URL: Deployed on Vercel
 ## Repository: https://github.com/Lemillion-base/rempah-story-pos
 
@@ -73,6 +73,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   - Manager: `manager` / `manager123`
   - Kasir: `kasir` / `kasir123`
   - Acaraki: `acaraki` / `acaraki123`
+- **Restriksi Multi-login Device**: Setiap user dibatasi hanya boleh memiliki satu session aktif di satu perangkat. Jika user login di perangkat/browser lain, session di perangkat lama otomatis ter-logout (kicked out) secara real-time via Supabase realtime subscription.
 
 ### 3.2. Modul Shift Management (Kasir)
 - **Buka Shift (Wajib)**:
@@ -352,6 +353,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   username: string (unique)
   password: string (bcrypt hashed — auto-migrasi dari plain text)
   role: 'Manager' | 'Kasir' | 'Acaraki'
+  activeSessionId?: string (untuk deteksi & batasi multi-device login)
   createdAt: string (ISO)
 }
 ```

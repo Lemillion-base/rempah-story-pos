@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('Manager', 'Kasir', 'Acaraki')),
+  active_session_id TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

@@ -56,9 +56,20 @@ export const useAuthStore = create<AuthState>()(
         }
 
         if (match) {
-          set({ currentUser: user });
+          // Multi-login check: generate new active session ID
+          const activeSessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          const updatedUser = { ...user, activeSessionId };
+
+          set({ currentUser: updatedUser });
           useAuditLogStore.getState().addLog(user.id, user.name, user.role, 'login', 'User logged in');
-          return user;
+          
+          set((s) => ({
+            users: s.users.map((u) => (u.id === user.id ? updatedUser : u)),
+          }));
+
+          syncUser(updatedUser);
+
+          return updatedUser;
         }
         return null;
       },
@@ -138,15 +149,47 @@ export const useAuthStore = create<AuthState>()(
                 if (localUser) {
                   const localIsHashed = localUser.password.startsWith('$2a$') || localUser.password.startsWith('$2b$');
                   const cloudIsHashed = cloudUser.password.startsWith('$2a$') || cloudUser.password.startsWith('$2b$');
+                  
+                  let preserved = { ...cloudUser };
                   if (localIsHashed && !cloudIsHashed) {
-                    const preserved = { ...cloudUser, password: localUser.password };
+                    preserved.password = localUser.password;
                     syncUser(preserved);
-                    return preserved;
                   }
+                  
+                  // Keep the activeSessionId if it's the current user's local session ID
+                  if (s.currentUser?.id === cloudUser.id) {
+                    preserved.activeSessionId = s.currentUser.activeSessionId;
+                  }
+                  return preserved;
                 }
                 return cloudUser;
               });
-              return { users: [...mergedCloud, ...localOnly] };
+
+              // Multi-login check on data load
+              const cloudCurrentUser = cloudUsers.find((u) => u.id === s.currentUser?.id);
+              if (cloudCurrentUser && s.currentUser) {
+                if (cloudCurrentUser.activeSessionId && s.currentUser.activeSessionId && cloudCurrentUser.activeSessionId !== s.currentUser.activeSessionId) {
+                  // Force logout in the next tick to prevent state transaction issues
+                  setTimeout(() => {
+                    alert('Akun Anda telah masuk di perangkat lain. Sesi ini akan ditutup.');
+                    get().logout();
+                    window.location.href = '/';
+                  }, 0);
+                }
+              }
+
+              // Preserve current user state safely
+              const updatedCurrentUser = s.currentUser
+                ? mergedCloud.find((u) => u.id === s.currentUser!.id) || s.currentUser
+                : null;
+              if (updatedCurrentUser && s.currentUser) {
+                updatedCurrentUser.activeSessionId = s.currentUser.activeSessionId;
+              }
+
+              return { 
+                users: [...mergedCloud, ...localOnly],
+                currentUser: updatedCurrentUser
+              };
             });
           } else {
             // Cloud is empty, seed it with local users

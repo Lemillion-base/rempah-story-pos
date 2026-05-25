@@ -124,6 +124,7 @@ Tolong pelajari dulu sebelum mulai coding.
   - `Inventory.tsx`: inventory
   - `Promos.tsx`: promos
   - `SettingsPage.tsx`: users
+  - `App.tsx` (Global): users (untuk restriksi multi-login device secara real-time)
 - **fullSync pattern**: Saat real-time event, cloud = sumber kebenaran. Item yang dihapus di cloud dihapus dari lokal (grace period 30s untuk item baru).
 
 ### Konvensi Kode:
@@ -191,10 +192,9 @@ Jika ingin melanjutkan development, berikut prioritas:
 | 2 | Payment Gateway (QRIS) | High | Perlu Supabase Edge Function + Midtrans API |
 | 3 | QR Self-Order | Medium | Generate QR per meja, halaman order publik |
 | 4 | Push Notification | Medium | Web Push API + service worker |
-| 5 | Dark Mode | Low | Tambah `dark:` classes di TailwindCSS |
-| 6 | Multi-language | Medium | i18n library (react-i18next) |
-| 7 | Stock log viewer UI | Low | Halaman baru untuk lihat riwayat stok |
-| 8 | Loyalty tier badge di CRM | Low | Tampilkan Bronze/Silver/Gold di card pelanggan |
+| 5 | Multi-language | Medium | i18n library (react-i18next) |
+| 6 | Stock log viewer UI | Low | Halaman baru untuk lihat riwayat stok |
+| 7 | Loyalty tier badge di CRM | Low | Tampilkan Bronze/Silver/Gold di card pelanggan |
 
 ---
 

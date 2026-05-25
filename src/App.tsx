@@ -12,7 +12,7 @@ import { useInventoryStore } from './store/inventoryStore';
 import { usePromoStore } from './store/promoStore';
 import { updateFavicon, updatePageTitle } from './utils/favicon';
 import { initOfflineQueue } from './lib/offlineQueue';
-import { fetchTransactionsFromCloud, runMigrations } from './lib/cloudSync';
+import { fetchTransactionsFromCloud, runMigrations, subscribeToUsers, unsubscribeChannel } from './lib/cloudSync';
 import Layout from './components/Layout';
 import OpenShiftModal from './components/OpenShiftModal';
 import ToastContainer from './components/ToastContainer';
@@ -89,6 +89,29 @@ export default function App() {
     useAuditLogStore.getState().clearOldLogs(90);
     useAuditLogStore.getState().loadFromCloud();
   }, []);
+
+  // Subscribe to realtime users table changes to prevent multi-device logins
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const channel = subscribeToUsers((payload: any) => {
+      if (payload.new && payload.new.id === currentUser.id) {
+        const localActiveSessionId = currentUser.activeSessionId;
+        const newActiveSessionId = payload.new.active_session_id;
+
+        // If there's a different session ID active in cloud, log out local session
+        if (newActiveSessionId && localActiveSessionId && newActiveSessionId !== localActiveSessionId) {
+          alert('Akun Anda telah masuk di perangkat lain. Sesi ini akan ditutup.');
+          useAuthStore.getState().logout();
+          window.location.href = '/';
+        }
+      }
+    });
+
+    return () => {
+      if (channel) unsubscribeChannel(channel);
+    };
+  }, [currentUser]);
 
   return (
     <>
