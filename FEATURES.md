@@ -118,6 +118,7 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 - Validasi username unik
 - **Audit Log**: semua aksi user tercatat (login, CRUD, transaksi, shift)
 - **Konfirmasi void/cancel**: Manager mendapat dialog konfirmasi sebelum void/cancel transaksi
+- **Restriksi Multi-login Device**: membatasi masing-masing user agar hanya bisa login aktif di satu perangkat saja (login di perangkat baru otomatis mengeluarkan perangkat lama)
 - Export audit log ke CSV
 
 ### 12. ⚙️ Settings & Konfigurasi
@@ -219,7 +220,6 @@ Cocok untuk:
 - [ ] QR Code self-order (scan dari meja)
 - [ ] Integrasi payment gateway (QRIS otomatis)
 - [ ] Push notification (stok rendah, pesanan lama)
-- [ ] Dark mode
 - [ ] Multi-language (English)
 - [ ] AI menu recommendation
 

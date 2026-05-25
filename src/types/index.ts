@@ -9,6 +9,7 @@ export interface User {
   password: string; // In MVP ini plain (future: hash)
   role: Role;
   createdAt: string;
+  activeSessionId?: string;
 }
 
 export interface InventoryItem {

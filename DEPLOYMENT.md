@@ -81,7 +81,10 @@ Setiap klien (toko) yang beli aplikasi Anda perlu:
 
 ### Setup Cepat untuk 1 Klien Baru:
 1. Buat Supabase project baru (gratis)
-2. Jalankan `schema.sql` di SQL Editor
+2. Jalankan `schema.sql` di SQL Editor.
+   > [!NOTE]
+   > Jika meng-upgrade database klien lama ke versi 3.1, jalankan perintah berikut di SQL Editor Supabase untuk menambahkan kolom pembatasan login device:
+   > `ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session_id TEXT;`
 3. Deploy frontend ke Vercel dengan env variables klien tersebut
 4. Berikan URL + akun login ke klien
 5. Klien bisa langsung pakai
@@ -183,6 +186,7 @@ Butuh bantuan? Hubungi: [WA Anda]
 - [x] Custom categories cloud sync
 - [x] Konfirmasi void/cancel transaksi (Manager)
 - [x] Clear cart button (2+ items)
+- [x] Restriksi Multi-login Device (satu session aktif per user)
 
 ### ✅ Bisnis
 - [ ] Tentukan pricing model

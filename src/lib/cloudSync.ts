@@ -28,14 +28,21 @@ export async function runMigrations() {
   if (!isSupabaseConfigured) return;
   try {
     // Migration 1: Add manual_hpp column to menus table
-    // Try selecting it — if the column doesn't exist, Supabase returns error
     const { error } = await supabase.from('menus').select('manual_hpp').limit(1);
     if (error && error.message.includes('manual_hpp')) {
       console.warn('[Migration] Column "manual_hpp" missing in menus table.');
       console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
       console.warn('  ALTER TABLE menus ADD COLUMN IF NOT EXISTS manual_hpp FLOAT DEFAULT 0;');
-      // Mark migration as needed so syncMenu can work around it
       migrationNeeded.manualHpp = true;
+    }
+
+    // Migration 2: Add active_session_id column to users table
+    const { error: userError } = await supabase.from('users').select('active_session_id').limit(1);
+    if (userError && userError.message.includes('active_session_id')) {
+      console.warn('[Migration] Column "active_session_id" missing in users table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session_id TEXT;');
+      migrationNeeded.activeSessionId = true;
     }
   } catch (e) {
     console.warn('[Migration] Could not verify schema:', e);
@@ -43,7 +50,7 @@ export async function runMigrations() {
 }
 
 // Track which migrations are needed so sync functions can adapt
-const migrationNeeded = { manualHpp: false };
+const migrationNeeded = { manualHpp: false, activeSessionId: false };
 export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
   return migrationNeeded[key];
 }
@@ -151,6 +158,21 @@ export function unsubscribeChannel(channel: any) {
   if (channel) {
     supabase.removeChannel(channel);
   }
+}
+
+export function subscribeToUsers(callback: (payload: any) => void) {
+  if (!isSupabaseConfigured) return null;
+  
+  const channel = supabase
+    .channel('users-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'users' },
+      callback
+    )
+    .subscribe();
+
+  return channel;
 }
 
 // ============================================================
@@ -466,14 +488,18 @@ export async function fetchInventoryFromCloud(): Promise<InventoryItem[] | null>
 
 export async function syncUser(user: User) {
   if (!isSupabaseConfigured) return;
-  await smartUpsert('users', {
+  const data: Record<string, any> = {
     id: user.id,
     name: user.name,
     username: user.username,
     password: user.password,
     role: user.role,
     created_at: user.createdAt,
-  });
+  };
+  if (!migrationNeeded.activeSessionId) {
+    data.active_session_id = user.activeSessionId || null;
+  }
+  await smartUpsert('users', data);
 }
 
 export async function deleteUserCloud(id: string) {
@@ -493,6 +519,7 @@ export async function fetchUsersFromCloud(): Promise<User[] | null> {
       password: row.password,
       role: row.role,
       createdAt: row.created_at,
+      activeSessionId: row.active_session_id || undefined,
     })) || null;
   } catch {
     return null;
