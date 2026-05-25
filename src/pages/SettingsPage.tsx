@@ -37,7 +37,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     const channel = supabase
-      .channel('users-realtime')
+      .channel('settings-users-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
         loadUsersFromCloud(true);
       })

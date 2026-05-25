@@ -23,7 +23,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 via-white to-brand-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 via-white to-brand-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 transition-colors duration-300">
       <div className="card w-full max-w-sm p-8">
         <div className="text-center mb-8">
           {settings.storeLogo ? (
@@ -31,8 +31,8 @@ export default function Login() {
           ) : (
             <div className="text-4xl mb-3">🌿</div>
           )}
-          <h1 className="text-2xl font-bold text-brand-700">{settings.storeName}</h1>
-          <p className="text-sm text-slate-500 mt-1">Point of Sale System</p>
+          <h1 className="text-2xl font-bold text-brand-700 dark:text-brand-400">{settings.storeName}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Point of Sale System</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -66,8 +66,8 @@ export default function Login() {
         </form>
 
         {settings.demoMode && (
-          <div className="mt-6 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs text-slate-500 dark:text-slate-400 space-y-1">
-            <p className="font-medium text-slate-600">Demo Accounts:</p>
+          <div className="mt-6 p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/30 rounded-xl text-xs text-slate-500 dark:text-slate-400 space-y-1">
+            <p className="font-medium text-slate-600 dark:text-slate-300">Demo Accounts:</p>
             <p>Manager: manager / manager123</p>
             <p>Kasir: kasir / kasir123</p>
             <p>Acaraki: acaraki / acaraki123</p>
