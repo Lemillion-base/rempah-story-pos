@@ -228,7 +228,10 @@ Butuh bantuan? Hubungi: [WA Anda]
 ## FAQ
 
 **Q: Apakah data klien aman?**
-A: Ya. Setiap klien punya database terpisah di Supabase. Password di-hash dengan bcrypt. Koneksi HTTPS.
+A: Ya. Setiap klien punya database terpisah di Supabase. Password di-hash dengan bcrypt. Koneksi HTTPS. Namun, pastikan mengaktifkan Row Level Security (RLS) di Supabase production untuk pengamanan optimal.
+
+**Q: Bagaimana jika koneksi real-time terputus saat perangkat sleep?**
+A: Sistem POS dilengkapi dengan auto-reconnect. Namun jika koneksi tersendat, kasir cukup melakukan swipe-refresh/reload halaman, dan offline queue akan otomatis mengunggah perubahan tertunda saat online.
 
 **Q: Bagaimana jika klien mau fitur tambahan?**
 A: Charge sebagai custom development (Rp 500rb-2jt per fitur tergantung kompleksitas).

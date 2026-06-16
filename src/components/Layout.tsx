@@ -6,6 +6,7 @@ import { useTransactionStore } from '../store/transactionStore';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { useCloudStatus } from '../hooks/useCloudStatus';
 import { formatRupiah, formatDate } from '../utils/format';
+import { printTextRaw } from '../utils/printer';
 import { useState, useMemo, useEffect } from 'react';
 import Modal from './Modal';
 import {
@@ -104,6 +105,7 @@ export default function Layout() {
   // Calculate shift stats
   const shiftStats = useMemo(() => {
     if (!activeShift) return { totalSales: 0, totalTx: 0, expectedCash: 0 };
+    // LOGIC-4 fix: Only count Selesai transactions for sales and expected cash
     const shiftTx = transactions.filter(
       (t) =>
         t.cashierId === currentUser.id &&
@@ -112,18 +114,13 @@ export default function Layout() {
     );
     const totalSales = shiftTx.reduce((a, t) => a + t.totalAmount, 0);
 
-    // Expected cash must include ALL cash transactions during shift (including voided)
-    // because money was physically received and is in the drawer
-    const allShiftTx = transactions.filter(
-      (t) =>
-        t.cashierId === currentUser.id &&
-        new Date(t.date) >= new Date(activeShift.openedAt)
-    );
-    const cashSales = allShiftTx
-      .filter((t) => t.paymentMethod === 'Cash' && t.txStatus !== 'Demo')
+    // BUG-K1 fix: Expected cash only includes Selesai cash transactions
+    // Cancel = voided (money returned/not collected), Demo = test data
+    const cashSales = shiftTx
+      .filter((t) => t.paymentMethod === 'Cash')
       .reduce((a, t) => a + t.totalAmount, 0);
-    const cashChange = allShiftTx
-      .filter((t) => t.paymentMethod === 'Cash' && t.txStatus !== 'Demo')
+    const cashChange = shiftTx
+      .filter((t) => t.paymentMethod === 'Cash')
       .reduce((a, t) => a + (t.change || 0), 0);
     const expectedCash = activeShift.openingCash + cashSales - cashChange;
     return { totalSales, totalTx: shiftTx.length, expectedCash };
@@ -150,7 +147,7 @@ export default function Layout() {
     );
   }, [transactions]);
 
-  const handleAcarakiPrint = () => {
+  const handleAcarakiPrint = async () => {
     const lines = [
       '=== RINGKASAN DAPUR ===',
       `Tanggal: ${new Date().toLocaleDateString('id-ID')}`,
@@ -164,12 +161,7 @@ export default function Layout() {
       '',
       '========================',
     ];
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`<pre style="font-family:monospace;font-size:12px;">${lines.join('\n')}</pre>`);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    await printTextRaw(lines, settings);
     // Reset done orders on KDS
     clearKdsDoneOrders();
     setShowAcarakiSummary(false);
@@ -184,7 +176,7 @@ export default function Layout() {
     navigate('/');
   };
 
-  const handleCloseShift = () => {
+  const handleCloseShift = async () => {
     const closingCash = parseInt(closingCashInput) || 0;
     closeShift(closingCash, shiftStats.totalSales, shiftStats.totalTx, shiftStats.expectedCash);
 
@@ -214,12 +206,7 @@ export default function Layout() {
       ``,
       `===========================`,
     ];
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`<pre style="font-family:monospace;font-size:11px;">${lines.join('\n')}</pre>`);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    await printTextRaw(lines, settings);
 
     setShowCloseShift(false);
     logout();
@@ -385,6 +372,7 @@ export default function Layout() {
         onClose={() => {}} // Cannot dismiss
         title="Tutup Shift & Serah Terima Kas"
         maxWidth="max-w-md"
+        dismissible={false}
       >
         <div className="space-y-5">
           <div className="bg-blue-50 rounded-xl p-4">
@@ -463,6 +451,7 @@ export default function Layout() {
         onClose={() => {}}
         title="Ringkasan Pesanan Selesai"
         maxWidth="max-w-md"
+        dismissible={false}
       >
         <div className="space-y-4">
           <div className="bg-green-50 rounded-xl p-4 text-center">

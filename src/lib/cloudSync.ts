@@ -44,13 +44,22 @@ export async function runMigrations() {
       console.warn('  ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session_id TEXT;');
       migrationNeeded.activeSessionId = true;
     }
+
+    // Migration 3: Add tax column to transactions table (GAP-3 fix)
+    const { error: txError } = await supabase.from('transactions').select('tax').limit(1);
+    if (txError && txError.message.includes('tax')) {
+      console.warn('[Migration] Column "tax" missing in transactions table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tax INT DEFAULT 0;');
+      migrationNeeded.tax = true;
+    }
   } catch (e) {
     console.warn('[Migration] Could not verify schema:', e);
   }
 }
 
 // Track which migrations are needed so sync functions can adapt
-const migrationNeeded = { manualHpp: false, activeSessionId: false };
+const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false };
 export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
   return migrationNeeded[key];
 }
@@ -64,7 +73,7 @@ export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
 
 export async function syncTransaction(tx: Transaction) {
   if (!isSupabaseConfigured) return;
-  await smartUpsert('transactions', {
+  const data: Record<string, any> = {
     id: tx.id,
     queue_number: tx.queueNumber,
     date: tx.date,
@@ -82,7 +91,11 @@ export async function syncTransaction(tx: Transaction) {
     customer_id: tx.customerId,
     customer_name: tx.customerName,
     hpp: tx.hpp,
-  });
+  };
+  if (!migrationNeeded.tax) {
+    data.tax = tx.tax || 0;
+  }
+  await smartUpsert('transactions', data);
 }
 
 export async function syncTransactionStatus(id: string, kitchenStatus: string) {
@@ -128,6 +141,7 @@ export async function fetchTransactionsFromCloud(): Promise<Transaction[] | null
       customerId: row.customer_id,
       customerName: row.customer_name,
       hpp: row.hpp,
+      tax: row.tax || 0,
     })) || null;
   } catch (e) {
     console.error('[CloudSync] Fetch EXCEPTION:', e);

@@ -652,20 +652,21 @@ Rendered by ToastContainer (fixed top-right, z-200)
 
 Fitur berikut sudah disiapkan arsitekturnya untuk fase pengembangan selanjutnya:
 
-### Phase 1 — NEXT (Cloud Sync)
-1. **Cloud Database (Supabase)**: Migrasi localStorage → Supabase PostgreSQL dengan Real-Time Subscriptions untuk komunikasi Kasir-Dapur lintas device. Multi-device support: kasir di tablet, KDS di TV, manager di laptop.
+### Phase 1 — NEXT (Integrasi & Sekuritas Lanjutan)
+1. **Auto-Reconnect & Visibility State Listener**: Otomatis memulihkan koneksi realtime Supabase saat perangkat menyala kembali dari mode sleep.
+2. **Supabase Row Level Security (RLS) Policies**: Pengamanan ketat akses database dari eksploitasi pihak luar yang mengetahui `anon key`.
 
-### Phase 2
-2. **Multi-outlet Support**: Satu akun Manager mengelola beberapa cabang
-3. **QR Code Self-Order**: Pelanggan scan QR di meja → pilih menu → langsung masuk KDS
-4. **Integrasi Payment Gateway**: QRIS otomatis (Midtrans/Xendit), auto-confirm pembayaran
-5. **Notifikasi Push**: Stok rendah, pesanan lama, shift reminder
+### Phase 2 (Komunikasi & Notifikasi)
+3. **WhatsApp Receipt & Shift Summary**: Kirim struk PDF ke pelanggan dan ringkasan shift harian ke WA Manager.
+4. **Multi-outlet Support**: Satu akun Manager mengelola beberapa cabang dengan database inventaris terpisah.
+5. **QR Code Self-Order**: Pelanggan scan QR di meja → pilih menu → langsung masuk KDS.
+6. **Integrasi Payment Gateway**: QRIS otomatis (Midtrans/Xendit) dengan auto-confirm pembayaran.
 
-### Phase 3
-6. **Laporan Perbandingan Periode**: Revenue minggu ini vs minggu lalu
-7. **Restock/Purchase Order**: Catat pembelian bahan baku dari supplier
-8. **Multi-language**: Support Bahasa Inggris
-9. **AI Recommendation**: Suggest menu berdasarkan cuaca/waktu/histori
+### Phase 3 (Analitik & Operasional)
+7. **Laporan Perbandingan Periode**: Analitik komparatif performa penjualan.
+8. **Restock/Purchase Order**: Pencatatan pembelian bahan baku dari supplier.
+9. **Multi-language**: Dukungan multibahasa (English/Indonesia).
+10. **AI Recommendation**: Rekomendasi menu cerdas berbasis histori dan cuaca.
 
 ### ~~Completed (moved from roadmap)~~
 - ~~Printer Thermal Bluetooth~~ ✅ (Web Bluetooth API + Browser Print)
@@ -678,6 +679,8 @@ Fitur berikut sudah disiapkan arsitekturnya untuk fase pengembangan selanjutnya:
 - ~~Clear Cart~~ ✅ (1-klik kosongkan keranjang)
 - ~~KDS Today Filter~~ ✅ (Hanya transaksi hari ini)
 - ~~Custom Categories Sync~~ ✅ (Cloud sync via settings table)
+- ~~Dark Mode Overhaul & Login Contrast~~ ✅ (Dark mode premium & halaman login bebas kontras)
+- ~~Multi-device Session Restriction~~ ✅ (Pembatasan satu session aktif per user via Supabase Realtime)
 
 ---
 

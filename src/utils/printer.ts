@@ -24,6 +24,7 @@ export interface ReceiptData {
   items: CartItem[];
   subtotal: number;
   discount: number;
+  tax?: number; // GAP-3 fix: Pajak
   total: number;
   paymentMethod: string;
   cashReceived?: number;
@@ -42,6 +43,7 @@ export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettin
     items: tx.items,
     subtotal: tx.subtotal,
     discount: tx.discount,
+    tax: tx.tax, // GAP-3 fix: Pajak
     total: tx.totalAmount,
     paymentMethod: tx.paymentMethod,
     cashReceived: tx.cashReceived,
@@ -88,6 +90,9 @@ export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
   lines.push(leftRight('Subtotal', formatRupiah(data.subtotal), width));
   if (data.discount > 0) {
     lines.push(leftRight('Diskon', `-${formatRupiah(data.discount)}`, width));
+  }
+  if (data.tax && data.tax > 0) {
+    lines.push(leftRight('Pajak', formatRupiah(data.tax), width));
   }
   lines.push(leftRight('TOTAL', formatRupiah(data.total), width));
   lines.push(separator);
@@ -275,6 +280,9 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
   if (data.discount > 0) {
     commands.push(...encoder.encode(`Diskon: -${formatRupiah(data.discount)}\n`));
   }
+  if (data.tax && data.tax > 0) {
+    commands.push(...encoder.encode(`Pajak: ${formatRupiah(data.tax)}\n`));
+  }
 
   // Bold total
   commands.push(ESC, 0x45, 0x01);
@@ -332,6 +340,87 @@ export async function printReceipt(data: ReceiptData, settings: AppSettings) {
   }
 }
 
+// GAP-7 fix: General raw text printing utility (supporting bluetooth & browser fallback)
+export async function printTextRaw(lines: string[], settings: AppSettings) {
+  if (!settings.printerEnabled) {
+    fallbackBrowserPrintText(lines, '58mm');
+    return;
+  }
+
+  if (settings.printerType === 'bluetooth') {
+    const connected = bluetoothCharacteristic ? true : await connectBluetoothPrinter();
+    if (!connected) {
+      fallbackBrowserPrintText(lines, settings.printerWidth);
+      return;
+    }
+    const maxChars = settings.printerWidth === '58mm' ? 32 : 42;
+    const encoder = new TextEncoder();
+    const ESC = 0x1B;
+    const GS = 0x1D;
+    const commands: number[] = [];
+
+    // Initialize printer
+    commands.push(ESC, 0x40); // ESC @
+    commands.push(ESC, 0x61, 0x00); // Left align
+
+    for (const line of lines) {
+      commands.push(...encoder.encode(line + '\n'));
+    }
+
+    // Feed and cut
+    commands.push(ESC, 0x64, 0x04); // Feed 4 lines
+    commands.push(GS, 0x56, 0x00); // Cut paper
+
+    const data_array = new Uint8Array(commands);
+    const chunkSize = 20;
+    for (let i = 0; i < data_array.length; i += chunkSize) {
+      const chunk = data_array.slice(i, i + chunkSize);
+      try {
+        if (bluetoothCharacteristic!.properties.writeWithoutResponse) {
+          await bluetoothCharacteristic!.writeValueWithoutResponse(chunk);
+        } else {
+          await bluetoothCharacteristic!.writeValue(chunk);
+        }
+        await new Promise((r) => setTimeout(r, 20));
+      } catch (err) {
+        console.error('Print chunk error:', err);
+        break;
+      }
+    }
+  } else {
+    fallbackBrowserPrintText(lines, settings.printerWidth);
+  }
+}
+
+function fallbackBrowserPrintText(lines: string[], width: '58mm' | '80mm') {
+  const fontSize = width === '58mm' ? '10px' : '12px';
+  const paperWidth = width === '58mm' ? '48mm' : '72mm';
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  if (!printWindow) return;
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Ringkasan</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: ${fontSize}; width: ${paperWidth}; margin: 0 auto; padding: 4mm 2mm; }
+        pre { white-space: pre-wrap; word-break: break-all; line-height: 1.4; }
+        @media print {
+          @page { margin: 0; size: ${width} auto; }
+          body { width: 100%; padding: 2mm; }
+        }
+      </style>
+    </head>
+    <body>
+      <pre>${lines.join('\n')}</pre>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
+}
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -348,7 +437,9 @@ function leftRight(left: string, right: string, width: '58mm' | '80mm'): string 
   return left + ' '.repeat(space) + right;
 }
 
-function padLeft(text: string, _width: '58mm' | '80mm'): string {
-  // Right-align helper for receipt line items
-  return '  ' + text;
+function padLeft(text: string, width: '58mm' | '80mm'): string {
+  // BUG-R2 fix: Actually right-align within remaining line space
+  const maxChars = width === '58mm' ? 32 : 42;
+  const pad = Math.max(1, maxChars - text.length - 10); // account for qty prefix
+  return ' '.repeat(pad) + text;
 }

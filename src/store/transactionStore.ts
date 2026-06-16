@@ -33,23 +33,26 @@ export const useTransactionStore = create<TransactionState>()(
 
       getNextQueueNumber: () => {
         const today = getTodayDateStr();
-        const state = get();
-        // Reset queue number if it's a new day
-        if (state.lastQueueDate !== today) {
-          set({ nextQueueNumber: 1, lastQueueDate: today });
-          return 1;
-        }
-        return state.nextQueueNumber;
+        // BUG-M1 fix: Dynamically find the maximum queue number from today's transactions
+        // to prevent race conditions or sync conflicts between multiple devices
+        const todayTxs = get().transactions.filter(
+          (t) => t.date.startsWith(today) && t.txStatus !== 'Demo' && t.txStatus !== 'Cancel'
+        );
+        const maxQueue = todayTxs.reduce((max, t) => Math.max(max, t.queueNumber || 0), 0);
+        return maxQueue + 1;
       },
 
       addTransaction: (tx) => {
         syncTransaction(tx); // Cloud sync
         set((s) => {
           const today = getTodayDateStr();
-          const shouldReset = s.lastQueueDate !== today;
+          const todayTxs = [tx, ...s.transactions].filter(
+            (t) => t.date.startsWith(today) && t.txStatus !== 'Demo' && t.txStatus !== 'Cancel'
+          );
+          const maxQueue = todayTxs.reduce((max, t) => Math.max(max, t.queueNumber || 0), 0);
           return {
             transactions: [tx, ...s.transactions],
-            nextQueueNumber: (shouldReset ? 1 : s.nextQueueNumber) + 1,
+            nextQueueNumber: maxQueue + 1,
             lastQueueDate: today,
           };
         });
@@ -84,7 +87,7 @@ export const useTransactionStore = create<TransactionState>()(
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return get().transactions.filter(
-          (t) => new Date(t.date) >= today && t.txStatus !== 'Demo'
+          (t) => new Date(t.date) >= today && t.txStatus !== 'Demo' && t.txStatus !== 'Cancel'
         );
       },
 
@@ -102,19 +105,36 @@ export const useTransactionStore = create<TransactionState>()(
         set((s) => {
           const cloudIds = new Set(cloudTransactions.map((t) => t.id));
           
+          // Find the oldest transaction date from the cloud list to establish the sync window boundary
+          let oldestCloudTime = 0;
+          if (cloudTransactions.length > 0) {
+            // Since it's sorted descending, the last element is the oldest
+            const oldestTx = cloudTransactions[cloudTransactions.length - 1];
+            oldestCloudTime = new Date(oldestTx.date).getTime();
+          }
+
           let localOnly: Transaction[];
           if (fullSync) {
-            // Full sync mode (real-time triggered): cloud is authoritative.
-            // Only keep local transactions created in the last 30 seconds
-            // (grace period for transactions that haven't synced to cloud yet)
+            // Full sync mode (real-time triggered): cloud is authoritative within the window.
+            // Only keep local transactions created in the last 30 seconds (grace period)
+            // or those older than the oldest cloud transaction (outside the sync window).
             const gracePeriod = 30 * 1000; // 30 seconds
             const cutoff = Date.now() - gracePeriod;
-            localOnly = s.transactions.filter(
-              (t) => !cloudIds.has(t.id) && new Date(t.date).getTime() > cutoff
-            );
+            localOnly = s.transactions.filter((t) => {
+              if (cloudIds.has(t.id)) return false;
+              const txTime = new Date(t.date).getTime();
+              if (txTime > cutoff) return true; // Keep in grace period
+              if (txTime > oldestCloudTime) return false; // Newer than oldest cloud but not in cloudIds -> deleted
+              return true; // Keep older transactions outside the window
+            });
           } else {
-            // Initial load: keep all local transactions not in cloud
-            localOnly = s.transactions.filter((t) => !cloudIds.has(t.id));
+            // Initial load: keep local transactions only if they are older than the oldest cloud transaction
+            // (if they are newer but not in cloud list, they were deleted on another device).
+            localOnly = s.transactions.filter((t) => {
+              if (cloudIds.has(t.id)) return false;
+              const txTime = new Date(t.date).getTime();
+              return txTime <= oldestCloudTime;
+            });
           }
 
           // Merge: cloud data + local-only data

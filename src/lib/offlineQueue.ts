@@ -45,14 +45,19 @@ export function addToQueue(op: Omit<QueueOperation, 'id' | 'timestamp' | 'retrie
   const queue = getQueue();
   
   // BUG-M8 fix: Deduplicate — for upsert/update, replace existing pending op for same table+record
+  // BUG-M3 fix: Also deduplicate inserts using data.id to prevent duplicate logs
   const recordId = op.data?.id || op.filter?.value;
-  if (recordId && (op.action === 'upsert' || op.action === 'update')) {
+  if (recordId && (op.action === 'upsert' || op.action === 'update' || op.action === 'insert')) {
     const existingIdx = queue.findIndex(
       (q) => q.table === op.table && 
-             (q.action === 'upsert' || q.action === 'update') &&
+             (q.action === op.action || ((q.action === 'upsert' || q.action === 'update') && (op.action === 'upsert' || op.action === 'update'))) &&
              (q.data?.id === recordId || q.filter?.value === recordId)
     );
     if (existingIdx !== -1) {
+      // For inserts with same ID, skip (it's a duplicate)
+      if (op.action === 'insert' && queue[existingIdx].action === 'insert') {
+        return; // Already queued, don't add again
+      }
       // Replace the stale operation with the latest data
       queue[existingIdx] = {
         ...queue[existingIdx],

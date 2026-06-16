@@ -60,8 +60,31 @@ export const useSettingsStore = create<SettingsState>()(
       loadFromCloud: async () => {
         const cloudSettings = await fetchSettingsFromCloud();
         if (cloudSettings) {
-          // Merge: keep local values as fallback, cloud overwrites where present
-          set((s) => ({ settings: { ...s.settings, ...cloudSettings } }));
+          set((s) => {
+            const merged = { ...seedSettings } as any;
+            // LOGIC-6: Merge settings per-field rather than overwriting completely
+            // Local modifications and cloud modifications are both preserved if they don't conflict.
+            Object.keys(seedSettings).forEach((k) => {
+              const key = k as keyof AppSettings;
+              const localVal = s.settings[key];
+              const cloudVal = cloudSettings[key];
+              const seedVal = seedSettings[key];
+
+              const localChanged = JSON.stringify(localVal) !== JSON.stringify(seedVal);
+              const cloudChanged = JSON.stringify(cloudVal) !== JSON.stringify(seedVal);
+
+              if (localChanged && !cloudChanged) {
+                merged[key] = localVal;
+              } else if (!localChanged && cloudChanged) {
+                merged[key] = cloudVal;
+              } else if (localChanged && cloudChanged) {
+                merged[key] = cloudVal; // Cloud wins conflict
+              } else {
+                merged[key] = seedVal;
+              }
+            });
+            return { settings: merged as AppSettings };
+          });
         }
       },
     }),

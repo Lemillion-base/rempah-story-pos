@@ -43,8 +43,9 @@ function ShiftGuard({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuthStore();
   const { activeShift } = useShiftStore();
 
-  // Kasir must open shift before working
-  const needsShift = currentUser && (currentUser.role === 'Kasir') && !activeShift;
+  // BUG-K4 fix: Both Kasir and Manager must open shift before working
+  // so all POS transactions are tracked for accurate cash reconciliation
+  const needsShift = currentUser && (currentUser.role === 'Kasir' || currentUser.role === 'Manager') && !activeShift;
 
   return (
     <>
@@ -59,6 +60,8 @@ export default function App() {
 
   // Migrate passwords, load cloud data, cleanup old logs, update favicon, init offline queue
   useEffect(() => {
+    // BUG-K2 fix: migratePasswords MUST complete before loadFromCloud
+    // to prevent cloud plain-text passwords from overwriting local hashed ones
     migratePasswords();
     initOfflineQueue();
 
@@ -74,6 +77,8 @@ export default function App() {
     });
     useCustomerStore.getState().loadFromCloud(true);
     useInventoryStore.getState().loadFromCloud(true);
+    // BUG-K2 fix: Load auth from cloud AFTER migratePasswords has set passwordsHashed=true
+    // migratePasswords is synchronous, so by this point local passwords are already hashed
     useAuthStore.getState().loadFromCloud(true);
     usePromoStore.getState().loadFromCloud(true);
     // BUG-C3 fix: Load shifts from cloud

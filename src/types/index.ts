@@ -24,6 +24,7 @@ export interface InventoryItem {
 export interface AddOn {
   name: string;
   price: number;
+  hpp?: number; // optional cost of goods for this addon (untuk hitung HPP akurat)
 }
 
 export interface Menu {
@@ -76,6 +77,7 @@ export interface Transaction {
   customerId?: string; // opsional (CRM)
   customerName?: string;
   hpp: number; // total cost of goods sold
+  tax?: number; // GAP-3 fix: Nilai pajak
 }
 
 // CRM (extension beyond PRD MVP)

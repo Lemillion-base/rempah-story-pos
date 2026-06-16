@@ -45,47 +45,76 @@ export default function POS() {
   const { getActivePromos, getPromoByCode, incrementUsage, getCustomerDiscount } = usePromoStore();
   const { addLog } = useAuditLogStore();
 
-  // GAP-3 fix: Real-time sync for menus, inventory, and customers
+  // GAP-3 fix: Real-time sync for menus, inventory, and customers (with GAP-2 auto-reconnect)
   // So Kasir sees changes from Manager's device even without navigating away
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
-    const menuChannel = supabase
-      .channel('pos-menus-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menus' }, () => {
+    let menuChannel: any;
+    let invChannel: any;
+    let custChannel: any;
+    let settingsChannel: any;
+
+    const setupSubscriptions = () => {
+      if (menuChannel) supabase.removeChannel(menuChannel);
+      if (invChannel) supabase.removeChannel(invChannel);
+      if (custChannel) supabase.removeChannel(custChannel);
+      if (settingsChannel) supabase.removeChannel(settingsChannel);
+
+      menuChannel = supabase
+        .channel('pos-menus-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'menus' }, () => {
+          useMenuStore.getState().loadFromCloud(true);
+        })
+        .subscribe();
+
+      invChannel = supabase
+        .channel('pos-inventory-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
+          useInventoryStore.getState().loadFromCloud(true);
+        })
+        .subscribe();
+
+      custChannel = supabase
+        .channel('pos-customers-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+          useCustomerStore.getState().loadFromCloud(true);
+        })
+        .subscribe();
+
+      settingsChannel = supabase
+        .channel('pos-settings-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
+          useSettingsStore.getState().loadFromCloud();
+          usePromoStore.getState().loadFromCloud(true); // loyalty settings also in settings table
+          useMenuStore.getState().loadFromCloud(true); // custom categories also in settings table
+        })
+        .subscribe();
+    };
+
+    setupSubscriptions();
+
+    const handleReconnect = () => {
+      if (document.visibilityState === 'visible' || navigator.onLine) {
+        console.log('[POS] Visibility or online restored, reconnecting subscriptions...');
         useMenuStore.getState().loadFromCloud(true);
-      })
-      .subscribe();
-
-    const invChannel = supabase
-      .channel('pos-inventory-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
         useInventoryStore.getState().loadFromCloud(true);
-      })
-      .subscribe();
-
-    const custChannel = supabase
-      .channel('pos-customers-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
         useCustomerStore.getState().loadFromCloud(true);
-      })
-      .subscribe();
-
-    // Also listen for settings changes (GAP-2: store name, tax, etc.)
-    const settingsChannel = supabase
-      .channel('pos-settings-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
         useSettingsStore.getState().loadFromCloud();
-        usePromoStore.getState().loadFromCloud(true); // loyalty settings also in settings table
-        useMenuStore.getState().loadFromCloud(true); // custom categories also in settings table
-      })
-      .subscribe();
+        setupSubscriptions();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleReconnect);
+    window.addEventListener('online', handleReconnect);
 
     return () => {
-      supabase.removeChannel(menuChannel);
-      supabase.removeChannel(invChannel);
-      supabase.removeChannel(custChannel);
-      supabase.removeChannel(settingsChannel);
+      if (menuChannel) supabase.removeChannel(menuChannel);
+      if (invChannel) supabase.removeChannel(invChannel);
+      if (custChannel) supabase.removeChannel(custChannel);
+      if (settingsChannel) supabase.removeChannel(settingsChannel);
+      window.removeEventListener('visibilitychange', handleReconnect);
+      window.removeEventListener('online', handleReconnect);
     };
   }, []);
 
@@ -104,11 +133,27 @@ export default function POS() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'F1') { e.preventDefault(); handleCheckoutCb(); }
-      if (e.key === 'Escape') { setShowCheckout(false); setSelectedMenu(null); setMobileCartOpen(false); }
+      if (e.key === 'F1') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleCheckoutCb();
+      }
+      if (e.key === 'Escape') {
+        setShowCheckout(false);
+        setSelectedMenu(null);
+        setMobileCartOpen(false);
+      }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const helpHandler = (e: Event) => {
+      e.preventDefault();
+      return false;
+    };
+    window.addEventListener('keydown', handler, true);
+    window.addEventListener('help', helpHandler);
+    return () => {
+      window.removeEventListener('keydown', handler, true);
+      window.removeEventListener('help', helpHandler);
+    };
   }, [handleCheckoutCb]);
 
   const [search, setSearch] = useState('');
@@ -139,14 +184,23 @@ export default function POS() {
   const [voucherCode, setVoucherCode] = useState('');
   const [appliedPromoId, setAppliedPromoId] = useState<string | null>(null);
   const [promoError, setPromoError] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  // Reset clear confirmation after 3 seconds (BUG-M4 fix)
+  useEffect(() => {
+    if (confirmClear) {
+      const timer = setTimeout(() => setConfirmClear(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [confirmClear]);
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
 
   // Active promos for dropdown
   const activePromos = getActivePromos();
 
-  // Calculate promo discount
-  const calculatePromoDiscount = (promoId: string | null, subtotal: number): number => {
+  // Calculate promo discount - memoized with useCallback (BUG-M2 fix)
+  const calculatePromoDiscount = useCallback((promoId: string | null, subtotal: number): number => {
     if (!promoId) return 0;
     const promo = activePromos.find((p) => p.id === promoId);
     if (!promo) return 0;
@@ -159,6 +213,19 @@ export default function POS() {
       if (!selectedCustomer || selectedCustomer.visitCount < promo.loyaltyMinVisits) return 0;
     }
 
+    // LOGIC-3 fix: Validate promo scope against cart items
+    if (promo.scope === 'category' && promo.scopeTarget) {
+      const hasMatchingCategory = cart.items.some((item) => {
+        const menu = menus.find((m) => m.id === item.menuId);
+        return menu && menu.category === promo.scopeTarget;
+      });
+      if (!hasMatchingCategory) return 0;
+    }
+    if (promo.scope === 'menu' && promo.scopeTarget) {
+      const hasMatchingMenu = cart.items.some((item) => item.menuId === promo.scopeTarget);
+      if (!hasMatchingMenu) return 0;
+    }
+
     let discount = 0;
     if (promo.type === 'percentage') {
       discount = Math.round(subtotal * promo.value / 100);
@@ -167,10 +234,9 @@ export default function POS() {
       discount = promo.value;
     }
     return discount;
-  };
+  }, [activePromos, selectedCustomer, cart.items, menus]);
 
-  // BUG-M1 fix: added selectedCustomerId to deps (calculatePromoDiscount checks customer for loyalty)
-  const promoDiscount = useMemo(() => calculatePromoDiscount(appliedPromoId, cart.getSubtotal()), [appliedPromoId, cart.items, selectedCustomerId]);
+  const promoDiscount = useMemo(() => calculatePromoDiscount(appliedPromoId, cart.getSubtotal()), [appliedPromoId, cart.items, calculatePromoDiscount]);
 
   const applyVoucherCode = () => {
     setPromoError('');
@@ -286,9 +352,16 @@ export default function POS() {
 
   const finalizeTransaction = () => {
     const manualDiscount = parseInt(discountInput) || 0;
-    const totalDiscount = manualDiscount + promoDiscount + loyaltyDiscount;
+    const rawTotalDiscount = manualDiscount + promoDiscount + loyaltyDiscount;
     const subtotal = cart.getSubtotal();
-    const total = Math.max(0, subtotal - totalDiscount);
+    // LOGIC-2 fix: Cap total discount to never exceed subtotal
+    const totalDiscount = Math.min(rawTotalDiscount, subtotal);
+    const netSubtotal = Math.max(0, subtotal - totalDiscount);
+    
+    // GAP-3: Calculate tax
+    const taxPercent = settings.taxPercent || 0;
+    const taxAmount = Math.round((netSubtotal * taxPercent) / 100);
+    const total = netSubtotal + taxAmount;
     const cash = parseInt(cashReceived) || 0;
 
     // Safety guard: Cash payment must have sufficient funds
@@ -317,6 +390,7 @@ export default function POS() {
       items: cart.items,
       subtotal,
       discount: totalDiscount,
+      tax: taxAmount, // GAP-3 fix: Save tax amount
       totalAmount: total,
       paymentMethod: payMethod,
       cashReceived: payMethod === 'Cash' ? cash : undefined,
@@ -360,6 +434,11 @@ export default function POS() {
     clearPromo();
     addToast(`Pesanan #${queueNum} berhasil! 🎉`, 'success');
   };
+
+  const taxPercent = settings.taxPercent || 0;
+  const netSubtotal = Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount);
+  const taxAmount = Math.round((netSubtotal * taxPercent) / 100);
+  const finalTotal = netSubtotal + taxAmount;
 
   return (
     <div className="flex flex-col lg:flex-row gap-0 lg:gap-4 h-full -m-4 lg:-m-6">
@@ -443,7 +522,7 @@ export default function POS() {
               <span className="font-semibold">{cart.items.length} item</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-bold">{formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}</span>
+              <span className="font-bold">{formatRupiah(finalTotal)}</span>
               <ChevronUp size={18} />
             </div>
           </button>
@@ -463,12 +542,24 @@ export default function POS() {
                 <span className="badge bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300">{cart.items.length}</span>
               </h2>
               <div className="flex items-center gap-1">
-                {/* FEAT-4: Clear all cart button */}
                 {cart.items.length >= 2 && (
                   <button
-                    onClick={() => { if (window.confirm('Kosongkan semua item di keranjang?')) cart.clearCart(); }}
-                    className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-650 transition"
-                    title="Kosongkan Keranjang"
+                    onClick={() => {
+                      if (confirmClear) {
+                        cart.clearCart();
+                        setConfirmClear(false);
+                        addToast('Keranjang dikosongkan', 'info');
+                      } else {
+                        setConfirmClear(true);
+                        addToast('Klik sekali lagi untuk mengosongkan keranjang', 'warning');
+                      }
+                    }}
+                    className={`p-2 rounded-lg transition ${
+                      confirmClear
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                        : 'hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-650'
+                    }`}
+                    title={confirmClear ? "Klik lagi untuk Konfirmasi" : "Kosongkan Keranjang"}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -579,10 +670,16 @@ export default function POS() {
                   👑 Loyalty discount: -{formatRupiah(loyaltyDiscount)}
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg text-slate-800 dark:text-slate-205">
+              {taxPercent > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">Pajak ({taxPercent}%)</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">{formatRupiah(taxAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg text-slate-800 dark:text-slate-200">
                 <span>Total</span>
                 <span className="text-brand-700 dark:text-brand-400">
-                  {formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}
+                  {formatRupiah(finalTotal)}
                 </span>
               </div>
               <button onClick={() => { setMobileCartOpen(false); handleCheckout(); }} className="btn-primary w-full text-base">
@@ -605,9 +702,22 @@ export default function POS() {
             {/* FEAT-4: Clear all cart button (desktop) */}
             {cart.items.length >= 2 && (
               <button
-                onClick={() => { if (window.confirm('Kosongkan semua item di keranjang?')) cart.clearCart(); }}
-                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-600 transition"
-                title="Kosongkan Keranjang"
+                onClick={() => {
+                  if (confirmClear) {
+                    cart.clearCart();
+                    setConfirmClear(false);
+                    addToast('Keranjang dikosongkan', 'info');
+                  } else {
+                    setConfirmClear(true);
+                    addToast('Klik sekali lagi untuk mengosongkan keranjang', 'warning');
+                  }
+                }}
+                className={`p-1.5 rounded-lg transition ${
+                  confirmClear
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                    : 'hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-600'
+                }`}
+                title={confirmClear ? "Klik lagi untuk Konfirmasi" : "Kosongkan Keranjang"}
               >
                 <Trash2 size={15} />
               </button>
@@ -662,14 +772,14 @@ export default function POS() {
                         if (item.quantity <= 1) cart.removeItem(item.lineId);
                         else cart.updateQuantity(item.lineId, item.quantity - 1);
                       }}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
                     >
                       <Minus size={12} />
                     </button>
                     <span className="text-sm font-semibold w-5 text-center text-slate-800 dark:text-slate-200">{item.quantity}</span>
                     <button
                       onClick={() => cart.updateQuantity(item.lineId, item.quantity + 1)}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 dark:hover:bg-slate-700 transition"
                     >
                       <Plus size={12} />
                     </button>
@@ -737,10 +847,16 @@ export default function POS() {
                 <span className="text-red-500">-{formatRupiah((parseInt(discountInput) || 0) + promoDiscount + loyaltyDiscount)}</span>
               </div>
             )}
+            {taxPercent > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">Pajak ({taxPercent}%)</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">{formatRupiah(taxAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-lg text-slate-800 dark:text-slate-200">
               <span>Total</span>
               <span className="text-brand-700 dark:text-brand-400">
-                {formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}
+                {formatRupiah(finalTotal)}
               </span>
             </div>
             <button onClick={handleCheckout} className="btn-primary w-full text-base">
@@ -770,7 +886,7 @@ export default function POS() {
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition ${
                       temp === t
                         ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-705'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                   >
                     {t === 'Hangat' ? '🔥' : '🧊'} {t}
@@ -790,7 +906,7 @@ export default function POS() {
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition ${
                       sugar === s
                         ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-705'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                   >
                     {s}
@@ -872,11 +988,16 @@ export default function POS() {
       >
         <div className="space-y-5">
           <div className="bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/30 rounded-xl p-4 text-center">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Total Pembayaran</p>
+            <p className="text-sm text-slate-605 dark:text-slate-400">Total Pembayaran</p>
             <p className="text-3xl font-bold text-brand-700 dark:text-brand-400">
-              {formatRupiah(Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))}
+              {formatRupiah(finalTotal)}
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-450 mt-1">Antrean #{queuePreview}</p>
+            {taxPercent > 0 && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Sudah termasuk Pajak ({taxPercent}%): {formatRupiah(taxAmount)}
+              </p>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Antrean #{queuePreview}</p>
             {selectedCustomer && (
               <p className="text-xs text-brand-600 dark:text-brand-400 mt-1">Pelanggan: {selectedCustomer.name}</p>
             )}
@@ -897,7 +1018,7 @@ export default function POS() {
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition ${
                     payMethod === method
                       ? 'bg-brand-600 text-white border-brand-600'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-202 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   <Icon size={20} />
@@ -924,13 +1045,7 @@ export default function POS() {
                   <div className="flex justify-between">
                     <span className="text-sm text-green-700 dark:text-green-400">Kembalian</span>
                     <span className="font-bold text-green-700 dark:text-green-400">
-                      {formatRupiah(
-                        Math.max(
-                          0,
-                          parseInt(cashReceived) -
-                            Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount)
-                        )
-                      )}
+                      {formatRupiah(Math.max(0, parseInt(cashReceived) - finalTotal))}
                     </span>
                   </div>
                 </div>
@@ -954,8 +1069,7 @@ export default function POS() {
             onClick={finalizeTransaction}
             disabled={
               payMethod === 'Cash' &&
-              (!cashReceived || (parseInt(cashReceived) || 0) <
-                Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount))
+              (!cashReceived || (parseInt(cashReceived) || 0) < finalTotal)
             }
             className="btn-primary w-full text-base"
           >
