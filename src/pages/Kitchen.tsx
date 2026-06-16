@@ -7,7 +7,7 @@ import { playNewOrderSound, playAlertSound } from '../utils/sound';
 import { subscribeToTransactions, unsubscribeChannel, fetchTransactionsFromCloud } from '../lib/cloudSync';
 import { isSupabaseConfigured } from '../lib/supabase';
 import type { KitchenStatus } from '../types';
-import { Clock, Flame, CheckCircle2, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Clock, Flame, CheckCircle2, ArrowRight, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 
 const columns: { status: KitchenStatus; label: string; color: string; icon: any }[] = [
   { status: 'Waiting', label: 'Antrean Menunggu', color: 'border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-600/50', icon: Clock },
@@ -22,11 +22,23 @@ export default function Kitchen() {
   const { shifts } = useShiftStore();
   const { currentUser } = useAuthStore();
   const [now, setNow] = useState(Date.now());
+  const [isMuted, setIsMuted] = useState(false); // GAP-6 fix: Mute state
   const prevWaitingCount = useRef(0);
 
   // Fetch transactions from cloud on mount + subscribe to real-time updates
   useEffect(() => {
     if (!isSupabaseConfigured) return;
+
+    let channel: any;
+
+    const setupSubscription = () => {
+      if (channel) unsubscribeChannel(channel);
+      channel = subscribeToTransactions((payload: any) => {
+        fetchTransactionsFromCloud().then((cloudTx) => {
+          if (cloudTx) loadFromCloud(cloudTx, true); // fullSync
+        });
+      });
+    };
 
     // Initial fetch from cloud
     const fetchData = async () => {
@@ -36,16 +48,27 @@ export default function Kitchen() {
       }
     };
     fetchData();
+    setupSubscription();
 
-    // Subscribe to real-time changes
-    const channel = subscribeToTransactions((payload: any) => {
-      // Re-fetch all transactions when any change happens
-      fetchTransactionsFromCloud().then((cloudTx) => {
-        if (cloudTx) loadFromCloud(cloudTx, true); // fullSync: cloud is authoritative
-      });
-    });
+    // Listen to visibilitychange and online events to auto-reconnect (GAP-2 fix)
+    const handleReconnect = () => {
+      if (document.visibilityState === 'visible' || navigator.onLine) {
+        console.log('[KDS] Visibility or online restored, reconnecting subscription...');
+        fetchTransactionsFromCloud().then((cloudTx) => {
+          if (cloudTx) loadFromCloud(cloudTx, true);
+        });
+        setupSubscription();
+      }
+    };
 
-    return () => { if (channel) unsubscribeChannel(channel); };
+    window.addEventListener('visibilitychange', handleReconnect);
+    window.addEventListener('online', handleReconnect);
+
+    return () => {
+      if (channel) unsubscribeChannel(channel);
+      window.removeEventListener('visibilitychange', handleReconnect);
+      window.removeEventListener('online', handleReconnect);
+    };
   }, []);
 
   // Update time every 10 seconds for alert calculation
@@ -94,19 +117,19 @@ export default function Kitchen() {
 
   // Sound: alarm for overdue orders
   useEffect(() => {
-    if (overdueCount > 0) {
+    if (overdueCount > 0 && !isMuted) {
       playAlertSound();
     }
-  }, [overdueCount]);
+  }, [overdueCount, isMuted]);
 
   // Re-trigger alarm periodically if overdue persists
   useEffect(() => {
-    if (overdueCount === 0) return;
+    if (overdueCount === 0 || isMuted) return;
     const interval = setInterval(() => {
-      if (overdueCount > 0) playAlertSound();
+      if (overdueCount > 0 && !isMuted) playAlertSound();
     }, 30000);
     return () => clearInterval(interval);
-  }, [overdueCount]);
+  }, [overdueCount, isMuted]);
 
   const getNextStatus = (current: KitchenStatus): KitchenStatus | null => {
     if (current === 'Waiting') return 'Processing';
@@ -116,16 +139,30 @@ export default function Kitchen() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         <h1 className="text-2xl font-bold">🍳 Kitchen Display System</h1>
-        {overdueCount > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-950/50 border border-red-300 dark:border-red-700 rounded-xl animate-pulse">
-            <AlertTriangle size={18} className="text-red-600" />
-            <span className="text-sm font-bold text-red-700 dark:text-red-400">
-              {overdueCount} pesanan menunggu &gt; 5 menit!
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {overdueCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-950/50 border border-red-300 dark:border-red-700 rounded-xl animate-pulse">
+              <AlertTriangle size={18} className="text-red-650" />
+              <span className="text-sm font-bold text-red-750 dark:text-red-400">
+                {overdueCount} pesanan menunggu &gt; 5 menit!
+              </span>
+            </div>
+          )}
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+              isMuted
+                ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-brand-50 dark:bg-brand-950/20 border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-400 hover:bg-brand-100/50 dark:hover:bg-brand-900/30'
+            }`}
+            title={isMuted ? 'Nyalakan alarm' : 'Senyapkan alarm'}
+          >
+            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            {isMuted ? 'Alarm Muted' : 'Mute Alarm'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">

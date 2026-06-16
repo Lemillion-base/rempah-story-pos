@@ -31,7 +31,12 @@ export const useShiftStore = create<ShiftState>()(
           totalTransactions: 0,
           status: 'open',
         };
-        set({ activeShift: shift });
+        // LOGIC-7 fix: Save to both activeShift AND shifts array
+        // so data survives app crashes before closeShift
+        set((s) => ({
+          activeShift: shift,
+          shifts: [shift, ...s.shifts],
+        }));
         syncShift(shift);
       },
 
@@ -50,8 +55,9 @@ export const useShiftStore = create<ShiftState>()(
           status: 'closed',
         };
 
+        // LOGIC-7 fix: Update the existing entry in shifts array (not prepend)
         set((s) => ({
-          shifts: [closed, ...s.shifts],
+          shifts: s.shifts.map((sh) => (sh.id === closed.id ? closed : sh)),
           activeShift: null,
         }));
         syncShift(closed);

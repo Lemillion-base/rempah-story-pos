@@ -203,9 +203,6 @@ export default function Catalog() {
           };
         });
       importMenus(imported);
-      if (currentUser) {
-        addLog(currentUser.id, currentUser.name, currentUser.role, 'update_menu', `Import menu dari CSV`);
-      }
     };
     reader.readAsText(file);
     e.target.value = '';

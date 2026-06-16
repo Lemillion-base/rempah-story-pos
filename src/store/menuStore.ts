@@ -4,6 +4,9 @@ import type { Menu } from '../types';
 import { seedMenus } from '../utils/seed';
 import { syncMenu, deleteMenuCloud, fetchMenusFromCloud, syncCustomCategories, fetchCustomCategoriesFromCloud } from '../lib/cloudSync';
 
+import { useAuditLogStore } from './auditLogStore';
+import { useAuthStore } from './authStore';
+
 interface MenuState {
   menus: Menu[];
   customCategories: string[];
@@ -46,6 +49,18 @@ export const useMenuStore = create<MenuState>()(
         // Sync all imported menus to cloud
         for (const menu of menus) {
           syncMenu(menu);
+        }
+        // Audit log (GAP-5 fix)
+        const currentUser = useAuthStore.getState().currentUser;
+        if (currentUser) {
+          useAuditLogStore.getState().addLog(
+            currentUser.id,
+            currentUser.name,
+            currentUser.role,
+            'update_menu',
+            `Import menu dari CSV (${menus.length} menu)`,
+            { count: menus.length }
+          );
         }
       },
 

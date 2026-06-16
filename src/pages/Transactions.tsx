@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useTransactionStore } from '../store/transactionStore';
 import { useAuthStore } from '../store/authStore';
 import { useAuditLogStore } from '../store/auditLogStore';
+import { useMenuStore } from '../store/menuStore';
+import { useInventoryStore } from '../store/inventoryStore';
 import { subscribeToTransactions, unsubscribeChannel, fetchTransactionsFromCloud } from '../lib/cloudSync';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah, formatDate } from '../utils/format';
-import type { TxStatus } from '../types';
+import type { TxStatus, Transaction } from '../types';
 import PinModal from '../components/PinModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import {
@@ -21,6 +23,8 @@ export default function Transactions() {
   const { transactions, updateTxStatus, deleteTransaction, loadFromCloud } = useTransactionStore();
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
+  const { menus } = useMenuStore();
+  const { revertStock } = useInventoryStore();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pinAction, setPinAction] = useState<{ type: 'status' | 'delete'; id: string; status?: TxStatus } | null>(null);
   // FEAT-5: Confirmation dialog state for Manager actions
@@ -68,10 +72,30 @@ export default function Transactions() {
     }
   };
 
+  // BUG-K3 fix: Calculate deductions from a transaction's items for stock revert
+  const calculateDeductions = (tx: Transaction): Record<string, number> => {
+    const deductions: Record<string, number> = {};
+    for (const item of tx.items) {
+      const menu = menus.find((m) => m.id === item.menuId);
+      if (menu) {
+        for (const [invId, amount] of Object.entries(menu.ingredients)) {
+          deductions[invId] = (deductions[invId] || 0) + amount * item.quantity;
+        }
+      }
+    }
+    return deductions;
+  };
+
   // FEAT-5: Execute after Manager confirms
   const onConfirmAction = () => {
     if (!confirmAction) return;
     if (confirmAction.type === 'status' && confirmAction.status) {
+      // BUG-K3 fix: Revert stock when changing TO Cancel from Selesai
+      const tx = transactions.find((t) => t.id === confirmAction.id);
+      if (tx && confirmAction.status === 'Cancel' && tx.txStatus === 'Selesai') {
+        const deductions = calculateDeductions(tx);
+        revertStock(deductions, `Revert: Cancel transaksi #${tx.queueNumber}`);
+      }
       updateTxStatus(confirmAction.id, confirmAction.status);
       if (currentUser) {
         addLog(currentUser.id, currentUser.name, currentUser.role, 'void_transaction', `Ubah status transaksi #${confirmAction.queueNumber || '?'} menjadi ${confirmAction.status}`, { transactionId: confirmAction.id, newStatus: confirmAction.status });
@@ -88,6 +112,12 @@ export default function Transactions() {
   const onPinSuccess = () => {
     if (!pinAction) return;
     if (pinAction.type === 'status' && pinAction.status) {
+      // BUG-K3 fix: Revert stock when Kasir cancels (after PIN verification)
+      const tx = transactions.find((t) => t.id === pinAction.id);
+      if (tx && pinAction.status === 'Cancel' && tx.txStatus === 'Selesai') {
+        const deductions = calculateDeductions(tx);
+        revertStock(deductions, `Revert: Cancel transaksi #${tx.queueNumber}`);
+      }
       updateTxStatus(pinAction.id, pinAction.status);
       if (currentUser) {
         addLog(currentUser.id, currentUser.name, currentUser.role, 'void_transaction', `Ubah status transaksi ${pinAction.id} menjadi ${pinAction.status}`, { transactionId: pinAction.id, newStatus: pinAction.status });
@@ -180,6 +210,13 @@ export default function Transactions() {
                     <div className="flex justify-between text-sm text-red-500">
                       <span>Diskon</span>
                       <span>-{formatRupiah(tx.discount)}</span>
+                    </div>
+                  )}
+
+                  {tx.tax !== undefined && tx.tax > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>Pajak</span>
+                      <span>{formatRupiah(tx.tax)}</span>
                     </div>
                   )}
 

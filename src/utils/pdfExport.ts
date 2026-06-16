@@ -39,6 +39,8 @@ export function exportPnlPDF(data: {
   totalRevenue: number;
   totalHPP: number;
   totalDiscount: number;
+  totalTax: number; // GAP-3 fix: Pajak
+  netRevenue: number; // GAP-3 fix: Pendapatan Bersih
   grossProfit: number;
   profitMargin: number;
   txCount: number;
@@ -53,8 +55,10 @@ export function exportPnlPDF(data: {
     startY: 50,
     head: [['Keterangan', 'Jumlah']],
     body: [
-      ['Total Pendapatan', formatRupiah(data.totalRevenue)],
+      ['Total Pendapatan Kotor (Gross)', formatRupiah(data.totalRevenue)],
       ['Diskon yang Diberikan', `(${formatRupiah(data.totalDiscount)})`],
+      ['Pajak Terkumpul (Tax)', `(${formatRupiah(data.totalTax)})`],
+      ['Pendapatan Bersih (Net Sales)', formatRupiah(data.netRevenue)],
       ['Harga Pokok Penjualan (HPP)', `(${formatRupiah(data.totalHPP)})`],
       ['Laba Kotor', formatRupiah(data.grossProfit)],
       ['', ''],
@@ -98,7 +102,7 @@ export function exportPnlPDF(data: {
 export function exportTransactionsPDF(data: {
   storeName: string;
   period: string;
-  transactions: { queue: string; date: string; cashier: string; customer: string; items: string; total: string; method: string; status: string }[];
+  transactions: { queue: string; date: string; cashier: string; customer: string; items: string; tax: string; total: string; method: string; status: string }[];
   totalRevenue: number;
   txCount: number;
 }) {
@@ -109,8 +113,8 @@ export function exportTransactionsPDF(data: {
 
   autoTable(doc, {
     startY: 58,
-    head: [['No.', 'Tanggal', 'Kasir', 'Pelanggan', 'Total', 'Metode', 'Status']],
-    body: data.transactions.map((t) => [t.queue, t.date, t.cashier, t.customer, t.total, t.method, t.status]),
+    head: [['No.', 'Tanggal', 'Kasir', 'Pelanggan', 'Pajak', 'Total', 'Metode', 'Status']],
+    body: data.transactions.map((t) => [t.queue, t.date, t.cashier, t.customer, t.tax, t.total, t.method, t.status]),
     theme: 'grid',
     headStyles: { fillColor: [184, 95, 33] },
     styles: { fontSize: 7 },

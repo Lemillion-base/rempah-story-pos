@@ -216,6 +216,9 @@ Cocok untuk:
 
 ## 📈 Roadmap (Coming Soon)
 
+- [ ] Auto-Reconnect & Visibility State listener (Koneksi realtime anti-sleep)
+- [ ] Supabase Row Level Security (RLS) policies (Keamanan basis data ketat)
+- [ ] WhatsApp PDF receipt & daily shift summaries
 - [ ] Multi-outlet support
 - [ ] QR Code self-order (scan dari meja)
 - [ ] Integrasi payment gateway (QRIS otomatis)

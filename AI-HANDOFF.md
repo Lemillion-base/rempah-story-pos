@@ -188,13 +188,16 @@ Jika ingin melanjutkan development, berikut prioritas:
 
 | # | Fitur | Kompleksitas | Detail |
 |---|-------|-------------|--------|
-| 1 | Multi-outlet | High | Tambah `store_id` di semua tabel, filter per outlet |
-| 2 | Payment Gateway (QRIS) | High | Perlu Supabase Edge Function + Midtrans API |
-| 3 | QR Self-Order | Medium | Generate QR per meja, halaman order publik |
-| 4 | Push Notification | Medium | Web Push API + service worker |
-| 5 | Multi-language | Medium | i18n library (react-i18next) |
-| 6 | Stock log viewer UI | Low | Halaman baru untuk lihat riwayat stok |
-| 7 | Loyalty tier badge di CRM | Low | Tampilkan Bronze/Silver/Gold di card pelanggan |
+| 1 | Auto-Reconnect & Visibility | Low | Event listener `visibilitychange` + reconnect channel |
+| 2 | Supabase RLS Policies | Medium | Aktifkan RLS dan filter query berbasis JWT auth |
+| 3 | WhatsApp receipt & summary | Medium | Supabase Edge function + WhatsApp Gateway API |
+| 4 | Multi-outlet | High | Tambah `store_id` di semua tabel, filter per outlet |
+| 5 | Payment Gateway (QRIS) | High | Perlu Supabase Edge Function + Midtrans API |
+| 6 | QR Self-Order | Medium | Generate QR per meja, halaman order publik |
+| 7 | Push Notification | Medium | Web Push API + service worker |
+| 8 | Multi-language | Medium | i18n library (react-i18next) |
+| 9 | Stock log viewer UI | Low | Halaman baru untuk lihat riwayat stok |
+| 10| Loyalty tier badge di CRM | Low | Tampilkan Bronze/Silver/Gold di card pelanggan |
 
 ---
 

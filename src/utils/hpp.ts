@@ -20,7 +20,8 @@ export const calculateMenuHPP = (
 };
 
 /**
- * Menghitung total HPP untuk seluruh cart item pada transaksi
+ * LOGIC-1 fix: Menghitung total HPP untuk seluruh cart item pada transaksi,
+ * termasuk HPP dari add-ons (jika diisi).
  */
 export const calculateTransactionHPP = (
   items: CartItem[],
@@ -31,7 +32,14 @@ export const calculateTransactionHPP = (
   for (const item of items) {
     const menu = menus.find((m) => m.id === item.menuId);
     if (menu) {
+      // HPP menu utama × quantity
       total += calculateMenuHPP(menu, inventory) * item.quantity;
+    }
+    // HPP add-ons (jika ada field hpp di addon)
+    for (const addon of item.addons) {
+      if (addon.hpp && addon.hpp > 0) {
+        total += addon.hpp * item.quantity;
+      }
     }
   }
   return total;

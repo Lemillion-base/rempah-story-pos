@@ -1,4 +1,3 @@
-import { v4 as uuid } from 'uuid';
 import type {
   User,
   InventoryItem,
@@ -53,7 +52,7 @@ export const seedInventory: InventoryItem[] = [
 
 export const seedMenus: Menu[] = [
   {
-    id: uuid(),
+    id: 'seed-menu-kunyit-asam',
     name: 'Kunyit Asam Signature',
     category: 'Jamu Murni',
     price: 18000,
@@ -66,7 +65,7 @@ export const seedMenus: Menu[] = [
     ],
   },
   {
-    id: uuid(),
+    id: 'seed-menu-beras-kencur',
     name: 'Beras Kencur',
     category: 'Jamu Murni',
     price: 16000,
@@ -76,7 +75,7 @@ export const seedMenus: Menu[] = [
     availableAddons: [{ name: 'Ekstra Madu', price: 5000 }],
   },
   {
-    id: uuid(),
+    id: 'seed-menu-wedang-jahe',
     name: 'Wedang Jahe',
     category: 'Wedang',
     price: 15000,
@@ -88,7 +87,7 @@ export const seedMenus: Menu[] = [
     ],
   },
   {
-    id: uuid(),
+    id: 'seed-menu-temulawak-madu',
     name: 'Temulawak Madu',
     category: 'Jamu Murni',
     price: 20000,
@@ -96,7 +95,7 @@ export const seedMenus: Menu[] = [
     availableAddons: [{ name: 'Lemon', price: 3000 }],
   },
   {
-    id: uuid(),
+    id: 'seed-menu-wedang-uwuh',
     name: 'Wedang Uwuh',
     category: 'Wedang',
     price: 17000,
@@ -104,7 +103,7 @@ export const seedMenus: Menu[] = [
     availableAddons: [{ name: 'Ekstra Madu', price: 5000 }],
   },
   {
-    id: uuid(),
+    id: 'seed-menu-golden-milk',
     name: 'Golden Milk',
     category: 'Signature',
     price: 25000,
@@ -117,7 +116,7 @@ export const seedMenus: Menu[] = [
     ],
   },
   {
-    id: uuid(),
+    id: 'seed-menu-jeruk-nipis',
     name: 'Jeruk Nipis Peras',
     category: 'Segar',
     price: 14000,
@@ -125,7 +124,7 @@ export const seedMenus: Menu[] = [
     availableAddons: [{ name: 'Ekstra Madu', price: 5000 }],
   },
   {
-    id: uuid(),
+    id: 'seed-menu-lemon-jahe',
     name: 'Lemon Jahe',
     category: 'Segar',
     price: 16000,

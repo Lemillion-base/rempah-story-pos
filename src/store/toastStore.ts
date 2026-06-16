@@ -16,6 +16,8 @@ interface ToastState {
 }
 
 let toastId = 0;
+// Track active timeouts to prevent memory leaks when toasts are removed manually
+const activeTimeouts = new Map<string, number>();
 
 export const useToastStore = create<ToastState>()((set) => ({
   toasts: [],
@@ -23,12 +25,22 @@ export const useToastStore = create<ToastState>()((set) => ({
   addToast: (message, type = 'success', duration = 3000) => {
     const id = String(++toastId);
     set((s) => ({ toasts: [...s.toasts, { id, message, type, duration }] }));
+    
     if (duration > 0) {
-      setTimeout(() => {
+      const timer = window.setTimeout(() => {
         set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+        activeTimeouts.delete(id);
       }, duration);
+      activeTimeouts.set(id, timer);
     }
   },
 
-  removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  removeToast: (id) => {
+    const timer = activeTimeouts.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      activeTimeouts.delete(id);
+    }
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  },
 }));

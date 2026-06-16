@@ -1,21 +1,40 @@
 export const formatRupiah = (n: number): string => {
-  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const rounded = Math.round(n);
+  const numStr = String(Math.abs(rounded));
+  let result = '';
+  let count = 0;
+  for (let i = numStr.length - 1; i >= 0; i--) {
+    result = numStr[i] + result;
+    count++;
+    if (count % 3 === 0 && i > 0) {
+      result = '.' + result;
+    }
+  }
+  return (rounded < 0 ? '-Rp ' : 'Rp ') + result;
 };
 
 export const formatDate = (iso: string): string => {
+  if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (isNaN(d.getTime())) return '';
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  const hour = String(d.getHours()).padStart(2, '0');
+  const minute = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${day} ${month} ${year}, ${hour}:${minute}`;
 };
 
 export const formatTime = (iso: string): string => {
+  if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  if (isNaN(d.getTime())) return '';
+  const hour = String(d.getHours()).padStart(2, '0');
+  const minute = String(d.getMinutes()).padStart(2, '0');
+  return `${hour}:${minute}`;
 };
 
 export const isSameDay = (a: Date, b: Date): boolean => {

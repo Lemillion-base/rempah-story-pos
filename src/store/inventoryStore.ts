@@ -12,6 +12,7 @@ interface InventoryState {
   updateItem: (id: string, data: Partial<InventoryItem>) => void;
   deleteItem: (id: string) => void;
   deductStock: (deductions: Record<string, number>, reason?: string) => void;
+  revertStock: (deductions: Record<string, number>, reason?: string) => void;
   getLowStockItems: () => InventoryItem[];
   loadFromCloud: (fullSync?: boolean) => Promise<void>;
 }
@@ -69,7 +70,7 @@ export const useInventoryStore = create<InventoryState>()(
               type: 'deduct',
               amount: -amount,
               stockBefore: item.stock,
-              stockAfter: Math.max(0, item.stock - amount),
+              stockAfter: item.stock - amount, // LOGIC-5 fix: Log actual stock after deduction (could be negative)
               unit: item.unit,
               reason: reason || 'Transaksi POS',
               date: new Date().toISOString(),
@@ -79,13 +80,49 @@ export const useInventoryStore = create<InventoryState>()(
         set((s) => ({
           items: s.items.map((i) => {
             const amount = deductions[i.id];
-            if (amount) return { ...i, stock: Math.max(0, i.stock - amount) };
+            if (amount) return { ...i, stock: i.stock - amount }; // LOGIC-5 fix: Allow negative stock values
             return i;
           }),
         }));
         // BUG-03 fix: Sync AFTER state update so cloud gets correct post-deduction stock
         const updatedItems = get().items;
         syncInventoryDeduction(deductions, updatedItems);
+      },
+
+      // BUG-K3 fix: Revert stock deductions when transaction is cancelled
+      revertStock: (deductions, reason) => {
+        const items = get().items;
+        // Log each revert
+        for (const [invId, amount] of Object.entries(deductions)) {
+          const item = items.find((i) => i.id === invId);
+          if (item && amount > 0) {
+            useStockLogStore.getState().addLog({
+              id: uuid(),
+              inventoryId: invId,
+              inventoryName: item.name,
+              type: 'add',
+              amount: amount,
+              stockBefore: item.stock,
+              stockAfter: item.stock + amount,
+              unit: item.unit,
+              reason: reason || 'Revert transaksi cancel',
+              date: new Date().toISOString(),
+            });
+          }
+        }
+        set((s) => ({
+          items: s.items.map((i) => {
+            const amount = deductions[i.id];
+            if (amount) return { ...i, stock: i.stock + amount };
+            return i;
+          }),
+        }));
+        // Sync reverted stock to cloud
+        const updatedItems = get().items;
+        for (const [id] of Object.entries(deductions)) {
+          const item = updatedItems.find((i) => i.id === id);
+          if (item) syncInventoryItem(item);
+        }
       },
 
       getLowStockItems: () => {
