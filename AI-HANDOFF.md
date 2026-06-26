@@ -153,7 +153,7 @@ git push origin main → Vercel auto-deploy (1-2 menit)
 - Semua tabel di schema `public`
 - RLS enabled dengan policy "allow all" (MVP)
 - Real-time enabled untuk SEMUA tabel (transactions, menus, inventory, customers, users, promos, settings)
-- `settings` table rows: id=1 (app settings), id=2 (loyalty settings), id=3 (custom categories)
+- `settings` table rows: id=1 (app settings, including loyalty settings and custom categories consolidated on id=1 to satisfy check constraints)
 
 ---
 

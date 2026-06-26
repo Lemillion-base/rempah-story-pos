@@ -20,7 +20,32 @@ export const useCartStore = create<CartState>()(
       items: [],
       discount: 0,
 
-      addItem: (item) => set((s) => ({ items: [...s.items, item] })),
+      addItem: (item) => set((s) => {
+        const existingIdx = s.items.findIndex((i) => {
+          if (i.menuId !== item.menuId) return false;
+          if (i.temperature !== item.temperature) return false;
+          if (i.sugar !== item.sugar) return false;
+          if (i.addons.length !== item.addons.length) return false;
+          const names1 = i.addons.map((a) => a.name).sort();
+          const names2 = item.addons.map((a) => a.name).sort();
+          return names1.every((val, idx) => val === names2[idx]);
+        });
+
+        if (existingIdx !== -1) {
+          const updated = [...s.items];
+          const existing = updated[existingIdx];
+          const newQty = existing.quantity + item.quantity;
+          const unitPrice = existing.basePrice + existing.addons.reduce((a, b) => a + b.price, 0);
+          updated[existingIdx] = {
+            ...existing,
+            quantity: newQty,
+            subtotal: unitPrice * newQty,
+          };
+          return { items: updated };
+        }
+
+        return { items: [...s.items, item] };
+      }),
 
       removeItem: (lineId) =>
         set((s) => ({ items: s.items.filter((i) => i.lineId !== lineId) })),

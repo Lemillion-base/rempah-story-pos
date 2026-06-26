@@ -57,8 +57,8 @@ export function exportPnlPDF(data: {
     body: [
       ['Total Pendapatan Kotor (Gross)', formatRupiah(data.totalRevenue)],
       ['Diskon yang Diberikan', `(${formatRupiah(data.totalDiscount)})`],
-      ['Pajak Terkumpul (Tax)', `(${formatRupiah(data.totalTax)})`],
       ['Pendapatan Bersih (Net Sales)', formatRupiah(data.netRevenue)],
+      ['Pajak Terkumpul (Tax)', `+${formatRupiah(data.totalTax)}`],
       ['Harga Pokok Penjualan (HPP)', `(${formatRupiah(data.totalHPP)})`],
       ['Laba Kotor', formatRupiah(data.grossProfit)],
       ['', ''],
