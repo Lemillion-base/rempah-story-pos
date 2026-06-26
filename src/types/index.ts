@@ -39,6 +39,7 @@ export interface Menu {
   availableAddons: AddOn[];
   description?: string;
   manualHpp?: number;
+  kitchenTarget?: string; // Target dapur/printer split (misal: "Bar", "Dapur Makanan", atau kosong/default)
 }
 
 export type Temperature = 'Hangat' | 'Dingin';
@@ -57,6 +58,7 @@ export interface CartItem {
   sugar: SugarLevel;
   addons: AddOn[];
   subtotal: number; // (basePrice + sum(addons)) * qty
+  kitchenTarget?: string; // target kitchen for split printing
 }
 
 export interface Transaction {
@@ -93,6 +95,16 @@ export interface Customer {
   createdAt: string;
 }
 
+export interface KitchenPrinterConfig {
+  id: string;
+  name: string; // nama printer, misal: "Printer Bar" atau "Printer Dapur Makanan"
+  targetCategory: string; // kategori target menu, misal: "Minuman" atau "Makanan"
+  enabled: boolean;
+  type: 'browser' | 'bluetooth';
+  width: '58mm' | '80mm';
+  bluetoothName?: string;
+}
+
 export interface AppSettings {
   managerPin: string;
   storeName: string;
@@ -105,6 +117,7 @@ export interface AppSettings {
   printerType: 'browser' | 'bluetooth'; // browser = window.print, bluetooth = Web Bluetooth API
   printerWidth: '58mm' | '80mm';
   autoPrintOnCheckout: boolean;
+  kitchenPrinters?: KitchenPrinterConfig[]; // Konfigurasi printer dapur untuk split print
   // Super Admin & Demo
   superAdminPin: string; // PIN untuk akses Manajemen Data (hanya developer)
   demoMode: boolean; // true = tampilkan demo accounts di login

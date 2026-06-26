@@ -105,9 +105,10 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 ### 10. 🖨️ Printer Thermal
 - **Browser Print**: window.print() dengan format thermal paper
 - **Bluetooth ESC/POS**: Web Bluetooth API untuk cetak langsung
-- Lebar kertas: 58mm atau 80mm
-- Auto-print saat checkout (toggle on/off)
-- Format struk: nama toko, alamat, item, total, kembalian, footer
+- **Lebar kertas**: 58mm atau 80mm
+- **Auto-print saat checkout**: (toggle on/off)
+- **Format struk**: nama toko, alamat, item, total, kembalian, footer
+- **Split Printing (Printer Dapur & Bar)**: Otomatis mencetak pesanan makanan dan minuman ke printer dapur masing-masing secara terpisah berdasarkan kategori dapur yang di-set pada menu, sementara kasir mencetak struk utuh untuk pelanggan. Dukungan browser print dan bluetooth per printer.
 
 ### 11. 🛡️ Keamanan & Audit
 - Password hashing (bcrypt, 10 salt rounds)

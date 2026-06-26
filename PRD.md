@@ -271,6 +271,9 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   - Metode cetak: Browser Print (window.print) / Bluetooth (Web Bluetooth API)
   - Lebar kertas: 58mm / 80mm
   - Info kontekstual per metode
+  - **Printer Dapur & Bar (Split Printing)**:
+    - Opsi untuk menambahkan beberapa printer dapur/bar tambahan.
+    - Setiap printer dapur memiliki: Nama Printer, Target Kategori Dapur, Tipe (Browser / Bluetooth), Lebar Kertas (58mm / 80mm), dan status Aktif.
 - **Manajemen User**: CRUD karyawan (nama, username, password, role)
 
 ---
@@ -337,9 +340,13 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   - ESC/POS commands: initialize, bold, center, left align, feed, cut
   - Data dikirim dalam chunks 20 bytes (BLE MTU)
   - Status koneksi real-time (terhubung/tidak)
-- **Utility**: `src/utils/printer.ts` — `printReceipt()`, `connectBluetoothPrinter()`, `disconnectBluetoothPrinter()`
+- **Split Printing (Printer Dapur & Bar)**:
+  - Menu dapat dikonfigurasi target dapurnya (misal: "Minuman" untuk Bar, "Makanan" untuk Dapur).
+  - Ketika pesanan checkout, selain mencetak struk penuh di printer kasir, sistem menyaring item pesanan berdasarkan target dapurnya.
+  - Tiket dapur hanya mencetak informasi antrean, nama kasir/pelanggan, nama produk, add-on, dan kuantitas (tanpa harga/subtotal/total).
+  - Setiap tiket dikirim secara terpisah ke printer dapur yang sesuai (baik lewat dialog Browser Print terpisah maupun Bluetooth).
+- **Utility**: `src/utils/printer.ts` — `printReceipt()`, `connectBluetoothPrinter()`, `disconnectBluetoothPrinter()`, `printKitchenReceiptBrowser()`, `printKitchenReceiptBluetooth()`
 - Format struk: nama toko, alamat, nomor antrean, tanggal, kasir, pelanggan, items + kustomisasi, subtotal, diskon, total, metode bayar, kembalian, footer
-- Arsitektur siap Web Bluetooth API (future)
 
 ---
 

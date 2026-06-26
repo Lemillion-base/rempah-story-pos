@@ -144,6 +144,7 @@ export const seedSettings: AppSettings = {
   printerType: 'browser',
   printerWidth: '58mm',
   autoPrintOnCheckout: false,
+  kitchenPrinters: [],
   superAdminPin: '000000',
   demoMode: true,
 };

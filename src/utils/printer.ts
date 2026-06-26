@@ -330,13 +330,166 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
 // MAIN PRINT FUNCTION (auto-selects mode based on settings)
 // ============================================================
 
-export async function printReceipt(data: ReceiptData, settings: AppSettings) {
-  if (!settings.printerEnabled) return;
+export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[], kp: KitchenPrinterConfig) {
+  const fontSize = kp.width === '58mm' ? '10px' : '12px';
+  const paperWidth = kp.width === '58mm' ? '48mm' : '72mm';
+  const separator = kp.width === '58mm' ? '─'.repeat(32) : '─'.repeat(42);
 
-  if (settings.printerType === 'bluetooth') {
-    await printReceiptBluetooth(data, settings.printerWidth);
-  } else {
-    printReceiptBrowser(data, settings.printerWidth);
+  const dateStr = new Date(data.date).toLocaleString('id-ID');
+
+  let lines: string[] = [];
+
+  // Header
+  lines.push(center(`TIKET DAPUR - #${data.queueNumber}`, kp.width));
+  lines.push(center(kp.name.toUpperCase(), kp.width));
+  lines.push(separator);
+
+  // Info
+  lines.push(`Tgl: ${dateStr}`);
+  lines.push(`Kasir: ${data.cashierName}`);
+  if (data.customerName) lines.push(`Pelanggan: ${data.customerName}`);
+  lines.push(separator);
+
+  // Items
+  for (const item of items) {
+    const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
+    lines.push(`${item.name}`);
+    lines.push(`  ${item.temperature}/${item.sugar}${addonStr}`);
+    lines.push(`  QTY: ${item.quantity}`);
+    lines.push('');
+  }
+
+  lines.push(separator);
+  lines.push('');
+  lines.push(center('Selesai Tiket', kp.width));
+  lines.push('');
+
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Tiket Dapur #${data.queueNumber} - ${kp.name}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: ${fontSize}; width: ${paperWidth}; margin: 0 auto; padding: 4mm 2mm; }
+        pre { white-space: pre-wrap; word-break: break-all; line-height: 1.4; font-weight: bold; }
+        @media print {
+          @page { margin: 0; size: ${kp.width} auto; }
+          body { width: 100%; padding: 2mm; }
+        }
+      </style>
+    </head>
+    <body>
+      <pre>${lines.join('\n')}</pre>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+
+  setTimeout(() => {
+    printWindow.print();
+    setTimeout(() => printWindow.close(), 1000);
+  }, 300);
+}
+
+export async function printKitchenReceiptBluetooth(data: ReceiptData, items: CartItem[], kp: KitchenPrinterConfig) {
+  const maxChars = kp.width === '58mm' ? 32 : 42;
+  const encoder = new TextEncoder();
+  const ESC = 0x1B;
+  const GS = 0x1D;
+  const commands: number[] = [];
+
+  commands.push(ESC, 0x40);
+  commands.push(ESC, 0x61, 0x01);
+  commands.push(ESC, 0x45, 0x01);
+  commands.push(...encoder.encode(`TIKET DAPUR - #${data.queueNumber}\n`));
+  commands.push(...encoder.encode(`${kp.name.toUpperCase()}\n`));
+  commands.push(ESC, 0x45, 0x00);
+
+  commands.push(ESC, 0x61, 0x00);
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode(`Tgl: ${new Date(data.date).toLocaleString('id-ID')}\n`));
+  commands.push(...encoder.encode(`Kasir: ${data.cashierName}\n`));
+  if (data.customerName) {
+    commands.push(...encoder.encode(`Pelanggan: ${data.customerName}\n`));
+  }
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+
+  for (const item of items) {
+    commands.push(...encoder.encode(`${item.name}\n`));
+    const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
+    commands.push(...encoder.encode(`  ${item.temperature}/${item.sugar}${addonStr}\n`));
+    commands.push(ESC, 0x45, 0x01);
+    commands.push(...encoder.encode(`  QTY: ${item.quantity}\n\n`));
+    commands.push(ESC, 0x45, 0x00);
+  }
+
+  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(ESC, 0x61, 0x01);
+  commands.push(...encoder.encode('\nSelesai Tiket\n\n'));
+  commands.push(ESC, 0x64, 0x04);
+  commands.push(GS, 0x56, 0x00);
+
+  const data_array = new Uint8Array(commands);
+  const chunkSize = 20;
+
+  if (!bluetoothCharacteristic) {
+    alert(`Printer Bluetooth untuk ${kp.name} belum terhubung. Sambungkan printer terlebih dahulu.`);
+    return;
+  }
+
+  for (let i = 0; i < data_array.length; i += chunkSize) {
+    const chunk = data_array.slice(i, i + chunkSize);
+    try {
+      if (bluetoothCharacteristic.properties.writeWithoutResponse) {
+        await bluetoothCharacteristic.writeValueWithoutResponse(chunk);
+      } else {
+        await bluetoothCharacteristic.writeValue(chunk);
+      }
+      await new Promise((r) => setTimeout(r, 20));
+    } catch (err) {
+      console.error('Print chunk error:', err);
+      break;
+    }
+  }
+}
+
+import type { KitchenPrinterConfig } from '../types';
+
+export async function printReceipt(data: ReceiptData, settings: AppSettings) {
+  // 1. Print full receipt on cashier printer if enabled
+  if (settings.printerEnabled) {
+    if (settings.printerType === 'bluetooth') {
+      await printReceiptBluetooth(data, settings.printerWidth);
+    } else {
+      printReceiptBrowser(data, settings.printerWidth);
+    }
+  }
+
+  // 2. Print split kitchen receipts for each configured kitchen printer
+  if (settings.kitchenPrinters && settings.kitchenPrinters.length > 0) {
+    for (const kp of settings.kitchenPrinters) {
+      if (!kp.enabled) continue;
+
+      // Filter items matching the targeted kitchen/bar category
+      const matchingItems = data.items.filter((item) => {
+        const itemTarget = (item.kitchenTarget || '').trim().toLowerCase();
+        const printerTarget = (kp.targetCategory || '').trim().toLowerCase();
+        return itemTarget === printerTarget && printerTarget !== '';
+      });
+
+      if (matchingItems.length === 0) continue;
+
+      // Print kitchen ticket
+      if (kp.type === 'bluetooth') {
+        await printKitchenReceiptBluetooth(data, matchingItems, kp);
+      } else {
+        printKitchenReceiptBrowser(data, matchingItems, kp);
+      }
+    }
   }
 }
 

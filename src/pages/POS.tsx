@@ -327,6 +327,7 @@ export default function POS() {
       sugar,
       addons: selectedAddons,
       subtotal: unitPrice * qty,
+      kitchenTarget: selectedMenu.kitchenTarget,
     };
     cart.addItem(item);
     setSelectedMenu(null);
@@ -1051,15 +1052,30 @@ export default function POS() {
                 </div>
               )}
               <div className="grid grid-cols-3 gap-2 mt-3">
-                {[20000, 50000, 100000].map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setCashReceived(String(v))}
-                    className="btn-secondary text-xs"
-                  >
-                    {formatRupiah(v)}
-                  </button>
-                ))}
+                {(() => {
+                  const suggestions: number[] = [];
+                  const t = finalTotal;
+                  // 1. Uang pas (exact amount)
+                  suggestions.push(t);
+                  // 2. Generate rounded-up denominations
+                  const denominators = [5000, 10000, 20000, 50000, 100000];
+                  for (const d of denominators) {
+                    const rounded = Math.ceil(t / d) * d;
+                    if (rounded > t && !suggestions.includes(rounded)) {
+                      suggestions.push(rounded);
+                    }
+                  }
+                  // Take top 3 unique suggestions
+                  return suggestions.slice(0, 3).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setCashReceived(String(v))}
+                      className="btn-secondary text-xs"
+                    >
+                      {formatRupiah(v)}
+                    </button>
+                  ));
+                })()}
               </div>
             </div>
           )}
