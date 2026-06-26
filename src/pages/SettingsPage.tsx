@@ -364,6 +364,171 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Kitchen Printers Settings */}
+      <div className="card p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <Printer size={18} className="text-brand-600" />
+              Printer Dapur & Bar (Split Print)
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">Konfigurasikan pencetakan struk terpisah ke printer dapur/bar masing-masing</p>
+          </div>
+          <button
+            onClick={() => {
+              const newPrinters = [...(settings.kitchenPrinters || [])];
+              newPrinters.push({
+                id: uuid(),
+                name: `Printer Dapur ${newPrinters.length + 1}`,
+                targetCategory: newPrinters.length === 0 ? 'Minuman' : 'Makanan',
+                enabled: true,
+                type: 'browser',
+                width: '58mm'
+              });
+              updateSettings({ kitchenPrinters: newPrinters });
+            }}
+            className="btn-secondary text-xs flex items-center gap-1 self-start sm:self-center"
+          >
+            <Plus size={14} /> Tambah Printer Dapur
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {(settings.kitchenPrinters || []).length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700/60 rounded-xl">
+              <p className="text-sm text-slate-400">Belum ada printer dapur yang dikonfigurasi</p>
+              <p className="text-xs text-slate-400 mt-1">Struk pesanan dapur terpisah dinonaktifkan. Semua struk dicetak di kasir utama.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
+                  <tr>
+                    <th className="text-left p-3 font-semibold min-w-[150px]">Nama Printer</th>
+                    <th className="text-left p-3 font-semibold min-w-[150px]">Target Kategori Dapur</th>
+                    <th className="text-left p-3 font-semibold">Tipe</th>
+                    <th className="text-left p-3 font-semibold">Lebar</th>
+                    <th className="text-center p-3 font-semibold">Aktif</th>
+                    <th className="text-center p-3 font-semibold">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(settings.kitchenPrinters || []).map((kp, idx) => (
+                    <tr key={kp.id} className="border-b border-slate-50 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                      <td className="p-3">
+                        <input
+                          type="text"
+                          value={kp.name}
+                          onChange={(e) => {
+                            const newPrinters = [...(settings.kitchenPrinters || [])];
+                            newPrinters[idx] = { ...kp, name: e.target.value };
+                            updateSettings({ kitchenPrinters: newPrinters });
+                          }}
+                          className="input py-1 px-2 text-xs"
+                          placeholder="Nama Printer Dapur"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <input
+                          type="text"
+                          value={kp.targetCategory}
+                          onChange={(e) => {
+                            const newPrinters = [...(settings.kitchenPrinters || [])];
+                            newPrinters[idx] = { ...kp, targetCategory: e.target.value };
+                            updateSettings({ kitchenPrinters: newPrinters });
+                          }}
+                          className="input py-1 px-2 text-xs"
+                          placeholder="Contoh: Minuman atau Makanan"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <select
+                          value={kp.type}
+                          onChange={(e) => {
+                            const newPrinters = [...(settings.kitchenPrinters || [])];
+                            newPrinters[idx] = { ...kp, type: e.target.value as 'browser' | 'bluetooth' };
+                            updateSettings({ kitchenPrinters: newPrinters });
+                          }}
+                          className="input py-1 px-2 text-xs"
+                        >
+                          <option value="browser">Browser Print</option>
+                          <option value="bluetooth">Bluetooth</option>
+                        </select>
+                      </td>
+                      <td className="p-3">
+                        <select
+                          value={kp.width}
+                          onChange={(e) => {
+                            const newPrinters = [...(settings.kitchenPrinters || [])];
+                            newPrinters[idx] = { ...kp, width: e.target.value as '58mm' | '80mm' };
+                            updateSettings({ kitchenPrinters: newPrinters });
+                          }}
+                          className="input py-1 px-2 text-xs"
+                        >
+                          <option value="58mm">58mm</option>
+                          <option value="80mm">80mm</option>
+                        </select>
+                      </td>
+                      <td className="p-3 text-center">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={kp.enabled}
+                            onChange={(e) => {
+                              const newPrinters = [...(settings.kitchenPrinters || [])];
+                              newPrinters[idx] = { ...kp, enabled: e.target.checked };
+                              updateSettings({ kitchenPrinters: newPrinters });
+                            }}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+                        </label>
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {kp.type === 'bluetooth' && (
+                            <button
+                              onClick={async () => {
+                                const ok = await connectBluetoothPrinter();
+                                if (ok) alert(`Printer "${kp.name}" berhasil terhubung!`);
+                              }}
+                              className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                              title="Hubungkan Bluetooth"
+                            >
+                              <Printer size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              const newPrinters = (settings.kitchenPrinters || []).filter((p) => p.id !== kp.id);
+                              updateSettings({ kitchenPrinters: newPrinters });
+                            }}
+                            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500"
+                            title="Hapus Printer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          
+          <div className="p-3 bg-blue-50/50 dark:bg-slate-800 rounded-xl text-xs text-slate-600 dark:text-slate-400">
+            <p className="font-semibold">💡 Tips Split Printing:</p>
+            <p className="mt-1">
+              • Gunakan tipe <strong>Browser Print</strong> untuk mencetak secara berurutan ke berbagai printer sistem (Kasir, Bar, Dapur Makanan).
+            </p>
+            <p className="mt-0.5">
+              • Setiap menu produk dapat diatur target dapurnya (misal: Produk A di-set target <strong>Minuman</strong>, Produk B di-set target <strong>Makanan</strong>).
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* User Management */}
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">

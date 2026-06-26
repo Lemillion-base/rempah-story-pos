@@ -197,7 +197,7 @@ Jika ingin melanjutkan development, berikut prioritas:
 | 7 | Push Notification | Medium | Web Push API + service worker |
 | 8 | Multi-language | Medium | i18n library (react-i18next) |
 | 9 | Stock log viewer UI | Low | Halaman baru untuk lihat riwayat stok |
-| 10| Loyalty tier badge di CRM | Low | Tampilkan Bronze/Silver/Gold di card pelanggan |
+| 10| Printer Queue Logs & Retry | Medium | Menyimpan log kegagalan cetak dapur dan fitur cetak ulang manual jika printer macet |
 
 ---
 

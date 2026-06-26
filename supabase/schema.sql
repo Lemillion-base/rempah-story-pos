@@ -36,8 +36,8 @@ CREATE TABLE IF NOT EXISTS menus (
   is_available BOOLEAN DEFAULT true,
   ingredients JSONB DEFAULT '{}',
   available_addons JSONB DEFAULT '[]',
-  description TEXT,
   manual_hpp FLOAT DEFAULT 0,
+  kitchen_target TEXT DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -152,9 +152,9 @@ CREATE TABLE IF NOT EXISTS settings (
   printer_width TEXT DEFAULT '58mm',
   auto_print_on_checkout BOOLEAN DEFAULT false,
   super_admin_pin TEXT DEFAULT '000000',
-  demo_mode BOOLEAN DEFAULT true,
   loyalty_enabled BOOLEAN DEFAULT false,
-  loyalty_settings JSONB DEFAULT '{}'
+  loyalty_settings JSONB DEFAULT '{}',
+  kitchen_printers JSONB DEFAULT '[]'
 );
 
 -- Insert default settings row

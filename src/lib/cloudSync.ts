@@ -53,13 +53,31 @@ export async function runMigrations() {
       console.warn('  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tax INT DEFAULT 0;');
       migrationNeeded.tax = true;
     }
+
+    // Migration 4: Add kitchen_target column to menus table
+    const { error: kitchenTargetError } = await supabase.from('menus').select('kitchen_target').limit(1);
+    if (kitchenTargetError && kitchenTargetError.message.includes('kitchen_target')) {
+      console.warn('[Migration] Column "kitchen_target" missing in menus table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE menus ADD COLUMN IF NOT EXISTS kitchen_target TEXT DEFAULT NULL;');
+      migrationNeeded.kitchenTarget = true;
+    }
+
+    // Migration 5: Add kitchen_printers column to settings table
+    const { error: kitchenPrintersError } = await supabase.from('settings').select('kitchen_printers').limit(1);
+    if (kitchenPrintersError && kitchenPrintersError.message.includes('kitchen_printers')) {
+      console.warn('[Migration] Column "kitchen_printers" missing in settings table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE settings ADD COLUMN IF NOT EXISTS kitchen_printers JSONB DEFAULT \'[]\';');
+      migrationNeeded.kitchenPrinters = true;
+    }
   } catch (e) {
     console.warn('[Migration] Could not verify schema:', e);
   }
 }
 
 // Track which migrations are needed so sync functions can adapt
-const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false };
+const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false };
 export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
   return migrationNeeded[key];
 }
@@ -244,6 +262,10 @@ export async function syncMenu(menu: Menu) {
   if (!migrationNeeded.manualHpp) {
     data.manual_hpp = menu.manualHpp || 0;
   }
+  // Only include kitchen_target if the column exists in DB
+  if (!migrationNeeded.kitchenTarget) {
+    data.kitchen_target = menu.kitchenTarget || null;
+  }
   await smartUpsert('menus', data);
 }
 
@@ -337,7 +359,7 @@ export async function checkConnection(): Promise<boolean> {
 
 export async function syncSettings(settings: AppSettings) {
   if (!isSupabaseConfigured) return;
-  await smartUpsert('settings', {
+  const data: Record<string, any> = {
     id: 1,
     manager_pin: settings.managerPin,
     store_name: settings.storeName,
@@ -351,7 +373,11 @@ export async function syncSettings(settings: AppSettings) {
     auto_print_on_checkout: settings.autoPrintOnCheckout,
     super_admin_pin: settings.superAdminPin,
     demo_mode: settings.demoMode,
-  });
+  };
+  if (!migrationNeeded.kitchenPrinters) {
+    data.kitchen_printers = settings.kitchenPrinters || [];
+  }
+  await smartUpsert('settings', data);
 }
 
 export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
@@ -370,6 +396,7 @@ export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
       printerType: data.printer_type || 'browser',
       printerWidth: data.printer_width || '58mm',
       autoPrintOnCheckout: data.auto_print_on_checkout || false,
+      kitchenPrinters: data.kitchen_printers || [],
       superAdminPin: data.super_admin_pin || '000000',
       demoMode: data.demo_mode !== false,
     };
@@ -470,6 +497,7 @@ export async function fetchMenusFromCloud(): Promise<Menu[] | null> {
       availableAddons: row.available_addons || [],
       description: row.description || undefined,
       manualHpp: row.manual_hpp || 0,
+      kitchenTarget: row.kitchen_target || undefined,
     })) || null;
   } catch {
     return null;

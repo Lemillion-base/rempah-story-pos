@@ -4,6 +4,7 @@ import { useMenuStore } from '../store/menuStore';
 import { useInventoryStore } from '../store/inventoryStore';
 import { useAuthStore } from '../store/authStore';
 import { useAuditLogStore } from '../store/auditLogStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
 import { calculateMenuHPP } from '../utils/hpp';
@@ -28,6 +29,19 @@ export default function Catalog() {
   const { items: inventory } = useInventoryStore();
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
+  const settings = useSettingsStore((s) => s.settings);
+
+  const configuredKitchenTargets = useMemo(() => {
+    const targets = new Set<string>();
+    if (settings.kitchenPrinters) {
+      settings.kitchenPrinters.forEach((kp) => {
+        if (kp.targetCategory) targets.add(kp.targetCategory);
+      });
+    }
+    targets.add('Makanan');
+    targets.add('Minuman');
+    return Array.from(targets);
+  }, [settings.kitchenPrinters]);
 
   // Real-time sync for menus
   useEffect(() => {
@@ -63,6 +77,7 @@ export default function Catalog() {
   const [formIngredients, setFormIngredients] = useState<{ invId: string; amount: string }[]>([]);
   const [formAddons, setFormAddons] = useState<{ name: string; price: string }[]>([]);
   const [formManualHpp, setFormManualHpp] = useState('');
+  const [formKitchenTarget, setFormKitchenTarget] = useState('');
 
   const allCategories = getCategories();
   const filterCategories = ['Semua', ...allCategories];
@@ -90,6 +105,7 @@ export default function Catalog() {
     setFormIngredients([]);
     setFormAddons([]);
     setFormManualHpp('');
+    setFormKitchenTarget('');
     setShowForm(true);
   };
 
@@ -110,6 +126,7 @@ export default function Catalog() {
       menu.availableAddons.map((a) => ({ name: a.name, price: String(a.price) }))
     );
     setFormManualHpp(menu.manualHpp ? String(menu.manualHpp) : '');
+    setFormKitchenTarget(menu.kitchenTarget || '');
     setShowForm(true);
   };
 
@@ -131,6 +148,7 @@ export default function Catalog() {
       ingredients,
       availableAddons: addons,
       manualHpp: Object.keys(ingredients).length > 0 ? 0 : (parseInt(formManualHpp) || 0),
+      kitchenTarget: formKitchenTarget || undefined,
     };
 
     if (editId) {
@@ -157,7 +175,7 @@ export default function Catalog() {
 
   // CSV Export
   const handleExport = () => {
-    const header = 'name,category,price,isBestSeller,ingredients,addons,manualHpp\n';
+    const header = 'name,category,price,isBestSeller,ingredients,addons,manualHpp,kitchenTarget\n';
     const rows = menus.map((m) =>
       [
         `"${m.name}"`,
@@ -167,6 +185,7 @@ export default function Catalog() {
         `"${JSON.stringify(m.ingredients)}"`,
         `"${JSON.stringify(m.availableAddons)}"`,
         m.manualHpp || 0,
+        m.kitchenTarget || '',
       ].join(',')
     );
     const csv = header + rows.join('\n');
@@ -187,21 +206,22 @@ export default function Catalog() {
       const text = ev.target?.result as string;
       const lines = text.split('\n').slice(1);
       const imported: Menu[] = lines
-        .filter((l) => l.trim())
-        .map((line) => {
-          const parts = line.match(/(".*?"|[^,]+)/g) || [];
-          const clean = (s: string) => s.replace(/^"|"$/g, '');
-          return {
-            id: uuid(),
-            name: clean(parts[0] || ''),
-            category: clean(parts[1] || ''),
-            price: parseInt(parts[2]) || 0,
-            isBestSeller: parts[3] === 'true',
-            ingredients: JSON.parse(clean(parts[4] || '{}')),
-            availableAddons: JSON.parse(clean(parts[5] || '[]')),
-            manualHpp: parseInt(parts[6]) || 0,
-          };
-        });
+          .filter((l) => l.trim())
+          .map((line) => {
+            const parts = line.match(/(".*?"|[^,]+)/g) || [];
+            const clean = (s: string) => s.replace(/^"|"$/g, '');
+            return {
+              id: uuid(),
+              name: clean(parts[0] || ''),
+              category: clean(parts[1] || ''),
+              price: parseInt(parts[2]) || 0,
+              isBestSeller: parts[3] === 'true',
+              ingredients: JSON.parse(clean(parts[4] || '{}')),
+              availableAddons: JSON.parse(clean(parts[5] || '[]')),
+              manualHpp: parseInt(parts[6]) || 0,
+              kitchenTarget: parts[7] ? clean(parts[7]) : undefined,
+            };
+          });
       importMenus(imported);
     };
     reader.readAsText(file);
@@ -260,6 +280,7 @@ export default function Catalog() {
               <tr>
                 <th className="text-left p-3 font-semibold">Nama</th>
                 <th className="text-left p-3 font-semibold">Kategori</th>
+                <th className="text-left p-3 font-semibold">Target Dapur</th>
                 <th className="text-right p-3 font-semibold">Harga</th>
                 <th className="text-right p-3 font-semibold">HPP</th>
                 <th className="text-right p-3 font-semibold">Margin</th>
@@ -278,6 +299,15 @@ export default function Catalog() {
                       {menu.isAvailable === false && <span className="ml-2 badge bg-slate-100 text-slate-500 text-xs">Nonaktif</span>}
                     </td>
                     <td className="p-3 text-slate-500 dark:text-slate-400">{menu.category}</td>
+                    <td className="p-3 text-slate-500 dark:text-slate-400">
+                      {menu.kitchenTarget ? (
+                        <span className="badge bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/40">
+                          {menu.kitchenTarget}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
                     <td className="p-3 text-right font-medium">{formatRupiah(menu.price)}</td>
                     <td className="p-3 text-right text-slate-500 dark:text-slate-400">{formatRupiah(hpp)}</td>
                     <td className="p-3 text-right text-green-600 font-medium">{formatRupiah(margin)}</td>
@@ -358,7 +388,20 @@ export default function Catalog() {
               <label className="label">Harga Jual (Rp)</label>
               <input value={formPrice} onChange={(e) => setFormPrice(e.target.value.replace(/\D/g, ''))} className="input" />
             </div>
-            <div className="flex items-end">
+            <div>
+              <label className="label">Target Dapur (Split Print)</label>
+              <select
+                value={formKitchenTarget}
+                onChange={(e) => setFormKitchenTarget(e.target.value)}
+                className="input"
+              >
+                <option value="">Sama dengan Kasir (Tanpa Split)</option>
+                {configuredKitchenTargets.map((target) => (
+                  <option key={target} value={target}>{target}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center h-full pt-6">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={formBestSeller} onChange={(e) => setFormBestSeller(e.target.checked)} className="w-4 h-4 rounded" />
                 <span className="text-sm font-medium">Best Seller ⭐</span>
