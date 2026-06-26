@@ -304,9 +304,10 @@ export async function syncShift(shift: CashierShift) {
 
 export async function syncAuditLog(entry: AuditLogEntry) {
   if (!isSupabaseConfigured) return;
+  const isValidUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
   await smartInsert('audit_logs', {
     id: entry.id,
-    user_id: entry.userId,
+    user_id: isValidUuid(entry.userId) ? entry.userId : null,
     user_name: entry.userName,
     user_role: entry.userRole,
     action: entry.action,
@@ -386,19 +387,18 @@ export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
 export async function syncLoyaltySettings(ls: LoyaltySettings) {
   if (!isSupabaseConfigured) return;
   await smartUpsert('settings', {
-    id: 2,
-    store_name: '__loyalty_settings__',
-    manager_pin: '0000',
-    categories: ls,
+    id: 1,
+    loyalty_enabled: ls.enabled,
+    loyalty_settings: ls,
   });
 }
 
 export async function fetchLoyaltySettingsFromCloud(): Promise<LoyaltySettings | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const { data, error } = await supabase.from('settings').select('categories').eq('id', 2).single();
-    if (error || !data?.categories) return null;
-    return data.categories as LoyaltySettings;
+    const { data, error } = await supabase.from('settings').select('loyalty_settings').eq('id', 1).single();
+    if (error || !data?.loyalty_settings) return null;
+    return data.loyalty_settings as LoyaltySettings;
   } catch {
     return null;
   }
@@ -412,9 +412,7 @@ export async function fetchLoyaltySettingsFromCloud(): Promise<LoyaltySettings |
 export async function syncCustomCategories(categories: string[]) {
   if (!isSupabaseConfigured) return;
   await smartUpsert('settings', {
-    id: 3,
-    store_name: '__custom_categories__',
-    manager_pin: '0000',
+    id: 1,
     categories: categories,
   });
 }
@@ -422,7 +420,7 @@ export async function syncCustomCategories(categories: string[]) {
 export async function fetchCustomCategoriesFromCloud(): Promise<string[] | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const { data, error } = await supabase.from('settings').select('categories').eq('id', 3).single();
+    const { data, error } = await supabase.from('settings').select('categories').eq('id', 1).single();
     if (error || !data?.categories) return null;
     return data.categories as string[];
   } catch {

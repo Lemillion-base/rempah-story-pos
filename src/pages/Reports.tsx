@@ -85,11 +85,12 @@ export default function Reports() {
   }, [transactions, dateFilterType, customDateFrom, customDateTo, filterMonth]);
 
   // P&L calculations
+  const totalGrossRevenue = filteredTx.reduce((a, t) => a + t.subtotal, 0);
   const totalRevenue = filteredTx.reduce((a, t) => a + t.totalAmount, 0);
   const totalHPP = filteredTx.reduce((a, t) => a + t.hpp, 0);
   const totalDiscount = filteredTx.reduce((a, t) => a + t.discount, 0);
   const totalTax = filteredTx.reduce((a, t) => a + (t.tax || 0), 0); // GAP-3 fix
-  const netRevenue = totalRevenue - totalTax;
+  const netRevenue = totalGrossRevenue - totalDiscount;
   const grossProfit = netRevenue - totalHPP;
   const profitMargin = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0;
   const avgTransaction = filteredTx.length > 0 ? totalRevenue / filteredTx.length : 0;
@@ -142,10 +143,10 @@ export default function Reports() {
       ['Periode', getDateLabel()],
       [''],
       ['Keterangan', 'Jumlah (Rp)'],
-      ['Total Pendapatan (Gross)', totalRevenue],
+      ['Total Pendapatan (Gross)', totalGrossRevenue],
       ['Diskon yang Diberikan', -totalDiscount],
-      ['Pajak Terkumpul', -totalTax],
       ['Pendapatan Bersih (Net)', netRevenue],
+      ['Pajak Terkumpul', totalTax],
       ['Harga Pokok Penjualan (HPP)', -totalHPP],
       ['Laba Kotor', grossProfit],
       [''],
@@ -295,7 +296,7 @@ export default function Reports() {
             </button>
           )}
           {activeTab === 'pnl' && (
-            <button onClick={() => exportPnlPDF({ storeName: settings.storeName, period: getDateLabel(), totalRevenue, totalHPP, totalDiscount, totalTax, netRevenue, grossProfit, profitMargin, txCount: filteredTx.length, avgTransaction, paymentBreakdown, categorySales })} className="btn-primary text-sm">
+            <button onClick={() => exportPnlPDF({ storeName: settings.storeName, period: getDateLabel(), totalRevenue: totalGrossRevenue, totalHPP, totalDiscount, totalTax, netRevenue, grossProfit, profitMargin, txCount: filteredTx.length, avgTransaction, paymentBreakdown, categorySales })} className="btn-primary text-sm">
               <FileText size={14} /> PDF
             </button>
           )}
@@ -478,19 +479,19 @@ export default function Reports() {
             <div className="space-y-3">
               <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
                 <span className="text-slate-600 dark:text-slate-400">Total Pendapatan Kotor (Revenue Gross)</span>
-                <span className="font-bold text-slate-750 dark:text-slate-300">{formatRupiah(totalRevenue)}</span>
+                <span className="font-bold text-slate-750 dark:text-slate-300">{formatRupiah(totalGrossRevenue)}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 pl-4">
                 <span className="text-slate-500 dark:text-slate-400">- Diskon yang diberikan</span>
                 <span className="text-red-500">({formatRupiah(totalDiscount)})</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 pl-4">
-                <span className="text-slate-500 dark:text-slate-400">- Pajak Terkumpul (Tax)</span>
-                <span className="text-red-500">({formatRupiah(totalTax)})</span>
-              </div>
               <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
                 <span className="text-slate-600 dark:text-slate-400 font-semibold">Pendapatan Bersih (Net Sales)</span>
                 <span className="font-bold text-green-700 dark:text-green-400">{formatRupiah(netRevenue)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 pl-4">
+                <span className="text-slate-500 dark:text-slate-400">+ Pajak Terkumpul (Tax)</span>
+                <span className="text-green-600">+{formatRupiah(totalTax)}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 pl-4">
                 <span className="text-slate-500 dark:text-slate-400">- Harga Pokok Penjualan (HPP)</span>

@@ -328,7 +328,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   - Settings: users
 - **fullSync pattern**: Saat real-time event, `loadFromCloud(true)` menjadikan cloud sebagai sumber kebenaran. Item yang dihapus di cloud dihapus dari lokal (grace period 30 detik)
 - **Cloud sync coverage**: 13 data types, 10 stores, 6 stores dengan fullSync, 100% halaman dengan real-time
-- **Custom Categories Sync**: Disimpan di settings table (id=3) sebagai JSON, sync antar device
+- **Custom Categories Sync**: Disimpan di settings table (id=1) di kolom categories sebagai JSON, sync antar device
 
 ### 4.4. Print & Thermal Printer
 - **Browser Print**: `window.open` + CSS `@page` optimized untuk thermal paper (58mm/80mm)
