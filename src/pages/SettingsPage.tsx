@@ -25,7 +25,9 @@ import {
   RotateCcw,
   Database,
   AlertTriangle,
+  Palette,
 } from 'lucide-react';
+import { generateShades, THEME_PRESETS, hexToRgbValues } from '../utils/theme';
 
 export default function SettingsPage() {
   const { users, addUser, updateUser, deleteUser, currentUser, loadFromCloud: loadUsersFromCloud } = useAuthStore();
@@ -51,6 +53,93 @@ export default function SettingsPage() {
   const [storeLogo, setStoreLogo] = useState(settings.storeLogo || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // UI Theme Settings
+  const [themeColor, setThemeColor] = useState(settings.themeColor || '#b85f21');
+  const [themeShades, setThemeShades] = useState<Record<string, string>>(
+    (settings.themeShades && Object.keys(settings.themeShades).length > 0)
+      ? (settings.themeShades as any)
+      : {
+          50: '#fdf8f3',
+          100: '#f9ebd9',
+          200: '#f2d4ae',
+          300: '#e9b67a',
+          400: '#de9348',
+          500: '#d17a2a',
+          600: '#b85f21',
+          700: '#94481f',
+          800: '#763b20',
+          900: '#60311d',
+        }
+  );
+
+  const applyPreset = (preset: typeof THEME_PRESETS[0]) => {
+    setThemeColor(preset.color);
+    setThemeShades(preset.shades as any);
+  };
+
+  const handleAutoGenerateShades = (color: string) => {
+    const generated = generateShades(color);
+    setThemeShades(generated);
+  };
+
+  const handleShadeChange = (shade: string, value: string) => {
+    setThemeShades((prev) => ({
+      ...prev,
+      [shade]: value,
+    }));
+  };
+
+  const saveThemeSettings = () => {
+    updateSettings({
+      themeColor,
+      themeShades: themeShades as any,
+    });
+    alert('Tema warna UI berhasil disimpan!');
+  };
+
+  // Apply local state themeShades instantly to the root for live preview
+  useEffect(() => {
+    const root = document.documentElement;
+    Object.entries(themeShades).forEach(([shade, hex]) => {
+      try {
+        const rgbStr = hexToRgbValues(hex);
+        root.style.setProperty(`--brand-${shade}`, rgbStr);
+      } catch (err) {
+        console.error('Failed to set preview root property:', err);
+      }
+    });
+  }, [themeShades]);
+
+  // Revert preview on unmount if changes were not saved
+  useEffect(() => {
+    return () => {
+      const stateShades = useSettingsStore.getState().settings.themeShades;
+      const activeShades = (stateShades && Object.keys(stateShades).length > 0)
+        ? stateShades
+        : {
+            50: '#fdf8f3',
+            100: '#f9ebd9',
+            200: '#f2d4ae',
+            300: '#e9b67a',
+            400: '#de9348',
+            500: '#d17a2a',
+            600: '#b85f21',
+            700: '#94481f',
+            800: '#763b20',
+            900: '#60311d',
+          };
+      const root = document.documentElement;
+      Object.entries(activeShades).forEach(([shade, hex]) => {
+        try {
+          const rgbStr = hexToRgbValues(hex);
+          root.style.setProperty(`--brand-${shade}`, rgbStr);
+        } catch (err) {
+          // ignore
+        }
+      });
+    };
+  }, []);
+
   // User form
   const [showUserForm, setShowUserForm] = useState(false);
   const [editUserId, setEditUserId] = useState<string | null>(null);
@@ -71,6 +160,7 @@ export default function SettingsPage() {
   const [superPinInput, setSuperPinInput] = useState('');
   const [superPinError, setSuperPinError] = useState('');
   const [newSuperPin, setNewSuperPin] = useState('');
+  const [activeTab, setActiveTab] = useState<'general' | 'printers' | 'users'>('general');
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -147,11 +237,52 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">⚙️ Settings</h1>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">⚙️ Settings</h1>
+      </div>
 
-      {/* Store Settings */}
-      <div className="card p-5">
+      {/* Tab Menu */}
+      <div className="flex border-b border-slate-200 dark:border-slate-700/50 overflow-x-auto scrollbar-none whitespace-nowrap -mx-4 px-4 sm:mx-0 sm:px-0">
+        <button
+          onClick={() => setActiveTab('general')}
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-sm transition-all flex-shrink-0 ${
+            activeTab === 'general'
+              ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <Store size={16} />
+          <span>Umum & Tampilan</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('printers')}
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-sm transition-all flex-shrink-0 ${
+            activeTab === 'printers'
+              ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <Printer size={16} />
+          <span>Printer & KDS</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-sm transition-all flex-shrink-0 ${
+            activeTab === 'users'
+              ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <Users size={16} />
+          <span>Pengguna & Sistem</span>
+        </button>
+      </div>
+
+      {activeTab === 'general' && (
+        <div className="space-y-6">
+          {/* Store Settings */}
+          <div className="card p-5">
         <h2 className="font-bold text-lg flex items-center gap-2 mb-4">
           <Store size={18} /> Pengaturan Toko
         </h2>
@@ -221,6 +352,167 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Pengaturan Tema Warna UI */}
+      <div className="card p-5">
+        <h2 className="font-bold text-lg flex items-center gap-2 mb-2">
+          <Palette size={18} className="text-brand-600" /> Pengaturan Tema Warna UI
+        </h2>
+        <p className="text-xs text-slate-500 mb-6">
+          Sesuaikan tema warna aplikasi Anda secara manual. Anda dapat menggunakan preset, menghasilkan gradasi otomatis dari warna dasar, atau mengubah setiap tingkat warna secara detail.
+        </p>
+
+        <div className="space-y-6">
+          {/* Preset Themes */}
+          <div>
+            <label className="label text-sm font-semibold mb-2">Preset Tema Pilihan</label>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {THEME_PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className={`flex flex-col items-center p-3 rounded-xl border text-left transition-all ${
+                    themeColor === preset.color
+                      ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-900/10 ring-2 ring-brand-400/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full shadow-inner mb-2 border border-black/10"
+                    style={{ backgroundColor: preset.color }}
+                  />
+                  <span className="text-xs font-semibold text-center text-slate-700 dark:text-slate-200">
+                    {preset.name.split(' (')[0]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Color Generator */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-300">Generator Tema Warna</h3>
+              <div>
+                <label className="label text-xs">Pilih Warna Dasar</label>
+                <div className="flex gap-2">
+                  <div className="relative w-12 h-11 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                    <input
+                      type="color"
+                      value={themeColor}
+                      onChange={(e) => {
+                        setThemeColor(e.target.value);
+                      }}
+                      className="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer scale-150"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={themeColor}
+                    onChange={(e) => setThemeColor(e.target.value)}
+                    placeholder="#b85f21"
+                    className="input py-2 text-sm font-mono"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleAutoGenerateShades(themeColor)}
+                className="btn-secondary text-xs w-full py-2.5 flex items-center justify-center gap-1.5"
+              >
+                <Palette size={14} /> Buat Gradasi Otomatis
+              </button>
+              <p className="text-[11px] text-slate-400">
+                * Tombol ini akan otomatis menghitung tingkat kecerahan warna (dari shade 50 hingga 900) berdasarkan warna dasar di atas.
+              </p>
+            </div>
+
+            {/* Shades Adjustment */}
+            <div className="md:col-span-2 space-y-4">
+              <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-300">Penyesuaian Gradasi Warna Manual</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {Object.keys(themeShades).map((shadeKey) => {
+                  const shade = shadeKey;
+                  return (
+                    <div key={shade} className="p-2 border border-slate-100 dark:border-slate-700/60 rounded-xl bg-slate-50/50 dark:bg-slate-800/20">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold text-slate-500">Shade {shade}</span>
+                        <div
+                          className="w-3.5 h-3.5 rounded-full border border-black/10"
+                          style={{ backgroundColor: themeShades[shade] }}
+                        />
+                      </div>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="color"
+                          value={themeShades[shade]}
+                          onChange={(e) => handleShadeChange(shade, e.target.value)}
+                          className="w-6 h-7 p-0 border-0 cursor-pointer rounded-lg overflow-hidden flex-shrink-0"
+                        />
+                        <input
+                          type="text"
+                          value={themeShades[shade]}
+                          onChange={(e) => handleShadeChange(shade, e.target.value)}
+                          className="input py-0.5 px-1 text-[10px] font-mono text-center rounded-lg border-slate-200 dark:border-slate-600"
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic Live Palette Preview */}
+              <div>
+                <label className="label text-[11px] text-slate-400 mb-1">Preview Gradasi Warna Aktif</label>
+                <div className="flex h-4 w-full rounded-md overflow-hidden shadow-inner border border-black/5">
+                  {Object.entries(themeShades).map(([shade, hex]) => (
+                    <div
+                      key={shade}
+                      className="flex-1 h-full relative group cursor-help"
+                      style={{ backgroundColor: hex }}
+                      title={`Shade ${shade}: ${hex}`}
+                    >
+                      <div className="hidden group-hover:block absolute bottom-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap z-10 font-mono">
+                        {shade}: {hex}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+            <button
+              type="button"
+              onClick={() => {
+                setThemeColor(settings.themeColor || '#b85f21');
+                setThemeShades((settings.themeShades && Object.keys(settings.themeShades).length > 0) ? (settings.themeShades as any) : {
+                  50: '#fdf8f3',
+                  100: '#f9ebd9',
+                  200: '#f2d4ae',
+                  300: '#e9b67a',
+                  400: '#de9348',
+                  500: '#d17a2a',
+                  600: '#b85f21',
+                  700: '#94481f',
+                  800: '#763b20',
+                  900: '#60311d',
+                });
+              }}
+              className="btn-secondary text-xs"
+            >
+              <RotateCcw size={14} /> Batal Perubahan
+            </button>
+            <button onClick={saveThemeSettings} className="btn-primary text-xs">
+              <Save size={14} /> Simpan Tema Warna
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* PIN Manager */}
       <div className="card p-5">
         <h2 className="font-bold text-lg flex items-center gap-2 mb-4">
@@ -254,9 +546,13 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+      </div>
+      )}
 
-      {/* Printer Settings */}
-      <div className="card p-5">
+      {activeTab === 'printers' && (
+        <div className="space-y-6">
+          {/* Printer Settings */}
+          <div className="card p-5">
         <h2 className="font-bold text-lg flex items-center gap-2 mb-4">
           <Printer size={18} /> Integrasi Printer Thermal
         </h2>
@@ -528,9 +824,13 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      </div>
+      )}
 
-      {/* User Management */}
-      <div className="card p-5">
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          {/* User Management */}
+          <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg flex items-center gap-2">
             <Users size={18} /> Manajemen User
@@ -796,6 +1096,8 @@ export default function SettingsPage() {
         confirmText="HAPUS SEMUA"
         variant="danger"
       />
+      </div>
+      )}
     </div>
   );
 }

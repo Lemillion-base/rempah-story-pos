@@ -11,6 +11,7 @@ import { useMenuStore } from './store/menuStore';
 import { useInventoryStore } from './store/inventoryStore';
 import { usePromoStore } from './store/promoStore';
 import { updateFavicon, updatePageTitle } from './utils/favicon';
+import { hexToRgbValues } from './utils/theme';
 import { initOfflineQueue } from './lib/offlineQueue';
 import { fetchTransactionsFromCloud, runMigrations, subscribeToUsers, unsubscribeChannel } from './lib/cloudSync';
 import Layout from './components/Layout';
@@ -57,6 +58,35 @@ function ShiftGuard({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { currentUser, migratePasswords } = useAuthStore();
+  const { settings } = useSettingsStore();
+
+  // Apply dynamic theme settings to root element
+  useEffect(() => {
+    const shades = (settings.themeShades && Object.keys(settings.themeShades).length > 0)
+      ? settings.themeShades
+      : {
+          50: '#fdf8f3',
+          100: '#f9ebd9',
+          200: '#f2d4ae',
+          300: '#e9b67a',
+          400: '#de9348',
+          500: '#d17a2a',
+          600: '#b85f21',
+          700: '#94481f',
+          800: '#763b20',
+          900: '#60311d',
+        };
+
+    const root = document.documentElement;
+    Object.entries(shades).forEach(([shade, hex]) => {
+      try {
+        const rgbStr = hexToRgbValues(hex);
+        root.style.setProperty(`--brand-${shade}`, rgbStr);
+      } catch (err) {
+        console.error('Failed to set root property for theme:', err);
+      }
+    });
+  }, [settings.themeShades]);
 
   // Migrate passwords, load cloud data, cleanup old logs, update favicon, init offline queue
   useEffect(() => {

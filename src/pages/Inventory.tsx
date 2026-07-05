@@ -7,6 +7,7 @@ import { formatRupiah } from '../utils/format';
 import type { InventoryItem } from '../types';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import StockOpname from './StockOpname';
 import {
   Plus,
   Pencil,
@@ -17,12 +18,15 @@ import {
   Download,
   Upload,
   Settings2,
+  ClipboardCheck,
+  Warehouse,
 } from 'lucide-react';
 
 export default function Inventory() {
   const { items: inventory, addItem, updateItem, deleteItem, loadFromCloud } = useInventoryStore();
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
+  const [activeTab, setActiveTab] = useState<'inventory' | 'opname'>('inventory');
 
   // Real-time sync for inventory
   useEffect(() => {
@@ -180,9 +184,9 @@ export default function Inventory() {
   const totalValue = inventory.reduce((a, i) => a + i.stock * i.costPerUnit, 0);
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">📦 Inventaris Bahan Baku</h1>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">📦 Inventaris</h1>
         <div className="flex gap-2 flex-wrap">
           <button onClick={openAdd} className="btn-primary text-sm">
             <Plus size={16} /> Tambah Bahan
@@ -200,6 +204,21 @@ export default function Inventory() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+        <button onClick={() => setActiveTab('inventory')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'inventory' ? 'bg-white dark:bg-slate-700 shadow-sm text-brand-700 dark:text-brand-300' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+          <Warehouse size={16} /> Bahan Baku
+        </button>
+        <button onClick={() => setActiveTab('opname')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'opname' ? 'bg-white dark:bg-slate-700 shadow-sm text-brand-700 dark:text-brand-300' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+          <ClipboardCheck size={16} /> Stock Opname
+        </button>
+      </div>
+
+      {activeTab === 'opname' && <StockOpname />}
+
+      {activeTab === 'inventory' && (<>
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
         <div className="card p-4">
@@ -442,6 +461,7 @@ export default function Inventory() {
         message="Yakin ingin menghapus bahan baku ini?"
         confirmText="Ya, Hapus"
       />
+      </>)}
     </div>
   );
 }

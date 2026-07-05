@@ -6,6 +6,7 @@ import { useMenuStore } from '../store/menuStore';
 import { useShiftStore } from '../store/shiftStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { formatRupiah, formatDate } from '../utils/format';
+import { useStockOpnameStore } from '../store/stockOpnameStore';
 import { exportPnlPDF, exportTransactionsPDF, exportInventoryPDF, exportShiftPDF, exportCashPDF } from '../utils/pdfExport';
 import {
   Chart as ChartJS,
@@ -31,11 +32,12 @@ import {
   FileText,
   Download,
   Wallet,
+  ClipboardCheck,
 } from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
 
-type ReportTab = 'pnl' | 'transactions' | 'inventory' | 'shift' | 'cash';
+type ReportTab = 'pnl' | 'transactions' | 'inventory' | 'shift' | 'cash' | 'opname';
 type DateFilterType = 'today' | 'week' | 'month' | 'custom';
 
 export default function Reports() {
@@ -51,6 +53,7 @@ export default function Reports() {
   const { menus } = useMenuStore();
   const { shifts } = useShiftStore();
   const { settings } = useSettingsStore();
+  const { records: opnameRecords } = useStockOpnameStore();
 
   // Filter transactions by date
   const filteredTx = useMemo(() => {
@@ -83,6 +86,40 @@ export default function Reports() {
       }
     });
   }, [transactions, dateFilterType, customDateFrom, customDateTo, filterMonth]);
+
+  // Compute date range for reuse in other tabs (opname, etc.)
+  const { dateFrom, dateTo } = useMemo(() => {
+    const now = new Date();
+    switch (dateFilterType) {
+      case 'today': {
+        const from = new Date(now); from.setHours(0, 0, 0, 0);
+        const to = new Date(now); to.setHours(23, 59, 59, 999);
+        return { dateFrom: from, dateTo: to };
+      }
+      case 'week': {
+        const from = new Date(now); from.setDate(from.getDate() - 7);
+        return { dateFrom: from, dateTo: now };
+      }
+      case 'month': {
+        if (filterMonth) {
+          const [y, m] = filterMonth.split('-').map(Number);
+          const from = new Date(y, m - 1, 1);
+          const to = new Date(y, m, 0, 23, 59, 59, 999);
+          return { dateFrom: from, dateTo: to };
+        }
+        const from = new Date(now.getFullYear(), now.getMonth(), 1);
+        const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return { dateFrom: from, dateTo: to };
+      }
+      case 'custom': {
+        const from = customDateFrom ? new Date(customDateFrom) : new Date(0);
+        const to = customDateTo ? new Date(customDateTo + 'T23:59:59') : new Date();
+        return { dateFrom: from, dateTo: to };
+      }
+      default:
+        return { dateFrom: new Date(0), dateTo: new Date() };
+    }
+  }, [dateFilterType, customDateFrom, customDateTo, filterMonth]);
 
   // P&L calculations
   const totalGrossRevenue = filteredTx.reduce((a, t) => a + t.subtotal, 0);
@@ -283,6 +320,7 @@ export default function Reports() {
     { id: 'cash' as ReportTab, label: 'Kas Kasir', icon: Wallet },
     { id: 'inventory' as ReportTab, label: 'Stok Bahan', icon: Package },
     { id: 'shift' as ReportTab, label: 'Shift', icon: Users },
+    { id: 'opname' as ReportTab, label: 'Stock Opname', icon: ClipboardCheck },
   ];
 
   return (
@@ -862,6 +900,136 @@ export default function Reports() {
           </div>
         </div>
       )}
+
+      {/* Stock Opname Tab */}
+      {activeTab === 'opname' && (() => {
+        const filteredOpnames = opnameRecords.filter((r) => {
+          const d = new Date(r.date);
+          return d >= dateFrom && d <= dateTo;
+        });
+        const totalOpnameLoss = filteredOpnames.reduce((a, r) => a + r.totalLossValue, 0);
+        const totalOpnameItems = filteredOpnames.reduce((a, r) => a + r.totalItems, 0);
+        const totalOpnameDiffs = filteredOpnames.reduce((a, r) => a + r.itemsWithDifference, 0);
+        // Aggregate loss per reason
+        const lossPerReason: Record<string, number> = {};
+        filteredOpnames.forEach((r) => {
+          r.items.filter((i) => i.difference !== 0).forEach((i) => {
+            const key = i.reason || 'Tidak Diketahui';
+            lossPerReason[key] = (lossPerReason[key] || 0) + i.lossValue;
+          });
+        });
+        const sortedReasons = Object.entries(lossPerReason).sort((a, b) => b[1] - a[1]);
+
+        return (
+          <div className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="card p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <ClipboardCheck className="text-blue-600 dark:text-blue-400" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Jumlah Opname</p>
+                    <p className="text-xl font-bold">{filteredOpnames.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="card p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Package className="text-amber-600 dark:text-amber-400" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Total Item Diopname</p>
+                    <p className="text-xl font-bold">{totalOpnameItems}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="card p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <AlertTriangle className="text-orange-600 dark:text-orange-400" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Item Selisih</p>
+                    <p className="text-xl font-bold text-amber-600">{totalOpnameDiffs}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="card p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <TrendingDown className="text-red-600 dark:text-red-400" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Total Kerugian</p>
+                    <p className={`text-xl font-bold ${totalOpnameLoss > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(totalOpnameLoss)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Loss per Reason */}
+            {sortedReasons.length > 0 && (
+              <div className="card p-5">
+                <h3 className="font-semibold text-sm mb-3">Kerugian per Alasan</h3>
+                <div className="space-y-2">
+                  {sortedReasons.map(([reason, loss]) => (
+                    <div key={reason} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">{reason}</span>
+                      <span className="font-semibold text-red-600">{formatRupiah(loss)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Opname Records Table */}
+            <div className="card overflow-hidden">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="font-semibold text-sm">Riwayat Stock Opname</h3>
+              </div>
+              {filteredOpnames.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-sm">Tidak ada data stock opname pada periode ini.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
+                      <tr>
+                        <th className="text-left p-3 font-semibold">Tanggal</th>
+                        <th className="text-left p-3 font-semibold">Petugas</th>
+                        <th className="text-center p-3 font-semibold">Item</th>
+                        <th className="text-center p-3 font-semibold">Selisih</th>
+                        <th className="text-right p-3 font-semibold">Kerugian</th>
+                        <th className="text-center p-3 font-semibold">PIN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOpnames.map((rec) => (
+                        <tr key={rec.id} className={`border-b border-slate-50 dark:border-slate-700/40 ${rec.totalLossValue > 0 ? 'bg-red-50/30 dark:bg-red-950/10' : ''}`}>
+                          <td className="p-3 text-xs">{formatDate(rec.date)}</td>
+                          <td className="p-3 font-medium">{rec.staffName}</td>
+                          <td className="p-3 text-center">{rec.totalItems}</td>
+                          <td className="p-3 text-center">
+                            <span className={`font-semibold ${rec.itemsWithDifference > 0 ? 'text-amber-600' : 'text-green-600'}`}>{rec.itemsWithDifference}</span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <span className={`font-bold ${rec.totalLossValue > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(rec.totalLossValue)}</span>
+                          </td>
+                          <td className="p-3 text-center text-xs">
+                            {rec.pinVerified ? <span className="text-green-600 font-medium">✓</span> : <span className="text-slate-300">—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
