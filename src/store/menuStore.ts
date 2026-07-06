@@ -101,7 +101,16 @@ export const useMenuStore = create<MenuState>()(
               } else {
                 localOnly = s.menus.filter((m) => !cloudIds.has(m.id));
               }
-              return { menus: [...cloudMenus, ...localOnly] };
+              const mergedMenus = cloudMenus.map((cm) => {
+                const local = s.menus.find((lm) => lm.id === cm.id);
+                return {
+                  ...cm,
+                  showSugarLevel: cm.showSugarLevel !== undefined
+                    ? cm.showSugarLevel
+                    : (local?.showSugarLevel !== undefined ? local.showSugarLevel : true),
+                };
+              });
+              return { menus: [...mergedMenus, ...localOnly] };
             });
           } else {
             // Cloud is empty, seed it with local menus

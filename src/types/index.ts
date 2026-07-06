@@ -40,6 +40,7 @@ export interface Menu {
   description?: string;
   manualHpp?: number;
   kitchenTarget?: string; // Target dapur/printer split (misal: "Bar", "Dapur Makanan", atau kosong/default)
+  showSugarLevel?: boolean; // true = tampilkan level gula, false = sembunyikan
 }
 
 export type Temperature = 'Hangat' | 'Dingin';
@@ -59,6 +60,7 @@ export interface CartItem {
   addons: AddOn[];
   subtotal: number; // (basePrice + sum(addons)) * qty
   kitchenTarget?: string; // target kitchen for split printing
+  showSugarLevel?: boolean;
 }
 
 export interface Transaction {

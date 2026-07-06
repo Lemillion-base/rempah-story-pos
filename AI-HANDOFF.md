@@ -1,4 +1,4 @@
-# 🤖 Panduan Handoff ke AI Developer Lain
+# 🤖 Panduan Handoff ke AI Developer Lain — BerdikariPOS
 
 ## Cara Melanjutkan Pengembangan dengan AI Lain (Antigravity, Cursor, dll)
 
@@ -43,7 +43,7 @@ Berikan file-file ini sebagai konteks awal agar AI memahami seluruh aplikasi:
 Copy-paste prompt ini saat memulai percakapan dengan AI baru:
 
 ```
-Saya memiliki aplikasi POS (Point of Sale) bernama "Rempah Story POS" yang sudah production.
+Saya memiliki aplikasi POS (Point of Sale) bernama "BerdikariPOS" yang sudah production dan bersifat umum/multi-purpose.
 
 Tech Stack:
 - React 18 + TypeScript + Vite 5
@@ -153,7 +153,7 @@ git push origin main → Vercel auto-deploy (1-2 menit)
 - Semua tabel di schema `public`
 - RLS enabled dengan policy "allow all" (MVP)
 - Real-time enabled untuk SEMUA tabel (transactions, menus, inventory, customers, users, promos, settings)
-- `settings` table rows: id=1 (app settings, including loyalty settings and custom categories consolidated on id=1 to satisfy check constraints)
+- `settings` table rows: id=1 (app settings, including loyalty settings, custom categories, theme_color, and theme_shades consolidated on id=1 to satisfy check constraints)
 
 ---
 

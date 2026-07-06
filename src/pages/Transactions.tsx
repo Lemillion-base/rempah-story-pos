@@ -193,7 +193,7 @@ export default function Transactions() {
                         <div>
                           <span className="font-medium">{item.name}</span>
                           <span className="text-slate-500 ml-2">
-                            x{item.quantity} • {item.temperature} • {item.sugar}
+                            x{item.quantity} • {item.temperature}{item.showSugarLevel !== false ? ` • ${item.sugar}` : ''}
                           </span>
                           {item.addons.length > 0 && (
                             <span className="text-xs text-slate-400 ml-1">

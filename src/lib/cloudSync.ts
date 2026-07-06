@@ -71,13 +71,22 @@ export async function runMigrations() {
       console.warn('  ALTER TABLE settings ADD COLUMN IF NOT EXISTS kitchen_printers JSONB DEFAULT \'[]\';');
       migrationNeeded.kitchenPrinters = true;
     }
+
+    // Migration 6: Add show_sugar_level column to menus table
+    const { error: sugarError } = await supabase.from('menus').select('show_sugar_level').limit(1);
+    if (sugarError && sugarError.message.includes('show_sugar_level')) {
+      console.warn('[Migration] Column "show_sugar_level" missing in menus table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_sugar_level BOOLEAN DEFAULT TRUE;');
+      migrationNeeded.showSugarLevel = true;
+    }
   } catch (e) {
     console.warn('[Migration] Could not verify schema:', e);
   }
 }
 
 // Track which migrations are needed so sync functions can adapt
-const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false };
+const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false, showSugarLevel: false };
 export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
   return migrationNeeded[key];
 }
@@ -265,6 +274,10 @@ export async function syncMenu(menu: Menu) {
   // Only include kitchen_target if the column exists in DB
   if (!migrationNeeded.kitchenTarget) {
     data.kitchen_target = menu.kitchenTarget || null;
+  }
+  // Only include show_sugar_level if the column exists in DB
+  if (!migrationNeeded.showSugarLevel) {
+    data.show_sugar_level = menu.showSugarLevel !== false;
   }
   await smartUpsert('menus', data);
 }
@@ -498,6 +511,9 @@ export async function fetchMenusFromCloud(): Promise<Menu[] | null> {
       description: row.description || undefined,
       manualHpp: row.manual_hpp || 0,
       kitchenTarget: row.kitchen_target || undefined,
+      showSugarLevel: (row.show_sugar_level !== undefined && row.show_sugar_level !== null)
+        ? row.show_sugar_level
+        : undefined,
     })) || null;
   } catch {
     return null;

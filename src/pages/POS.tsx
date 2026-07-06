@@ -324,10 +324,11 @@ export default function POS() {
       basePrice: selectedMenu.price,
       quantity: qty,
       temperature: temp,
-      sugar,
+      sugar: selectedMenu.showSugarLevel !== false ? sugar : 'None',
       addons: selectedAddons,
       subtotal: unitPrice * qty,
       kitchenTarget: selectedMenu.kitchenTarget,
+      showSugarLevel: selectedMenu.showSugarLevel !== false,
     };
     cart.addItem(item);
     setSelectedMenu(null);
@@ -595,7 +596,7 @@ export default function POS() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm text-slate-850 dark:text-slate-200 truncate">{item.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {item.temperature} • Gula {item.sugar}
+                        {item.temperature}{item.showSugarLevel !== false ? ` • Gula ${item.sugar}` : ''}
                         {item.addons.length > 0 && ` • +${item.addons.map((a) => a.name).join(', ')}`}
                       </p>
                     </div>
@@ -755,7 +756,7 @@ export default function POS() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-slate-800 dark:text-slate-200 truncate">{item.name}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {item.temperature} • Gula {item.sugar}
+                      {item.temperature}{item.showSugarLevel !== false ? ` • Gula ${item.sugar}` : ''}
                       {item.addons.length > 0 && ` • +${item.addons.map((a) => a.name).join(', ')}`}
                     </p>
                   </div>
@@ -897,24 +898,26 @@ export default function POS() {
             </div>
 
             {/* Sugar Level */}
-            <div>
-              <label className="label text-slate-700 dark:text-slate-300">Level Gula</label>
-              <div className="flex gap-2">
-                {(['Normal', 'Less', 'None'] as SugarLevel[]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSugar(s)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition ${
-                      sugar === s
-                        ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+            {selectedMenu.showSugarLevel !== false && (
+              <div>
+                <label className="label text-slate-700 dark:text-slate-300">Level Gula</label>
+                <div className="flex gap-2">
+                  {(['Normal', 'Less', 'None'] as SugarLevel[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSugar(s)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition ${
+                        sugar === s
+                          ? 'bg-brand-600 text-white border-brand-600'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-205 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Add-ons */}
             {selectedMenu.availableAddons.length > 0 && (

@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-## Project Name: POS Rempah Story
+## Project Name: BerdikariPOS
 ## Product Version: 3.1 (Production)
 ## Document Status: Production Ready
 ## Last Updated: 25 Mei 2026
@@ -11,7 +11,7 @@
 
 ## 1. Product Overview
 
-**Rempah Story POS** adalah aplikasi Point of Sale (Sistem Kasir) berbasis web yang dirancang khusus untuk bisnis F&B modern dengan konsep Open Kitchen (kafe jamu modern). Sistem ini menghubungkan pesanan dari Kasir langsung ke layar Acaraki (Dapur) secara real-time melalui shared state, menyediakan dashboard analitik komprehensif untuk Manager, serta fitur CRM pelanggan dan manajemen shift kasir.
+**BerdikariPOS** adalah aplikasi Point of Sale (Sistem Kasir) berbasis web yang dirancang untuk berbagai jenis usaha (F&B, retail, kelontong, jasa, salon, laundry, bakery, dll). Sistem ini menghubungkan pesanan dari Kasir langsung ke layar Dapur/Pemenuhan secara real-time melalui shared state, menyediakan dashboard analitik komprehensif untuk Manager, serta fitur CRM pelanggan, manajemen shift kasir, dan integrasi multi-printer.
 
 ### 1.1. Tech Stack
 
@@ -260,11 +260,17 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Max entries**: 10.000 (auto-trim)
 
 ### 3.13. Modul Settings (Manager)
+- **Tabbed Layout**: Halaman pengaturan diorganisasikan ke dalam 3 tab utama (*Umum & Tampilan*, *Printer & KDS*, *Pengguna & Sistem*) untuk mempermudah navigasi dan mengurangi space vertikal yang terlalu banyak di mobile maupun desktop.
 - **Pengaturan Toko**:
   - Upload logo toko (base64, maks 500KB) — tampil di login, sidebar, header mobile
   - Nama toko (tampil di login, sidebar, header, struk)
   - Alamat toko
-- **PIN Manager**: 4-6 digit untuk otorisasi tindakan krusial
+- **Pengaturan Tema Warna UI**:
+  - Memilih preset tema warna (Jamu Original, Matcha Green, Telang Blue, Rosella Red, Charcoal Slate)
+  - Men-generate 10 shades warna (50-900) otomatis dari warna dasar (color picker)
+  - Penyesuaian manual detail hex code per shade warna
+  - Live preview instan di seluruh elemen aplikasi sebelum disimpan ke cloud settings.
+- **PIN Manager**: 4-6 digit untuk otorisasi tindakan krusial (void/pembatalan transaksi)
 - **Integrasi Printer Thermal**:
   - Toggle aktifkan printer
   - Toggle auto-print saat checkout
@@ -720,7 +726,7 @@ Fitur berikut sudah disiapkan arsitekturnya untuk fase pengembangan selanjutnya:
 Kunyit, Jahe Emprit, Temulawak, Sereh, Kayu Manis, Gula Aren, Gula Pasir, Madu Murni, Lemon, Jeruk Nipis, Susu UHT, Cup 16oz, Cup 12oz, Sedotan, Air Galon
 
 ### Default Settings
-- Store Name: "Rempah Story"
+- Store Name: "BerdikariPOS"
 - Manager PIN: "1234"
 - Printer: Disabled
 - Tax: 0%
@@ -791,4 +797,4 @@ git push origin main
 
 ---
 
-*Document ini mencakup seluruh fitur yang sudah diimplementasi pada aplikasi POS Rempah Story v3.0. Gunakan sebagai referensi lengkap untuk pengembangan lebih lanjut.*
+*Document ini mencakup seluruh fitur yang sudah diimplementasi pada aplikasi BerdikariPOS v3.1. Gunakan sebagai referensi lengkap untuk pengembangan lebih lanjut.*

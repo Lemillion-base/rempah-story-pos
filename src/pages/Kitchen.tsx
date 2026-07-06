@@ -231,7 +231,7 @@ export default function Kitchen() {
                           <div key={item.lineId} className="border-l-4 border-brand-300 dark:border-brand-600 pl-3">
                             <p className="font-bold text-base dark:text-slate-100">{item.name}</p>
                             <p className="text-sm text-slate-600 dark:text-slate-400 font-semibold">
-                              {item.temperature} • Gula {item.sugar} • x{item.quantity}
+                              {item.temperature}{item.showSugarLevel !== false ? ` • Gula ${item.sugar}` : ''} • x{item.quantity}
                             </p>
                             {item.addons.length > 0 && (
                               <p className="text-xs text-slate-500">
