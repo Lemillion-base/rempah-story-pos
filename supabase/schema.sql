@@ -1,5 +1,5 @@
 -- ============================================================
--- Rempah Story POS — Supabase Database Schema
+-- BerdikariPOS — Supabase Database Schema
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
 -- ============================================================
 
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS stock_logs (
 CREATE TABLE IF NOT EXISTS settings (
   id INT PRIMARY KEY DEFAULT 1,
   manager_pin TEXT DEFAULT '1234',
-  store_name TEXT DEFAULT 'Rempah Story',
+  store_name TEXT DEFAULT 'BerdikariPOS',
   store_logo TEXT,
   address TEXT,
   tax_percent FLOAT DEFAULT 0,
@@ -159,6 +159,20 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- Insert default settings row
 INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+-- 11. Stock Opnames table (Stock Taking / Physical Inventory Count)
+CREATE TABLE IF NOT EXISTS stock_opnames (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date TIMESTAMPTZ DEFAULT now(),
+  staff_id TEXT NOT NULL,
+  staff_name TEXT NOT NULL,
+  items JSONB NOT NULL DEFAULT '[]',
+  total_loss_value FLOAT DEFAULT 0,
+  total_items INT DEFAULT 0,
+  items_with_difference INT DEFAULT 0,
+  pin_verified BOOLEAN DEFAULT false,
+  notes TEXT
+);
 
 -- ============================================================
 -- Enable Realtime for ALL tables (required for multi-device sync)

@@ -135,7 +135,7 @@ export const seedMenus: Menu[] = [
 
 export const seedSettings: AppSettings = {
   managerPin: '1234',
-  storeName: 'Rempah Story',
+  storeName: 'BerdikariPOS',
   storeLogo: undefined,
   address: 'Jl. Jamu Modern No. 1',
   taxPercent: 0,
@@ -147,4 +147,17 @@ export const seedSettings: AppSettings = {
   kitchenPrinters: [],
   superAdminPin: '000000',
   demoMode: true,
+  themeColor: '#b85f21',
+  themeShades: {
+    50: '#fdf8f3',
+    100: '#f9ebd9',
+    200: '#f2d4ae',
+    300: '#e9b67a',
+    400: '#de9348',
+    500: '#d17a2a',
+    600: '#b85f21',
+    700: '#94481f',
+    800: '#763b20',
+    900: '#60311d',
+  },
 };

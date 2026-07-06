@@ -12,9 +12,9 @@ export default defineConfig({
       },
       includeAssets: ['sounds/kds-alarm.wav'],
       manifest: {
-        name: 'Rempah Story POS',
-        short_name: 'Rempah POS',
-        description: 'Point of Sale System untuk bisnis jamu modern',
+        name: 'BerdikariPOS',
+        short_name: 'BerdikariPOS',
+        description: 'Point of Sale System untuk berbagai jenis usaha',
         theme_color: '#b85f21',
         background_color: '#fdf8f3',
         display: 'standalone',

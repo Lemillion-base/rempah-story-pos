@@ -1,5 +1,5 @@
 /**
- * Rempah Story POS — Ngrok Tunnel
+ * BerdikariPOS — Ngrok Tunnel
  * 
  * SETUP (sekali saja):
  * 1. Daftar gratis di https://dashboard.ngrok.com/signup
@@ -32,7 +32,7 @@ ngrok.stdout.on('data', (data) => {
   if (urlMatch && !publicUrl) {
     publicUrl = urlMatch[1];
     console.log('\n┌──────────────────────────────────────────────────┐');
-    console.log('│  🌿 Rempah Story POS — Public Tunnel Active       │');
+    console.log('│  🚀 BerdikariPOS — Public Tunnel Active           │');
     console.log('├──────────────────────────────────────────────────┤');
     console.log(`│  Local:   http://localhost:${PORT}`);
     console.log(`│  Public:  ${publicUrl}`);
@@ -67,7 +67,7 @@ setTimeout(async () => {
     if (data.tunnels && data.tunnels.length > 0) {
       publicUrl = data.tunnels[0].public_url;
       console.log('\n┌──────────────────────────────────────────────────┐');
-      console.log('│  🌿 Rempah Story POS — Public Tunnel Active       │');
+      console.log('│  🚀 BerdikariPOS — Public Tunnel Active           │');
       console.log('├──────────────────────────────────────────────────┤');
       console.log(`│  Local:   http://localhost:${PORT}`);
       console.log(`│  Public:  ${publicUrl}`);

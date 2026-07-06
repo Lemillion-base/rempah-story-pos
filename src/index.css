@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand-50: 253 248 243;
+  --brand-100: 249 235 217;
+  --brand-200: 242 212 174;
+  --brand-300: 233 182 122;
+  --brand-400: 222 147 72;
+  --brand-500: 209 122 42;
+  --brand-600: 184 95 33;
+  --brand-700: 148 72 31;
+  --brand-800: 118 59 32;
+  --brand-900: 96 49 29;
+}
+
 @layer base {
   html, body, #root {
     height: 100%;
@@ -112,3 +125,5 @@
 .animate-fade-in-up {
   animation: fade-in-up 0.4s ease-out both;
 }
+
+/* Force Tailwind CSS styles cache rebuild: dynamic-theme-colors-v2 */

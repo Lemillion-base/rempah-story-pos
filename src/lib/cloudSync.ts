@@ -12,7 +12,8 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { smartUpsert, smartUpdate, smartDelete, smartInsert } from './offlineQueue';
 import type { 
   User, InventoryItem, Menu, Transaction, Customer, 
-  CashierShift, Promo, AuditLogEntry, AppSettings, LoyaltySettings 
+  CashierShift, Promo, AuditLogEntry, AppSettings, LoyaltySettings,
+  StockOpname 
 } from '../types';
 import type { StockLogEntry } from '../store/stockLogStore';
 
@@ -80,13 +81,31 @@ export async function runMigrations() {
       console.warn('  ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_sugar_level BOOLEAN DEFAULT TRUE;');
       migrationNeeded.showSugarLevel = true;
     }
+
+    // Migration 7: Add theme_color column to settings table
+    const { error: themeColorError } = await supabase.from('settings').select('theme_color').limit(1);
+    if (themeColorError && themeColorError.message.includes('theme_color')) {
+      console.warn('[Migration] Column "theme_color" missing in settings table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_color TEXT;');
+      migrationNeeded.themeColor = true;
+    }
+
+    // Migration 8: Add theme_shades column to settings table
+    const { error: themeShadesError } = await supabase.from('settings').select('theme_shades').limit(1);
+    if (themeShadesError && themeShadesError.message.includes('theme_shades')) {
+      console.warn('[Migration] Column "theme_shades" missing in settings table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_shades JSONB;');
+      migrationNeeded.themeShades = true;
+    }
   } catch (e) {
     console.warn('[Migration] Could not verify schema:', e);
   }
 }
 
 // Track which migrations are needed so sync functions can adapt
-const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false, showSugarLevel: false };
+const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false, showSugarLevel: false, themeColor: false, themeShades: false };
 export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
   return migrationNeeded[key];
 }
@@ -390,6 +409,12 @@ export async function syncSettings(settings: AppSettings) {
   if (!migrationNeeded.kitchenPrinters) {
     data.kitchen_printers = settings.kitchenPrinters || [];
   }
+  if (!migrationNeeded.themeColor) {
+    data.theme_color = settings.themeColor || null;
+  }
+  if (!migrationNeeded.themeShades) {
+    data.theme_shades = settings.themeShades || null;
+  }
   await smartUpsert('settings', data);
 }
 
@@ -412,6 +437,8 @@ export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
       kitchenPrinters: data.kitchen_printers || [],
       superAdminPin: data.super_admin_pin || '000000',
       demoMode: data.demo_mode !== false,
+      themeColor: data.theme_color || undefined,
+      themeShades: data.theme_shades || undefined,
     };
   } catch (e) {
     console.warn('[CloudSync] Fetch settings failed:', e);
@@ -736,3 +763,44 @@ export async function fetchAuditLogsFromCloud(): Promise<AuditLogEntry[] | null>
   }
 }
 
+// ============================================================
+// STOCK OPNAMES (Stock Taking Records)
+// ============================================================
+
+export async function syncStockOpname(record: StockOpname) {
+  if (!isSupabaseConfigured) return;
+  await smartInsert('stock_opnames', {
+    id: record.id,
+    date: record.date,
+    staff_id: record.staffId,
+    staff_name: record.staffName,
+    items: record.items,
+    total_loss_value: record.totalLossValue,
+    total_items: record.totalItems,
+    items_with_difference: record.itemsWithDifference,
+    pin_verified: record.pinVerified,
+    notes: record.notes || null,
+  });
+}
+
+export async function fetchStockOpnamesFromCloud(): Promise<StockOpname[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('stock_opnames').select('*').order('date', { ascending: false }).limit(200);
+    if (error) return null;
+    return data?.map((row) => ({
+      id: row.id,
+      date: row.date,
+      staffId: row.staff_id,
+      staffName: row.staff_name,
+      items: row.items || [],
+      totalLossValue: row.total_loss_value || 0,
+      totalItems: row.total_items || 0,
+      itemsWithDifference: row.items_with_difference || 0,
+      pinVerified: row.pin_verified || false,
+      notes: row.notes || undefined,
+    })) || null;
+  } catch {
+    return null;
+  }
+}

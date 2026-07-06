@@ -123,6 +123,20 @@ export interface AppSettings {
   // Super Admin & Demo
   superAdminPin: string; // PIN untuk akses Manajemen Data (hanya developer)
   demoMode: boolean; // true = tampilkan demo accounts di login
+  // UI Theme Settings
+  themeColor?: string;
+  themeShades?: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+  };
 }
 
 // Shift Management
@@ -188,7 +202,8 @@ export type AuditAction =
   | 'create_inventory' | 'update_inventory' | 'delete_inventory' | 'deduct_inventory'
   | 'open_shift' | 'close_shift'
   | 'update_settings' | 'create_promo' | 'update_promo' | 'delete_promo'
-  | 'create_customer' | 'update_customer' | 'delete_customer';
+  | 'create_customer' | 'update_customer' | 'delete_customer'
+  | 'stock_opname';
 
 export interface AuditLogEntry {
   id: string;
@@ -199,4 +214,30 @@ export interface AuditLogEntry {
   detail: string;
   timestamp: string; // ISO
   metadata?: Record<string, any>;
+}
+
+// Stock Opname (Stock Taking / Physical Inventory Count)
+export interface StockOpnameItem {
+  inventoryId: string;
+  inventoryName: string;
+  unit: string;
+  systemStock: number;    // Stok Buku (Sistem) saat opname dimulai
+  actualStock: number;    // Stok Fisik (dihitung staf)
+  difference: number;     // actualStock - systemStock (+ lebih / - kurang)
+  costPerUnit: number;    // harga per unit untuk hitung kerugian
+  lossValue: number;      // Math.abs(difference) * costPerUnit (jika selisih negatif)
+  reason: string;         // Alasan penyesuaian (e.g. "Basi", "Bahan Rusak", "Salah Input")
+}
+
+export interface StockOpname {
+  id: string;
+  date: string;           // ISO timestamp
+  staffId: string;        // ID user yang melakukan opname
+  staffName: string;      // Nama staf penginput
+  items: StockOpnameItem[];
+  totalLossValue: number; // Total kerugian
+  totalItems: number;     // Jumlah item yang diopname
+  itemsWithDifference: number; // Jumlah item yang ada selisih
+  pinVerified: boolean;   // Apakah PIN Manager sudah diverifikasi (wajib jika ada selisih besar)
+  notes?: string;         // Catatan tambahan
 }

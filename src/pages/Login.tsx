@@ -29,7 +29,7 @@ export default function Login() {
           {settings.storeLogo ? (
             <img src={settings.storeLogo} alt="Logo" className="w-16 h-16 mx-auto mb-3 rounded-xl object-contain" />
           ) : (
-            <div className="text-4xl mb-3">🌿</div>
+            <div className="text-4xl mb-3">🏪</div>
           )}
           <h1 className="text-2xl font-bold text-brand-700 dark:text-brand-400">{settings.storeName}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Point of Sale System</p>

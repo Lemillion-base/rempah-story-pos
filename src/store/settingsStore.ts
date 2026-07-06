@@ -23,7 +23,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       settings: seedSettings,
 
-      updateSettings: (data) => {
+      updateSettings: (data: Partial<AppSettings>) => {
         // BUG-M4 fix: Hash PINs before storing
         const processed = { ...data };
         if (processed.managerPin && !isBcryptHash(processed.managerPin)) {
@@ -32,7 +32,7 @@ export const useSettingsStore = create<SettingsState>()(
         if (processed.superAdminPin && !isBcryptHash(processed.superAdminPin)) {
           processed.superAdminPin = bcrypt.hashSync(processed.superAdminPin, 8);
         }
-        set((s) => ({ settings: { ...s.settings, ...processed } }));
+        set((s: SettingsState) => ({ settings: { ...s.settings, ...processed } }));
         const updated = { ...get().settings, ...processed };
         syncSettings(updated);
         // Update favicon & title if logo/name changed
@@ -41,7 +41,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       // BUG-M4 fix: Compare PIN with bcrypt (supports both hashed and legacy plaintext)
-      verifyPin: (pin) => {
+      verifyPin: (pin: string) => {
         const stored = get().settings.managerPin;
         if (isBcryptHash(stored)) {
           return bcrypt.compareSync(pin, stored);
@@ -50,7 +50,7 @@ export const useSettingsStore = create<SettingsState>()(
         if (stored === pin) {
           // Migrate plaintext PIN to hash
           const hashed = bcrypt.hashSync(pin, 8);
-          set((s) => ({ settings: { ...s.settings, managerPin: hashed } }));
+          set((s: SettingsState) => ({ settings: { ...s.settings, managerPin: hashed } }));
           syncSettings({ ...get().settings, managerPin: hashed });
           return true;
         }
@@ -60,7 +60,7 @@ export const useSettingsStore = create<SettingsState>()(
       loadFromCloud: async () => {
         const cloudSettings = await fetchSettingsFromCloud();
         if (cloudSettings) {
-          set((s) => {
+          set((s: SettingsState) => {
             const merged = { ...seedSettings } as any;
             // LOGIC-6: Merge settings per-field rather than overwriting completely
             // Local modifications and cloud modifications are both preserved if they don't conflict.
@@ -70,8 +70,8 @@ export const useSettingsStore = create<SettingsState>()(
               const cloudVal = cloudSettings[key];
               const seedVal = seedSettings[key];
 
-              const localChanged = JSON.stringify(localVal) !== JSON.stringify(seedVal);
-              const cloudChanged = JSON.stringify(cloudVal) !== JSON.stringify(seedVal);
+              const localChanged = localVal !== undefined && JSON.stringify(localVal) !== JSON.stringify(seedVal);
+              const cloudChanged = cloudVal !== undefined && JSON.stringify(cloudVal) !== JSON.stringify(seedVal);
 
               if (localChanged && !cloudChanged) {
                 merged[key] = localVal;
@@ -80,7 +80,7 @@ export const useSettingsStore = create<SettingsState>()(
               } else if (localChanged && cloudChanged) {
                 merged[key] = cloudVal; // Cloud wins conflict
               } else {
-                merged[key] = seedVal;
+                merged[key] = localVal !== undefined ? localVal : seedVal;
               }
             });
             return { settings: merged as AppSettings };
@@ -88,6 +88,18 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
     }),
-    { name: 'rempah-settings' }
+    {
+      name: 'rempah-settings',
+      merge: (persistedState: any, currentState: any) => {
+        return {
+          ...currentState,
+          ...persistedState,
+          settings: {
+            ...currentState.settings,
+            ...(persistedState?.settings || {}),
+          },
+        };
+      },
+    }
   )
 );

@@ -23,5 +23,9 @@ export function updateFavicon(logoDataUrl?: string) {
  * Update document title to match store name
  */
 export function updatePageTitle(storeName: string) {
-  document.title = `${storeName} POS`;
+  if (storeName.toLowerCase().endsWith('pos')) {
+    document.title = storeName;
+  } else {
+    document.title = `${storeName} POS`;
+  }
 }

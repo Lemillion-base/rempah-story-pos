@@ -28,6 +28,7 @@ import {
   Shield,
   Sun,
   Moon,
+  ClipboardCheck,
 } from 'lucide-react';
 
 const navItems = {
@@ -233,7 +234,7 @@ export default function Layout() {
           {settings.storeLogo ? (
             <img src={settings.storeLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain flex-shrink-0" />
           ) : (
-            <span className="text-xl flex-shrink-0">🌿</span>
+            <span className="text-xl flex-shrink-0">🏪</span>
           )}
           {!sidebarCollapsed && (
             <div className="min-w-0">
