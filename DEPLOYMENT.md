@@ -1,4 +1,4 @@
-# 🚀 Panduan Deployment & Komersialisasi — Rempah Story POS
+# 🚀 Panduan Deployment & Komersialisasi — BerdikariPOS
 
 ## Status: ✅ PRODUCTION LIVE
 - **Hosting**: Vercel (auto-deploy)
@@ -83,11 +83,14 @@ Setiap klien (toko) yang beli aplikasi Anda perlu:
 1. Buat Supabase project baru (gratis)
 2. Jalankan `schema.sql` di SQL Editor.
    > [!NOTE]
-   > Jika meng-upgrade database klien lama ke versi 3.1, jalankan perintah berikut di SQL Editor Supabase untuk mendukung fitur pembatasan login device & split printing dapur:
+   > Jika meng-upgrade database klien lama ke versi 3.1, jalankan perintah berikut di SQL Editor Supabase untuk mendukung fitur pembatasan login device, split printing dapur, tema warna dinamis, dan fleksibilitas opsi level gula menu:
    > ```sql
    > ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session_id TEXT;
    > ALTER TABLE menus ADD COLUMN IF NOT EXISTS kitchen_target TEXT DEFAULT NULL;
    > ALTER TABLE settings ADD COLUMN IF NOT EXISTS kitchen_printers JSONB DEFAULT '[]';
+   > ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_color TEXT;
+   > ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_shades JSONB;
+   > ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_sugar_level BOOLEAN DEFAULT TRUE;
    > ```
 3. Deploy frontend ke Vercel dengan env variables klien tersebut
 4. Berikan URL + akun login ke klien

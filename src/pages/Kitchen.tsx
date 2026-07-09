@@ -224,6 +224,15 @@ export default function Kitchen() {
                       {/* Shift/Cashier info */}
                       <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">
                         {formatTime(order.date)} • {order.cashierName}
+                        {order.orderType && (
+                          <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            order.orderType === 'Take Away'
+                              ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                              : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                          }`}>
+                            {order.orderType === 'Take Away' ? '📦' : '🍽️'} {order.orderType}
+                          </span>
+                        )}
                       </p>
 
                       <div className="space-y-2">
@@ -231,7 +240,7 @@ export default function Kitchen() {
                           <div key={item.lineId} className="border-l-4 border-brand-300 dark:border-brand-600 pl-3">
                             <p className="font-bold text-base dark:text-slate-100">{item.name}</p>
                             <p className="text-sm text-slate-600 dark:text-slate-400 font-semibold">
-                              {item.temperature} • Gula {item.sugar} • x{item.quantity}
+                              {item.showTemperature !== false ? item.temperature : ''}{item.showTemperature !== false && item.showSugarLevel !== false ? ' • ' : ''}{item.showSugarLevel !== false ? `Gula ${item.sugar}` : ''}{(item.showTemperature !== false || item.showSugarLevel !== false) ? ' • ' : ''}x{item.quantity}
                             </p>
                             {item.addons.length > 0 && (
                               <p className="text-xs text-slate-500">

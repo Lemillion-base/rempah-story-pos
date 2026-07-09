@@ -175,6 +175,15 @@ export default function Transactions() {
                   <p className="font-medium text-sm">{formatDate(tx.date)}</p>
                   <p className="text-xs text-slate-500">
                     {tx.paymentMethod} • {tx.items.length} item • {tx.cashierName}
+                    {tx.orderType && (
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        tx.orderType === 'Take Away'
+                          ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                          : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                      }`}>
+                        {tx.orderType}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="text-right">
@@ -193,7 +202,7 @@ export default function Transactions() {
                         <div>
                           <span className="font-medium">{item.name}</span>
                           <span className="text-slate-500 ml-2">
-                            x{item.quantity} • {item.temperature} • {item.sugar}
+                            x{item.quantity}{item.showTemperature !== false ? ` • ${item.temperature}` : ''}{item.showSugarLevel !== false ? ` • ${item.sugar}` : ''}
                           </span>
                           {item.addons.length > 0 && (
                             <span className="text-xs text-slate-400 ml-1">

@@ -1,12 +1,12 @@
-# 🌿 Rempah Story POS — Daftar Fitur & Keunggulan
+# 🏪 BerdikariPOS — Daftar Fitur & Keunggulan
 
-## Aplikasi Point of Sale Modern untuk Bisnis F&B
+## Aplikasi Point of Sale Modern untuk Berbagai Jenis Usaha
 
 ---
 
 ## 🎯 Ringkasan
 
-Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bisnis F&B modern (kafe, kedai minuman, restoran kecil). Menghubungkan kasir, dapur, dan manajemen dalam satu platform terintegrasi dengan cloud sync real-time.
+BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk berbagai jenis usaha (F&B, retail, kelontong, jasa, salon, laundry, bakery, dll). Menghubungkan kasir, bagian dapur/pemenuhan, dan manajemen dalam satu platform terintegrasi dengan cloud sync real-time.
 
 ---
 
@@ -123,10 +123,12 @@ Rempah Story POS adalah sistem kasir berbasis web yang dirancang khusus untuk bi
 - Export audit log ke CSV
 
 ### 12. ⚙️ Settings & Konfigurasi
-- Pengaturan toko: nama, logo, alamat
-- PIN Manager (4-6 digit)
-- Integrasi printer thermal
-- Manajemen user (CRUD)
+- **Tabbed Layout**: Halaman pengaturan diorganisasikan ke dalam 3 tab utama (*Umum & Tampilan*, *Printer & KDS*, *Pengguna & Sistem*) untuk tampilan yang rapi dan menghemat space di desktop maupun mobile.
+- **Pengaturan Toko**: Nama, logo (base64), dan alamat toko.
+- **Pengaturan Tema Warna UI**: Mengatur skema warna aplikasi secara dinamis dengan live preview instan. Bisa memilih preset (Jamu Original, Matcha Green, Telang Blue, Rosella Red, Charcoal Slate), generate gradasi otomatis dari warna dasar, atau mengubah per shade warna secara manual. Skema warna ini ter-sync di Supabase.
+- **PIN Manager**: PIN 4-6 digit terenkripsi untuk otorisasi void/pembatalan transaksi oleh manager.
+- **Integrasi Printer Thermal & Kitchen Printers (Split Print)**.
+- **Manajemen User**: Tambah, ubah, dan hapus user beserta rolenya.
 - **Manajemen Data** (dilindungi Super Admin PIN):
   - Mode Demo on/off
   - Bersihkan data transaksi (fresh start)
@@ -229,4 +231,4 @@ Cocok untuk:
 
 ---
 
-*Dokumen ini menggambarkan fitur aplikasi POS Rempah Story v3.0 yang sudah live di production.*
+*Dokumen ini menggambarkan fitur aplikasi BerdikariPOS v3.1 yang sudah live di production.*
