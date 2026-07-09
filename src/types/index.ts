@@ -41,6 +41,7 @@ export interface Menu {
   manualHpp?: number;
   kitchenTarget?: string; // Target dapur/printer split (misal: "Bar", "Dapur Makanan", atau kosong/default)
   showSugarLevel?: boolean; // true = tampilkan level gula, false = sembunyikan
+  showTemperature?: boolean; // true = tampilkan pilihan suhu, false = sembunyikan (untuk makanan)
 }
 
 export type Temperature = 'Hangat' | 'Dingin';
@@ -48,6 +49,7 @@ export type SugarLevel = 'Normal' | 'Less' | 'None';
 export type PaymentMethod = 'Cash' | 'QRIS' | 'Transfer';
 export type KitchenStatus = 'Waiting' | 'Processing' | 'Done';
 export type TxStatus = 'Selesai' | 'Cancel' | 'Demo';
+export type OrderType = 'Dine In' | 'Take Away';
 
 export interface CartItem {
   lineId: string; // unique per line
@@ -61,6 +63,7 @@ export interface CartItem {
   subtotal: number; // (basePrice + sum(addons)) * qty
   kitchenTarget?: string; // target kitchen for split printing
   showSugarLevel?: boolean;
+  showTemperature?: boolean;
 }
 
 export interface Transaction {
@@ -82,6 +85,7 @@ export interface Transaction {
   customerName?: string;
   hpp: number; // total cost of goods sold
   tax?: number; // GAP-3 fix: Nilai pajak
+  orderType?: 'Dine In' | 'Take Away'; // Tipe pesanan: makan di tempat atau bawa pulang
 }
 
 // CRM (extension beyond PRD MVP)

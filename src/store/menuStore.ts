@@ -108,6 +108,9 @@ export const useMenuStore = create<MenuState>()(
                   showSugarLevel: cm.showSugarLevel !== undefined
                     ? cm.showSugarLevel
                     : (local?.showSugarLevel !== undefined ? local.showSugarLevel : true),
+                  showTemperature: cm.showTemperature !== undefined
+                    ? cm.showTemperature
+                    : (local?.showTemperature !== undefined ? local.showTemperature : true),
                 };
               });
               return { menus: [...mergedMenus, ...localOnly] };

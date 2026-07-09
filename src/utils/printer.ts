@@ -29,6 +29,7 @@ export interface ReceiptData {
   paymentMethod: string;
   cashReceived?: number;
   change?: number;
+  orderType?: 'Dine In' | 'Take Away';
 }
 
 export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettings): ReceiptData {
@@ -48,6 +49,7 @@ export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettin
     paymentMethod: tx.paymentMethod,
     cashReceived: tx.cashReceived,
     change: tx.change,
+    orderType: tx.orderType,
   };
 }
 
@@ -74,6 +76,7 @@ export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
   lines.push(`Tgl: ${dateStr}`);
   lines.push(`Kasir: ${data.cashierName}`);
   if (data.customerName) lines.push(`Pelanggan: ${data.customerName}`);
+  if (data.orderType) lines.push(`Tipe: ${data.orderType}`);
   lines.push(separator);
 
   // Items
@@ -81,7 +84,8 @@ export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
     const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
     lines.push(`${item.name}`);
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
-    lines.push(`  ${item.temperature}${sugarStr}${addonStr}`);
+    const tempStr = item.showTemperature !== false ? item.temperature : '';
+    lines.push(`  ${tempStr}${sugarStr}${addonStr}`);
     lines.push(`  ${item.quantity}x ${formatRupiah(item.basePrice + item.addons.reduce((a, b) => a + b.price, 0))}${padLeft(formatRupiah(item.subtotal), width)}`);
   }
 
@@ -264,6 +268,9 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
   if (data.customerName) {
     commands.push(...encoder.encode(`Pelanggan: ${data.customerName}\n`));
   }
+  if (data.orderType) {
+    commands.push(...encoder.encode(`Tipe: ${data.orderType}\n`));
+  }
   commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
 
   // Items
@@ -271,7 +278,8 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
     commands.push(...encoder.encode(`${item.name}\n`));
     const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
-    commands.push(...encoder.encode(`  ${item.temperature}${sugarStr}${addonStr}\n`));
+    const tempStr = item.showTemperature !== false ? item.temperature : '';
+    commands.push(...encoder.encode(`  ${tempStr}${sugarStr}${addonStr}\n`));
     commands.push(...encoder.encode(`  ${item.quantity}x    ${formatRupiah(item.subtotal)}\n`));
   }
 
@@ -350,6 +358,7 @@ export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[],
   lines.push(`Tgl: ${dateStr}`);
   lines.push(`Kasir: ${data.cashierName}`);
   if (data.customerName) lines.push(`Pelanggan: ${data.customerName}`);
+  if (data.orderType) lines.push(`Tipe: ${data.orderType}`);
   lines.push(separator);
 
   // Items
@@ -357,7 +366,8 @@ export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[],
     const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
     lines.push(`${item.name}`);
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
-    lines.push(`  ${item.temperature}${sugarStr}${addonStr}`);
+    const tempStr = item.showTemperature !== false ? item.temperature : '';
+    lines.push(`  ${tempStr}${sugarStr}${addonStr}`);
     lines.push(`  QTY: ${item.quantity}`);
     lines.push('');
   }
@@ -419,13 +429,17 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
   if (data.customerName) {
     commands.push(...encoder.encode(`Pelanggan: ${data.customerName}\n`));
   }
+  if (data.orderType) {
+    commands.push(...encoder.encode(`Tipe: ${data.orderType}\n`));
+  }
   commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
 
   for (const item of items) {
     commands.push(...encoder.encode(`${item.name}\n`));
     const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
-    commands.push(...encoder.encode(`  ${item.temperature}${sugarStr}${addonStr}\n`));
+    const tempStr = item.showTemperature !== false ? item.temperature : '';
+    commands.push(...encoder.encode(`  ${tempStr}${sugarStr}${addonStr}\n`));
     commands.push(ESC, 0x45, 0x01);
     commands.push(...encoder.encode(`  QTY: ${item.quantity}\n\n`));
     commands.push(ESC, 0x45, 0x00);

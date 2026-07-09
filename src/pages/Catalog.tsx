@@ -79,6 +79,7 @@ export default function Catalog() {
   const [formManualHpp, setFormManualHpp] = useState('');
   const [formKitchenTarget, setFormKitchenTarget] = useState('');
   const [formShowSugarLevel, setFormShowSugarLevel] = useState(true);
+  const [formShowTemperature, setFormShowTemperature] = useState(true);
 
   const allCategories = getCategories();
   const filterCategories = ['Semua', ...allCategories];
@@ -108,6 +109,7 @@ export default function Catalog() {
     setFormManualHpp('');
     setFormKitchenTarget('');
     setFormShowSugarLevel(true);
+    setFormShowTemperature(true);
     setShowForm(true);
   };
 
@@ -130,6 +132,7 @@ export default function Catalog() {
     setFormManualHpp(menu.manualHpp ? String(menu.manualHpp) : '');
     setFormKitchenTarget(menu.kitchenTarget || '');
     setFormShowSugarLevel(menu.showSugarLevel !== false);
+    setFormShowTemperature(menu.showTemperature !== false);
     setShowForm(true);
   };
 
@@ -153,6 +156,7 @@ export default function Catalog() {
       manualHpp: Object.keys(ingredients).length > 0 ? 0 : (parseInt(formManualHpp) || 0),
       kitchenTarget: formKitchenTarget || undefined,
       showSugarLevel: formShowSugarLevel,
+      showTemperature: formShowTemperature,
     };
 
     if (editId) {
@@ -179,7 +183,7 @@ export default function Catalog() {
 
   // CSV Export
   const handleExport = () => {
-    const header = 'name,category,price,isBestSeller,ingredients,addons,manualHpp,kitchenTarget,showSugarLevel\n';
+    const header = 'name,category,price,isBestSeller,ingredients,addons,manualHpp,kitchenTarget,showSugarLevel,showTemperature\n';
     const rows = menus.map((m) =>
       [
         `"${m.name}"`,
@@ -191,6 +195,7 @@ export default function Catalog() {
         m.manualHpp || 0,
         m.kitchenTarget || '',
         m.showSugarLevel !== false,
+        m.showTemperature !== false,
       ].join(',')
     );
     const csv = header + rows.join('\n');
@@ -226,6 +231,7 @@ export default function Catalog() {
               manualHpp: parseInt(parts[6]) || 0,
               kitchenTarget: parts[7] ? clean(parts[7]) : undefined,
               showSugarLevel: parts[8] ? clean(parts[8]) !== 'false' : true,
+              showTemperature: parts[9] ? clean(parts[9]) !== 'false' : true,
             };
           });
       importMenus(imported);
@@ -415,6 +421,10 @@ export default function Catalog() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={formShowSugarLevel} onChange={(e) => setFormShowSugarLevel(e.target.checked)} className="w-4 h-4 rounded" />
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-350">Level Gula 🍬</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={formShowTemperature} onChange={(e) => setFormShowTemperature(e.target.checked)} className="w-4 h-4 rounded" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-350">Pilihan Suhu 🌡️</span>
               </label>
             </div>
           </div>

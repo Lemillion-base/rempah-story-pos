@@ -99,13 +99,31 @@ export async function runMigrations() {
       console.warn('  ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_shades JSONB;');
       migrationNeeded.themeShades = true;
     }
+
+    // Migration 9: Add show_temperature column to menus table
+    const { error: tempError } = await supabase.from('menus').select('show_temperature').limit(1);
+    if (tempError && tempError.message.includes('show_temperature')) {
+      console.warn('[Migration] Column "show_temperature" missing in menus table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_temperature BOOLEAN DEFAULT TRUE;');
+      migrationNeeded.showTemperature = true;
+    }
+
+    // Migration 10: Add order_type column to transactions table
+    const { error: orderTypeError } = await supabase.from('transactions').select('order_type').limit(1);
+    if (orderTypeError && orderTypeError.message.includes('order_type')) {
+      console.warn('[Migration] Column "order_type" missing in transactions table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS order_type TEXT;');
+      migrationNeeded.orderType = true;
+    }
   } catch (e) {
     console.warn('[Migration] Could not verify schema:', e);
   }
 }
 
 // Track which migrations are needed so sync functions can adapt
-const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false, showSugarLevel: false, themeColor: false, themeShades: false };
+const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false, showSugarLevel: false, themeColor: false, themeShades: false, showTemperature: false, orderType: false };
 export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
   return migrationNeeded[key];
 }
@@ -140,6 +158,9 @@ export async function syncTransaction(tx: Transaction) {
   };
   if (!migrationNeeded.tax) {
     data.tax = tx.tax || 0;
+  }
+  if (!migrationNeeded.orderType) {
+    data.order_type = tx.orderType || null;
   }
   await smartUpsert('transactions', data);
 }
@@ -188,6 +209,7 @@ export async function fetchTransactionsFromCloud(): Promise<Transaction[] | null
       customerName: row.customer_name,
       hpp: row.hpp,
       tax: row.tax || 0,
+      orderType: row.order_type || undefined,
     })) || null;
   } catch (e) {
     console.error('[CloudSync] Fetch EXCEPTION:', e);
@@ -297,6 +319,10 @@ export async function syncMenu(menu: Menu) {
   // Only include show_sugar_level if the column exists in DB
   if (!migrationNeeded.showSugarLevel) {
     data.show_sugar_level = menu.showSugarLevel !== false;
+  }
+  // Only include show_temperature if the column exists in DB
+  if (!migrationNeeded.showTemperature) {
+    data.show_temperature = menu.showTemperature !== false;
   }
   await smartUpsert('menus', data);
 }
@@ -540,6 +566,9 @@ export async function fetchMenusFromCloud(): Promise<Menu[] | null> {
       kitchenTarget: row.kitchen_target || undefined,
       showSugarLevel: (row.show_sugar_level !== undefined && row.show_sugar_level !== null)
         ? row.show_sugar_level
+        : undefined,
+      showTemperature: (row.show_temperature !== undefined && row.show_temperature !== null)
+        ? row.show_temperature
         : undefined,
     })) || null;
   } catch {

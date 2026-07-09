@@ -15,7 +15,7 @@ import { formatRupiah } from '../utils/format';
 import { calculateTransactionHPP } from '../utils/hpp';
 import { printReceipt, buildReceiptFromTransaction } from '../utils/printer';
 import { checkStockAvailability, type StockWarning } from '../utils/stockCheck';
-import type { Menu, CartItem, Temperature, SugarLevel, AddOn, PaymentMethod } from '../types';
+import type { Menu, CartItem, Temperature, SugarLevel, AddOn, PaymentMethod, OrderType } from '../types';
 import Modal from '../components/Modal';
 import {
   Search,
@@ -30,6 +30,8 @@ import {
   ChevronUp,
   ChevronDown,
   AlertTriangle,
+  UtensilsCrossed,
+  ShoppingBag as TakeAwayIcon,
 } from 'lucide-react';
 
 export default function POS() {
@@ -172,6 +174,9 @@ export default function POS() {
   const [sugar, setSugar] = useState<SugarLevel>('Normal');
   const [selectedAddons, setSelectedAddons] = useState<AddOn[]>([]);
   const [qty, setQty] = useState(1);
+
+  // Order type state (Dine In / Take Away)
+  const [orderType, setOrderType] = useState<OrderType>('Dine In');
 
   // Checkout state
   const [payMethod, setPayMethod] = useState<PaymentMethod>('Cash');
@@ -323,12 +328,13 @@ export default function POS() {
       name: selectedMenu.name,
       basePrice: selectedMenu.price,
       quantity: qty,
-      temperature: temp,
+      temperature: selectedMenu.showTemperature !== false ? temp : 'Hangat',
       sugar: selectedMenu.showSugarLevel !== false ? sugar : 'None',
       addons: selectedAddons,
       subtotal: unitPrice * qty,
       kitchenTarget: selectedMenu.kitchenTarget,
       showSugarLevel: selectedMenu.showSugarLevel !== false,
+      showTemperature: selectedMenu.showTemperature !== false,
     };
     cart.addItem(item);
     setSelectedMenu(null);
@@ -404,6 +410,7 @@ export default function POS() {
       customerId: selectedCustomerId || undefined,
       customerName: selectedCustomer?.name || undefined,
       hpp,
+      orderType,
     };
 
     addTransaction(tx);
@@ -434,6 +441,7 @@ export default function POS() {
     setPayMethod('Cash');
     setSelectedCustomerId(null);
     clearPromo();
+    setOrderType('Dine In');
     addToast(`Pesanan #${queueNum} berhasil! 🎉`, 'success');
   };
 
@@ -596,7 +604,7 @@ export default function POS() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm text-slate-850 dark:text-slate-200 truncate">{item.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {item.temperature}{item.showSugarLevel !== false ? ` • Gula ${item.sugar}` : ''}
+                        {item.showTemperature !== false ? item.temperature : ''}{item.showTemperature !== false && item.showSugarLevel !== false ? ' • ' : ''}{item.showSugarLevel !== false ? `Gula ${item.sugar}` : ''}
                         {item.addons.length > 0 && ` • +${item.addons.map((a) => a.name).join(', ')}`}
                       </p>
                     </div>
@@ -756,7 +764,7 @@ export default function POS() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-slate-800 dark:text-slate-200 truncate">{item.name}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {item.temperature}{item.showSugarLevel !== false ? ` • Gula ${item.sugar}` : ''}
+                      {item.showTemperature !== false ? item.temperature : ''}{item.showTemperature !== false && item.showSugarLevel !== false ? ' • ' : ''}{item.showSugarLevel !== false ? `Gula ${item.sugar}` : ''}
                       {item.addons.length > 0 && ` • +${item.addons.map((a) => a.name).join(', ')}`}
                     </p>
                   </div>
@@ -878,6 +886,7 @@ export default function POS() {
         {selectedMenu && (
           <div className="space-y-5">
             {/* Temperature */}
+            {selectedMenu.showTemperature !== false && (
             <div>
               <label className="label text-slate-700 dark:text-slate-300">Suhu</label>
               <div className="flex gap-2">
@@ -896,6 +905,7 @@ export default function POS() {
                 ))}
               </div>
             </div>
+            )}
 
             {/* Sugar Level */}
             {selectedMenu.showSugarLevel !== false && (
@@ -1005,6 +1015,30 @@ export default function POS() {
             {selectedCustomer && (
               <p className="text-xs text-brand-600 dark:text-brand-400 mt-1">Pelanggan: {selectedCustomer.name}</p>
             )}
+          </div>
+
+          {/* Order Type (Dine In / Take Away) */}
+          <div>
+            <label className="label text-slate-700 dark:text-slate-300">Tipe Pesanan</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { type: 'Dine In' as OrderType, icon: UtensilsCrossed, label: 'Dine In' },
+                { type: 'Take Away' as OrderType, icon: TakeAwayIcon, label: 'Take Away' },
+              ]).map(({ type, icon: Icon, label }) => (
+                <button
+                  key={type}
+                  onClick={() => setOrderType(type)}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition ${
+                    orderType === type
+                      ? 'bg-brand-600 text-white border-brand-600'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="text-sm font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Payment Method */}
