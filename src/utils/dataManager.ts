@@ -37,6 +37,7 @@ export async function resetToDefault() {
     'rempah-stock-logs',
     'rempah-promos',
     'rempah-audit-logs',
+    'rempah-stock-opnames',
   ];
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 
@@ -52,7 +53,7 @@ export async function resetToDefault() {
  * - Menus (katalog produk)
  * - Inventory (bahan baku)
  * 
- * Menghapus:
+ * Menahpus:
  * - Transactions
  * - Shifts
  * - Customers
@@ -61,7 +62,7 @@ export async function resetToDefault() {
  * - Cart
  * - Promos
  */
-export function clearOperationalData() {
+export async function clearOperationalData() {
   const keysToClear = [
     'rempah-transactions',
     'rempah-cart',
@@ -70,12 +71,13 @@ export function clearOperationalData() {
     'rempah-stock-logs',
     'rempah-audit-logs',
     'rempah-promos',
+    'rempah-stock-opnames',
   ];
   keysToClear.forEach((key) => localStorage.removeItem(key));
 
   // Also clear from Supabase if configured
   if (isSupabaseConfigured) {
-    clearCloudOperationalData();
+    await clearCloudOperationalData();
   }
 
   window.location.reload();
@@ -107,6 +109,7 @@ export async function factoryReset() {
     'rempah-stock-logs',
     'rempah-promos',
     'rempah-audit-logs',
+    'rempah-stock-opnames',
   ];
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 
@@ -125,6 +128,7 @@ async function clearCloudOperationalData() {
     await supabase.from('audit_logs').delete().neq('id', '');
     await supabase.from('stock_logs').delete().neq('id', '');
     await supabase.from('promos').delete().neq('id', '');
+    await supabase.from('stock_opnames').delete().neq('id', '');
   } catch (e) {
     console.warn('Cloud clear failed:', e);
   }
@@ -138,6 +142,7 @@ async function clearAllCloudData() {
     await supabase.from('audit_logs').delete().neq('id', '');
     await supabase.from('stock_logs').delete().neq('id', '');
     await supabase.from('promos').delete().neq('id', '');
+    await supabase.from('stock_opnames').delete().neq('id', '');
     await supabase.from('menus').delete().neq('id', '');
     await supabase.from('inventory').delete().neq('id', '');
     await supabase.from('users').delete().neq('id', '');

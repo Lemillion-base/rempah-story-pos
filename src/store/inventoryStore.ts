@@ -9,7 +9,7 @@ import { syncInventoryItem, syncInventoryDeduction, deleteInventoryCloud, fetchI
 interface InventoryState {
   items: InventoryItem[];
   addItem: (item: InventoryItem) => void;
-  updateItem: (id: string, data: Partial<InventoryItem>) => void;
+  updateItem: (id: string, data: Partial<InventoryItem>, options?: { skipLog?: boolean }) => void;
   deleteItem: (id: string) => void;
   deductStock: (deductions: Record<string, number>, reason?: string) => void;
   revertStock: (deductions: Record<string, number>, reason?: string) => void;
@@ -27,10 +27,10 @@ export const useInventoryStore = create<InventoryState>()(
         set((s) => ({ items: [...s.items, item] }));
       },
 
-      updateItem: (id, data) => {
+      updateItem: (id, data, options) => {
         const current = get().items.find((i) => i.id === id);
         // Log stock change if stock was manually adjusted
-        if (current && data.stock !== undefined && data.stock !== current.stock) {
+        if (current && data.stock !== undefined && data.stock !== current.stock && !options?.skipLog) {
           useStockLogStore.getState().addLog({
             id: uuid(),
             inventoryId: id,

@@ -288,7 +288,10 @@ export default function POS() {
   // Preview queue number for checkout modal (read-only, no side effects)
   const queuePreview = useMemo(() => {
     const today = new Date();
-    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     const state = useTransactionStore.getState();
     if (state.lastQueueDate !== dateStr) return 1;
     return state.nextQueueNumber;
@@ -358,7 +361,7 @@ export default function POS() {
     setShowCheckout(true);
   };
 
-  const finalizeTransaction = () => {
+  const finalizeTransaction = async () => {
     const manualDiscount = parseInt(discountInput) || 0;
     const rawTotalDiscount = manualDiscount + promoDiscount + loyaltyDiscount;
     const subtotal = cart.getSubtotal();
@@ -375,7 +378,7 @@ export default function POS() {
     // Safety guard: Cash payment must have sufficient funds
     if (payMethod === 'Cash' && cash < total) return;
 
-    const queueNum = getNextQueueNumber();
+    const queueNum = await getNextQueueNumber();
 
     const hpp = calculateTransactionHPP(cart.items, menus, inventory);
 
@@ -446,7 +449,10 @@ export default function POS() {
   };
 
   const taxPercent = settings.taxPercent || 0;
-  const netSubtotal = Math.max(0, cart.getSubtotal() - (parseInt(discountInput) || 0) - promoDiscount - loyaltyDiscount);
+  // LOGIC-ERR-02 fix: Use same capping formula as finalizeTransaction()
+  const rawPreviewDiscount = (parseInt(discountInput) || 0) + promoDiscount + loyaltyDiscount;
+  const cappedPreviewDiscount = Math.min(rawPreviewDiscount, cart.getSubtotal());
+  const netSubtotal = Math.max(0, cart.getSubtotal() - cappedPreviewDiscount);
   const taxAmount = Math.round((netSubtotal * taxPercent) / 100);
   const finalTotal = netSubtotal + taxAmount;
 
@@ -854,7 +860,7 @@ export default function POS() {
             {(parseInt(discountInput) > 0 || promoDiscount > 0 || loyaltyDiscount > 0) && (
               <div className="flex justify-between text-sm">
                 <span className="text-red-500">Total Diskon</span>
-                <span className="text-red-500">-{formatRupiah((parseInt(discountInput) || 0) + promoDiscount + loyaltyDiscount)}</span>
+                <span className="text-red-500">-{formatRupiah(cappedPreviewDiscount)}</span>
               </div>
             )}
             {taxPercent > 0 && (

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Transaction, KitchenStatus, TxStatus } from '../types';
 import { syncTransaction, syncTransactionStatus, syncTransactionTxStatus, deleteTransactionCloud } from '../lib/cloudSync';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface TransactionState {
   transactions: Transaction[];
@@ -15,12 +16,16 @@ interface TransactionState {
   getTodayTransactions: () => Transaction[];
   getActiveKitchenOrders: () => Transaction[];
   clearKdsDoneOrders: () => void;
-  getNextQueueNumber: () => number;
+  getNextQueueNumber: () => Promise<number>;
   loadFromCloud: (transactions: Transaction[], fullSync?: boolean) => void;
 }
 
 function getTodayDateStr(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export const useTransactionStore = create<TransactionState>()(
@@ -31,10 +36,39 @@ export const useTransactionStore = create<TransactionState>()(
       lastQueueDate: null,
       lastKdsClearTime: null,
 
-      getNextQueueNumber: () => {
+      getNextQueueNumber: async () => {
         const today = getTodayDateStr();
-        // BUG-M1 fix: Dynamically find the maximum queue number from today's transactions
-        // to prevent race conditions or sync conflicts between multiple devices
+        
+        // Try to fetch max queue number from Supabase to prevent multi-device race conditions
+        if (isSupabaseConfigured && navigator.onLine) {
+          try {
+            const todayStart = `${today}T00:00:00.000Z`;
+            const todayEnd = `${today}T23:59:59.999Z`;
+            const { data, error } = await supabase
+              .from('transactions')
+              .select('queue_number')
+              .gte('date', todayStart)
+              .lte('date', todayEnd)
+              .neq('tx_status', 'Demo')
+              .neq('tx_status', 'Cancel')
+              .order('queue_number', { ascending: false })
+              .limit(1);
+
+            if (!error && data && data.length > 0) {
+              const cloudMax = data[0].queue_number || 0;
+              const localTxs = get().transactions.filter(
+                (t) => t.date.startsWith(today) && t.txStatus !== 'Demo' && t.txStatus !== 'Cancel'
+              );
+              const localMax = localTxs.reduce((max, t) => Math.max(max, t.queueNumber || 0), 0);
+              const absoluteMax = Math.max(cloudMax, localMax);
+              return absoluteMax + 1;
+            }
+          } catch (e) {
+            console.warn('Failed to fetch max queue number from cloud, falling back to local:', e);
+          }
+        }
+
+        // Fallback to local calculation (offline-first)
         const todayTxs = get().transactions.filter(
           (t) => t.date.startsWith(today) && t.txStatus !== 'Demo' && t.txStatus !== 'Cancel'
         );

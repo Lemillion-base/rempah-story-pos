@@ -5,6 +5,7 @@ import type { AppSettings } from '../types';
 import { seedSettings } from '../utils/seed';
 import { syncSettings, fetchSettingsFromCloud } from '../lib/cloudSync';
 import { updateFavicon, updatePageTitle } from '../utils/favicon';
+import { useToastStore } from './toastStore';
 
 interface SettingsState {
   settings: AppSettings;
@@ -60,6 +61,9 @@ export const useSettingsStore = create<SettingsState>()(
       loadFromCloud: async () => {
         const cloudSettings = await fetchSettingsFromCloud();
         if (cloudSettings) {
+          // LOGIC-ERR-01 fix: Track fields where both local and cloud diverged from seed
+          const conflictFields: string[] = [];
+
           set((s: SettingsState) => {
             const merged = { ...seedSettings } as any;
             // LOGIC-6: Merge settings per-field rather than overwriting completely
@@ -78,6 +82,14 @@ export const useSettingsStore = create<SettingsState>()(
               } else if (!localChanged && cloudChanged) {
                 merged[key] = cloudVal;
               } else if (localChanged && cloudChanged) {
+                // LOGIC-ERR-01 fix: Cloud still wins, but track the conflict
+                // Skip sensitive fields (PINs) and complex objects (themeShades) from notification
+                if (JSON.stringify(localVal) !== JSON.stringify(cloudVal)) {
+                  const skipNotify = ['managerPin', 'superAdminPin', 'themeShades'];
+                  if (!skipNotify.includes(key)) {
+                    conflictFields.push(key);
+                  }
+                }
                 merged[key] = cloudVal; // Cloud wins conflict
               } else {
                 merged[key] = localVal !== undefined ? localVal : seedVal;
@@ -85,6 +97,28 @@ export const useSettingsStore = create<SettingsState>()(
             });
             return { settings: merged as AppSettings };
           });
+
+          // LOGIC-ERR-01 fix: Notify user if conflicts were detected
+          if (conflictFields.length > 0) {
+            const fieldLabels: Record<string, string> = {
+              storeName: 'Nama Toko',
+              storeAddress: 'Alamat Toko',
+              storePhone: 'Telepon Toko',
+              storeLogo: 'Logo Toko',
+              taxPercent: 'Pajak (%)',
+              printerEnabled: 'Printer',
+              printerType: 'Tipe Printer',
+              themeColor: 'Warna Tema',
+            };
+            const labels = conflictFields.map((f) => fieldLabels[f] || f).join(', ');
+            setTimeout(() => {
+              useToastStore.getState().addToast(
+                `⚠️ Pengaturan "${labels}" diperbarui dari perangkat lain. Perubahan lokal Anda digantikan oleh data cloud.`,
+                'warning',
+                6000
+              );
+            }, 1500);
+          }
         }
       },
     }),

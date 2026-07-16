@@ -130,7 +130,7 @@ export default function StockOpname() {
           unit: item.unit, reason: `Stock Opname: ${item.reason}`,
           date: new Date().toISOString(),
         });
-        updateItem(item.inventoryId, { stock: item.actualStock });
+        updateItem(item.inventoryId, { stock: item.actualStock }, { skipLog: true });
       }
     }
 

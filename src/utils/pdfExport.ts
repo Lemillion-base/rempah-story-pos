@@ -46,6 +46,7 @@ export function exportPnlPDF(data: {
   txCount: number;
   avgTransaction: number;
   paymentBreakdown: { Cash: number; QRIS: number; Transfer: number };
+  orderTypeBreakdown?: { 'Dine In': number; 'Take Away': number };
   categorySales: [string, { revenue: number; qty: number }][];
 }) {
   const doc = createPDF({ title: 'Laporan Laba Rugi', storeName: data.storeName, period: data.period });
@@ -83,6 +84,21 @@ export function exportPnlPDF(data: {
     theme: 'grid',
     headStyles: { fillColor: [59, 130, 246] },
   });
+
+  // Order Type breakdown
+  if (data.orderTypeBreakdown) {
+    const yOrderType = (doc as any).lastAutoTable.finalY + 10;
+    autoTable(doc, {
+      startY: yOrderType,
+      head: [['Tipe Pesanan', 'Jumlah Pesanan']],
+      body: [
+        ['Dine In', `${data.orderTypeBreakdown['Dine In']} Pesanan`],
+        ['Take Away', `${data.orderTypeBreakdown['Take Away']} Pesanan`],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [6, 182, 212] },
+    });
+  }
 
   // Category sales
   if (data.categorySales.length > 0) {

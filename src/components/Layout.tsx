@@ -8,6 +8,7 @@ import { useCloudStatus } from '../hooks/useCloudStatus';
 import { formatRupiah, formatDate } from '../utils/format';
 import { printTextRaw } from '../utils/printer';
 import { useState, useMemo, useEffect } from 'react';
+import { getQueueLength, setQueueChangeListener } from '../lib/offlineQueue';
 import Modal from './Modal';
 import {
   LayoutDashboard,
@@ -63,6 +64,14 @@ export default function Layout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [queueLength, setQueueLength] = useState(getQueueLength());
+
+  useEffect(() => {
+    setQueueChangeListener((count) => {
+      setQueueLength(count);
+    });
+    return () => setQueueChangeListener(() => {});
+  }, []);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('theme');
@@ -282,17 +291,24 @@ export default function Layout() {
 
         {/* Cloud sync status */}
         {!sidebarCollapsed && cloudStatus !== 'disabled' && (
-          <div className={`mx-3 mb-2 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs ${
+          <div className={`mx-3 mb-2 px-3 py-1.5 rounded-lg flex items-center justify-between text-xs ${
             cloudStatus === 'connected' ? 'bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400' :
             cloudStatus === 'disconnected' ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400' :
             'bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500'
           }`}>
-            <span className={`w-2 h-2 rounded-full ${
-              cloudStatus === 'connected' ? 'bg-blue-500' :
-              cloudStatus === 'disconnected' ? 'bg-red-500' :
-              'bg-slate-300 animate-pulse'
-            }`} />
-            <span>{cloudStatus === 'connected' ? 'Cloud Sync' : cloudStatus === 'disconnected' ? 'Offline' : 'Connecting...'}</span>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${
+                cloudStatus === 'connected' ? 'bg-blue-500' :
+                cloudStatus === 'disconnected' ? 'bg-red-500' :
+                'bg-slate-300 animate-pulse'
+              }`} />
+              <span>{cloudStatus === 'connected' ? 'Cloud Sync' : cloudStatus === 'disconnected' ? 'Offline' : 'Connecting...'}</span>
+            </div>
+            {queueLength > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full animate-pulse" title={`${queueLength} operasi sync tertunda`}>
+                {queueLength}
+              </span>
+            )}
           </div>
         )}
 

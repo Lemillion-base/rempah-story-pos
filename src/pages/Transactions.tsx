@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { useMenuStore } from '../store/menuStore';
 import { useInventoryStore } from '../store/inventoryStore';
+import { useCustomerStore } from '../store/customerStore';
 import { subscribeToTransactions, unsubscribeChannel, fetchTransactionsFromCloud } from '../lib/cloudSync';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah, formatDate } from '../utils/format';
@@ -24,7 +25,8 @@ export default function Transactions() {
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
   const { menus } = useMenuStore();
-  const { revertStock } = useInventoryStore();
+  const { revertStock, deductStock } = useInventoryStore();
+  const { recordVisit, revertVisit } = useCustomerStore();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pinAction, setPinAction] = useState<{ type: 'status' | 'delete'; id: string; status?: TxStatus } | null>(null);
   // FEAT-5: Confirmation dialog state for Manager actions
@@ -90,11 +92,22 @@ export default function Transactions() {
   const onConfirmAction = () => {
     if (!confirmAction) return;
     if (confirmAction.type === 'status' && confirmAction.status) {
-      // BUG-K3 fix: Revert stock when changing TO Cancel from Selesai
+      // BUG-K3 / LOGIC-ERR-06 / LOGIC-ERR-03 fix: Revert/deduct stock & revert/re-record visits
       const tx = transactions.find((t) => t.id === confirmAction.id);
-      if (tx && confirmAction.status === 'Cancel' && tx.txStatus === 'Selesai') {
-        const deductions = calculateDeductions(tx);
-        revertStock(deductions, `Revert: Cancel transaksi #${tx.queueNumber}`);
+      if (tx) {
+        if (confirmAction.status === 'Cancel' && tx.txStatus === 'Selesai') {
+          const deductions = calculateDeductions(tx);
+          revertStock(deductions, `Revert: Cancel transaksi #${tx.queueNumber}`);
+          if (tx.customerId) {
+            revertVisit(tx.customerId, tx.totalAmount);
+          }
+        } else if (confirmAction.status === 'Selesai' && tx.txStatus === 'Cancel') {
+          const deductions = calculateDeductions(tx);
+          deductStock(deductions, `Deduct: Re-enable transaksi #${tx.queueNumber}`);
+          if (tx.customerId) {
+            recordVisit(tx.customerId, tx.totalAmount);
+          }
+        }
       }
       updateTxStatus(confirmAction.id, confirmAction.status);
       if (currentUser) {
@@ -112,11 +125,22 @@ export default function Transactions() {
   const onPinSuccess = () => {
     if (!pinAction) return;
     if (pinAction.type === 'status' && pinAction.status) {
-      // BUG-K3 fix: Revert stock when Kasir cancels (after PIN verification)
+      // BUG-K3 / LOGIC-ERR-06 / LOGIC-ERR-03 fix: Revert/deduct stock & revert/re-record visits
       const tx = transactions.find((t) => t.id === pinAction.id);
-      if (tx && pinAction.status === 'Cancel' && tx.txStatus === 'Selesai') {
-        const deductions = calculateDeductions(tx);
-        revertStock(deductions, `Revert: Cancel transaksi #${tx.queueNumber}`);
+      if (tx) {
+        if (pinAction.status === 'Cancel' && tx.txStatus === 'Selesai') {
+          const deductions = calculateDeductions(tx);
+          revertStock(deductions, `Revert: Cancel transaksi #${tx.queueNumber}`);
+          if (tx.customerId) {
+            revertVisit(tx.customerId, tx.totalAmount);
+          }
+        } else if (pinAction.status === 'Selesai' && tx.txStatus === 'Cancel') {
+          const deductions = calculateDeductions(tx);
+          deductStock(deductions, `Deduct: Re-enable transaksi #${tx.queueNumber}`);
+          if (tx.customerId) {
+            recordVisit(tx.customerId, tx.totalAmount);
+          }
+        }
       }
       updateTxStatus(pinAction.id, pinAction.status);
       if (currentUser) {
