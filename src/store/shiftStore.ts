@@ -72,17 +72,33 @@ export const useShiftStore = create<ShiftState>()(
       loadFromCloud: async () => {
         const cloudShifts = await fetchShiftsFromCloud();
         if (cloudShifts && cloudShifts.length > 0) {
+          let currentUser = null;
+          try {
+            const authModule = await import('./authStore');
+            currentUser = authModule.useAuthStore.getState().currentUser;
+          } catch (e) {
+            console.warn('Failed to load currentUser in shiftStore:', e);
+          }
+
           set((s) => {
             const cloudIds = new Set(cloudShifts.map((sh) => sh.id));
             // Keep local shifts not yet in cloud
             const localOnly = s.shifts.filter((sh) => !cloudIds.has(sh.id));
 
-            // BUG-NEW-05 fix: Check if activeShift was closed from another device
+            // BUG-NEW-05 / BUG-MED-05 / BUG-MED-02 fix: Check if activeShift was closed from another device or needs restore
             let updatedActiveShift = s.activeShift;
             if (updatedActiveShift) {
               const cloudVersion = cloudShifts.find((sh) => sh.id === updatedActiveShift!.id);
               if (cloudVersion && cloudVersion.status === 'closed') {
                 updatedActiveShift = null;
+              }
+            } else if (currentUser) {
+              // Local activeShift is null, restore from cloud if there is a matching open shift for current user
+              const openCloudShift = cloudShifts.find(
+                (sh) => sh.userId === currentUser.id && sh.status === 'open'
+              );
+              if (openCloudShift) {
+                updatedActiveShift = openCloudShift;
               }
             }
 

@@ -139,6 +139,18 @@ export default function Reports() {
     return map;
   }, [filteredTx]);
 
+  // Order Type breakdown (Dine In vs Take Away)
+  const orderTypeBreakdown = useMemo(() => {
+    const map = { 'Dine In': 0, 'Take Away': 0 };
+    filteredTx.forEach((t) => {
+      const type = t.orderType || 'Dine In';
+      if (type === 'Dine In' || type === 'Take Away') {
+        map[type] = (map[type] || 0) + 1;
+      }
+    });
+    return map;
+  }, [filteredTx]);
+
   // Category sales
   const categorySales = useMemo(() => {
     const map: Record<string, { revenue: number; qty: number }> = {};
@@ -195,6 +207,10 @@ export default function Reports() {
       ['Cash', paymentBreakdown.Cash],
       ['QRIS', paymentBreakdown.QRIS],
       ['Transfer', paymentBreakdown.Transfer],
+      [''],
+      ['TIPE PESANAN'],
+      ['Dine In', orderTypeBreakdown['Dine In']],
+      ['Take Away', orderTypeBreakdown['Take Away']],
       [''],
       ['PENJUALAN PER KATEGORI'],
       ['Kategori', 'Revenue', 'Qty'],
@@ -334,7 +350,7 @@ export default function Reports() {
             </button>
           )}
           {activeTab === 'pnl' && (
-            <button onClick={() => exportPnlPDF({ storeName: settings.storeName, period: getDateLabel(), totalRevenue: totalGrossRevenue, totalHPP, totalDiscount, totalTax, netRevenue, grossProfit, profitMargin, txCount: filteredTx.length, avgTransaction, paymentBreakdown, categorySales })} className="btn-primary text-sm">
+            <button onClick={() => exportPnlPDF({ storeName: settings.storeName, period: getDateLabel(), totalRevenue: totalGrossRevenue, totalHPP, totalDiscount, totalTax, netRevenue, grossProfit, profitMargin, txCount: filteredTx.length, avgTransaction, paymentBreakdown, orderTypeBreakdown, categorySales })} className="btn-primary text-sm">
               <FileText size={14} /> PDF
             </button>
           )}
@@ -550,8 +566,8 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* Payment & Category */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Payment, Order Type & Category */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="card p-5">
               <h3 className="font-bold mb-3">Distribusi Pembayaran</h3>
               <div className="h-48">
@@ -583,8 +599,34 @@ export default function Reports() {
             </div>
 
             <div className="card p-5">
+              <h3 className="font-bold mb-3">Tipe Pesanan</h3>
+              <div className="h-48">
+                <Doughnut
+                  data={{
+                    labels: ['Dine In', 'Take Away'],
+                    datasets: [{
+                      data: [orderTypeBreakdown['Dine In'], orderTypeBreakdown['Take Away']],
+                      backgroundColor: ['#06b6d4', '#f97316'],
+                    }],
+                  }}
+                  options={{ responsive: true, maintainAspectRatio: false }}
+                />
+              </div>
+              <div className="mt-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-cyan-500" /> Dine In</span>
+                  <span className="font-medium">{orderTypeBreakdown['Dine In']} Pesanan</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-orange-500" /> Take Away</span>
+                  <span className="font-medium">{orderTypeBreakdown['Take Away']} Pesanan</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="card p-5">
               <h3 className="font-bold mb-3">Penjualan per Kategori</h3>
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-64 overflow-y-auto">
                 {categorySales.map(([cat, data]) => (
                   <div key={cat} className="flex items-center justify-between">
                     <div>

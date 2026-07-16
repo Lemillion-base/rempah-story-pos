@@ -99,13 +99,24 @@ export async function flushQueue(): Promise<{ success: number; failed: number }>
   const queue = getQueue();
   if (queue.length === 0) { isFlushing = false; return { success: 0, failed: 0 }; }
 
-  console.log(`[OfflineQueue] Flushing ${queue.length} pending operations...`);
+  // LOGIC-ERR-04 fix: Sort queue to respect dependency ordering
+  // insert → upsert → update → delete ensures parent records exist before child ops
+  const actionOrder: Record<string, number> = { insert: 0, upsert: 1, update: 2, delete: 3 };
+  const sortedQueue = [...queue].sort((a, b) => {
+    const orderA = actionOrder[a.action] ?? 1;
+    const orderB = actionOrder[b.action] ?? 1;
+    if (orderA !== orderB) return orderA - orderB;
+    // Within same action type, preserve chronological order
+    return a.timestamp.localeCompare(b.timestamp);
+  });
+
+  console.log(`[OfflineQueue] Flushing ${sortedQueue.length} pending operations...`);
 
   let success = 0;
   let failed = 0;
   const remaining: QueueOperation[] = [];
 
-  for (const op of queue) {
+  for (const op of sortedQueue) {
     try {
       let error: any = null;
 

@@ -18,6 +18,7 @@ import Layout from './components/Layout';
 import OpenShiftModal from './components/OpenShiftModal';
 import ToastContainer from './components/ToastContainer';
 import Login from './pages/Login';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const POS = lazy(() => import('./pages/POS'));
 const Kitchen = lazy(() => import('./pages/Kitchen'));
@@ -151,44 +152,46 @@ export default function App() {
   return (
     <>
     <ToastContainer />
-    <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="text-brand-600 text-lg font-medium">Memuat...</div></div>}>
-    <Routes>
-      <Route
-        path="/"
-        element={
-          currentUser ? (
-            <Navigate to={currentUser.role === 'Manager' ? '/dashboard' : currentUser.role === 'Kasir' ? '/pos' : '/kitchen'} replace />
-          ) : (
-            <Login />
-          )
-        }
-      />
+    <ErrorBoundary>
+      <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="text-brand-600 text-lg font-medium">Memuat...</div></div>}>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            currentUser ? (
+              <Navigate to={currentUser.role === 'Manager' ? '/dashboard' : currentUser.role === 'Kasir' ? '/pos' : '/kitchen'} replace />
+            ) : (
+              <Login />
+            )
+          }
+        />
 
-      <Route
-        element={
-          <ProtectedRoute>
-            <ShiftGuard>
-              <Layout />
-            </ShiftGuard>
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/pos" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><POS /></ProtectedRoute>} />
-        <Route path="/kitchen" element={<ProtectedRoute allowedRoles={['Manager', 'Acaraki']}><Kitchen /></ProtectedRoute>} />
-        <Route path="/transactions" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Transactions /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['Manager']}><Dashboard /></ProtectedRoute>} />
-        <Route path="/catalog" element={<ProtectedRoute allowedRoles={['Manager']}><Catalog /></ProtectedRoute>} />
-        <Route path="/inventory" element={<ProtectedRoute allowedRoles={['Manager']}><Inventory /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute allowedRoles={['Manager']}><Reports /></ProtectedRoute>} />
-        <Route path="/customers" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Customers /></ProtectedRoute>} />
-        <Route path="/promos" element={<ProtectedRoute allowedRoles={['Manager']}><Promos /></ProtectedRoute>} />
-        <Route path="/audit-log" element={<ProtectedRoute allowedRoles={['Manager']}><AuditLog /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute allowedRoles={['Manager']}><SettingsPage /></ProtectedRoute>} />
-      </Route>
+        <Route
+          element={
+            <ProtectedRoute>
+              <ShiftGuard>
+                <Layout />
+              </ShiftGuard>
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/pos" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><POS /></ProtectedRoute>} />
+          <Route path="/kitchen" element={<ProtectedRoute allowedRoles={['Manager', 'Acaraki']}><Kitchen /></ProtectedRoute>} />
+          <Route path="/transactions" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Transactions /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['Manager']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/catalog" element={<ProtectedRoute allowedRoles={['Manager']}><Catalog /></ProtectedRoute>} />
+          <Route path="/inventory" element={<ProtectedRoute allowedRoles={['Manager']}><Inventory /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute allowedRoles={['Manager']}><Reports /></ProtectedRoute>} />
+          <Route path="/customers" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Customers /></ProtectedRoute>} />
+          <Route path="/promos" element={<ProtectedRoute allowedRoles={['Manager']}><Promos /></ProtectedRoute>} />
+          <Route path="/audit-log" element={<ProtectedRoute allowedRoles={['Manager']}><AuditLog /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute allowedRoles={['Manager']}><SettingsPage /></ProtectedRoute>} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-    </Suspense>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      </Suspense>
+    </ErrorBoundary>
     </>
   );
 }

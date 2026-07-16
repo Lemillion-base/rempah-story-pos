@@ -85,7 +85,10 @@ export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
     lines.push(`${item.name}`);
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
     const tempStr = item.showTemperature !== false ? item.temperature : '';
-    lines.push(`  ${tempStr}${sugarStr}${addonStr}`);
+    const detailStr = `${tempStr}${sugarStr}${addonStr}`.trim();
+    if (detailStr) {
+      lines.push(`  ${detailStr}`);
+    }
     lines.push(`  ${item.quantity}x ${formatRupiah(item.basePrice + item.addons.reduce((a, b) => a + b.price, 0))}${padLeft(formatRupiah(item.subtotal), width)}`);
   }
 
@@ -279,7 +282,10 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
     const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
     const tempStr = item.showTemperature !== false ? item.temperature : '';
-    commands.push(...encoder.encode(`  ${tempStr}${sugarStr}${addonStr}\n`));
+    const detailStr = `${tempStr}${sugarStr}${addonStr}`.trim();
+    if (detailStr) {
+      commands.push(...encoder.encode(`  ${detailStr}\n`));
+    }
     commands.push(...encoder.encode(`  ${item.quantity}x    ${formatRupiah(item.subtotal)}\n`));
   }
 
@@ -367,7 +373,10 @@ export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[],
     lines.push(`${item.name}`);
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
     const tempStr = item.showTemperature !== false ? item.temperature : '';
-    lines.push(`  ${tempStr}${sugarStr}${addonStr}`);
+    const detailStr = `${tempStr}${sugarStr}${addonStr}`.trim();
+    if (detailStr) {
+      lines.push(`  ${detailStr}`);
+    }
     lines.push(`  QTY: ${item.quantity}`);
     lines.push('');
   }
@@ -439,7 +448,10 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
     const addonStr = item.addons.length > 0 ? ` +${item.addons.map(a => a.name).join(',')}` : '';
     const sugarStr = item.showSugarLevel !== false ? `/${item.sugar}` : '';
     const tempStr = item.showTemperature !== false ? item.temperature : '';
-    commands.push(...encoder.encode(`  ${tempStr}${sugarStr}${addonStr}\n`));
+    const detailStr = `${tempStr}${sugarStr}${addonStr}`.trim();
+    if (detailStr) {
+      commands.push(...encoder.encode(`  ${detailStr}\n`));
+    }
     commands.push(ESC, 0x45, 0x01);
     commands.push(...encoder.encode(`  QTY: ${item.quantity}\n\n`));
     commands.push(ESC, 0x45, 0x00);

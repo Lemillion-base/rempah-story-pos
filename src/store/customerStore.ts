@@ -9,6 +9,7 @@ interface CustomerState {
   updateCustomer: (id: string, data: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   recordVisit: (id: string, amount: number) => void;
+  revertVisit: (id: string, amount: number) => void;
   loadFromCloud: (fullSync?: boolean) => Promise<void>;
 }
 
@@ -46,6 +47,22 @@ export const useCustomerStore = create<CustomerState>()(
                   visitCount: c.visitCount + 1,
                   totalSpent: c.totalSpent + amount,
                   lastVisit: new Date().toISOString(),
+                }
+              : c
+          ),
+        }));
+        const updated = get().customers.find((c) => c.id === id);
+        if (updated) syncCustomer(updated);
+      },
+
+      revertVisit: (id, amount) => {
+        set((s) => ({
+          customers: s.customers.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  visitCount: Math.max(0, c.visitCount - 1),
+                  totalSpent: Math.max(0, c.totalSpent - amount),
                 }
               : c
           ),
