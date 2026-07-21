@@ -1,9 +1,9 @@
 # Product Requirements Document (PRD)
 
 ## Project Name: BerdikariPOS
-## Product Version: 3.1 (Production)
+## Product Version: 3.4 (Production)
 ## Document Status: Production Ready
-## Last Updated: 25 Mei 2026
+## Last Updated: 16 Juli 2026
 ## Production URL: Deployed on Vercel
 ## Repository: https://github.com/Lemillion-base/rempah-story-pos
 
@@ -93,10 +93,11 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Katalog Produk**: Grid card dengan gambar produk (atau inisial nama jika belum ada foto)
 - **Filter**: Kategori (Semua, Best Seller, per kategori) + Search
 - **Kustomisasi Pesanan (Modal)**:
-  - Pilihan Suhu: Hangat / Dingin
-  - Level Gula: Normal / Less / None
+  - Pilihan Suhu: Hangat / Dingin (dapat dinonaktifkan per produk, misal untuk makanan)
+  - Level Gula: Normal / Less / None (dapat dinonaktifkan per produk)
   - Add-ons opsional (multi-select)
   - Quantity selector
+  - Pilihan Tipe Pesanan: Dine In / Take Away
   - Preview total harga
 - **Keranjang Belanja**:
   - Item list dengan quantity +/- controls
@@ -132,13 +133,15 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Toast Notifications**: Feedback visual saat tambah ke cart dan transaksi berhasil.
 - **Clear Cart (FEAT-4)**: Tombol kosongkan keranjang di header cart (muncul jika item ≥ 2) dengan konfirmasi. Tersedia di mobile dan desktop.
 - **Real-time Sync (GAP-3 fix)**: POS subscribe ke tabel menus, inventory, customers, dan settings. Perubahan dari device lain (Manager) langsung ter-reflect tanpa reload.
+- **Order Type**: Pilihan Dine In / Take Away per transaksi, tersimpan di data transaksi, ditampilkan di KDS dan struk.
+- **Discount Capping (LOGIC-ERR-02 fix)**: Preview diskon di cart footer menggunakan formula identik dengan finalizeTransaction(), sehingga angka preview selalu konsisten dengan total akhir.
 
 ### 3.4. Modul KDS / Acaraki (Dapur)
 - **Kanban Board 3 kolom**:
   1. Antrean Menunggu (Waiting) — border amber
   2. Sedang Diproses (Processing) — border blue
   3. Selesai (Done) — border green
-- **Detail Tiket**: Nomor antrean (bold besar), nama produk, suhu, level gula, quantity, add-ons, waktu masuk, nama kasir
+- **Detail Tiket**: Nomor antrean (bold besar), nama produk, suhu, level gula, quantity, add-ons, waktu masuk, nama kasir, tipe pesanan (Dine In/Take Away)
 - **Aksi**: Tombol 1-klik untuk memindahkan status ke tahap berikutnya
 - **Alert 5 Menit**:
   - Pesanan Waiting > 5 menit: card merah + animasi pulse + badge durasi
@@ -157,6 +160,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Keamanan**: Non-manager wajib input PIN Manager (modal custom, bukan browser prompt)
 - **Konfirmasi Void (FEAT-5)**: Manager mendapat ConfirmDialog sebelum void/cancel/delete transaksi (warna merah untuk delete/cancel, kuning untuk ubah status lain)
 - **Real-time Sync**: Transaksi yang dihapus/diubah di device lain langsung ter-reflect
+- **Customer Visit Revert (LOGIC-ERR-03 fix)**: Saat transaksi di-cancel, visitCount dan totalSpent pelanggan otomatis dikurangi. Saat transaksi di-re-enable dari Cancel → Selesai, data pelanggan otomatis di-record kembali.
 
 ### 3.6. Modul Dashboard (Manager)
 - **Stats Cards**: Pendapatan hari ini, jumlah transaksi, menu terlaris, laba kotor
@@ -189,6 +193,17 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **CRUD Bahan**: Tambah/Edit/Hapus
 - **Pengaturan Min. Stok Global**: Terapkan threshold ke semua item sekaligus
 - **Import/Export CSV**: Download & upload data inventaris
+
+### 3.8a. Modul Stock Opname (Manager)
+- **Tujuan**: Rekonsiliasi stok fisik vs stok sistem secara berkala
+- **Alur Kerja**: Pilih item inventaris → input stok fisik aktual → sistem hitung selisih otomatis → input alasan penyesuaian → verifikasi PIN Manager (wajib jika selisih signifikan) → submit
+- **Fitur**:
+  - Stok sistem otomatis diambil dari inventaris terkini
+  - Kalkulasi kerugian/selisih otomatis per item dan total
+  - Pencatatan alasan per item (Basi, Rusak, Salah Input, dll)
+  - Stock log otomatis tercatat sebagai "Stock Opname" (tanpa duplikasi log)
+  - Riwayat stock opname tersimpan untuk audit
+  - Halaman khusus di sidebar navigasi Manager
 - **Auto-deduct**: Stok otomatis berkurang saat transaksi POS
 
 ### 3.9. Modul Laporan (Manager)
@@ -199,6 +214,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - Cards: Total Pendapatan, HPP, Laba Kotor, Margin %
 - Detail: Revenue, Diskon, HPP, Laba Kotor, Jumlah Tx, Rata-rata/Tx
 - Distribusi Pembayaran (Doughnut Chart + breakdown)
+- Distribusi Tipe Pesanan: Dine In vs Take Away (Doughnut Chart + breakdown)
 - Penjualan per Kategori
 
 #### Tab 2: Transaksi
@@ -281,6 +297,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
     - Opsi untuk menambahkan beberapa printer dapur/bar tambahan.
     - Setiap printer dapur memiliki: Nama Printer, Target Kategori Dapur, Tipe (Browser / Bluetooth), Lebar Kertas (58mm / 80mm), dan status Aktif.
 - **Manajemen User**: CRUD karyawan (nama, username, password, role)
+- **Settings Merge Conflict Notification (LOGIC-ERR-01 fix)**: Saat loadFromCloud mendeteksi bahwa pengaturan lokal dan cloud sama-sama berubah untuk field yang sama, cloud tetap menang namun toast warning ditampilkan agar user tahu perubahannya digantikan.
 
 ---
 
@@ -312,6 +329,7 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - State persist ke localStorage (instant load)
 - Auto-cleanup: stock log > 30 hari, audit log > 90 hari (on app load)
 - Code-splitting: React.lazy() per halaman (bundle utama ~450KB)
+- Error boundary: Crash pada halaman lazy-loaded tidak menyebabkan white-screen, menampilkan UI recovery
 
 ### 4.5. PWA (Progressive Web App)
 - **Installable**: Bisa di-install ke homescreen (tablet/HP) tanpa browser bar
@@ -326,6 +344,8 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Auto-retry**: Saat internet kembali, antrian otomatis di-flush ke Supabase
 - **Max 5 retries**: Operasi yang gagal 5x dihapus dari antrian
 - **Flush on app start**: Pending items dari sesi sebelumnya langsung di-retry
+- **Dependency-ordered flush (LOGIC-ERR-04 fix)**: Operasi di-sort sebelum flush (insert → upsert → update → delete) untuk mencegah update diproses sebelum insert parent record
+- **Queue indicator**: Badge di sidebar menampilkan jumlah operasi tertunda secara real-time
 - **Real-time sync**: Supabase real-time subscriptions di SEMUA halaman
   - POS: menus, inventory, customers, settings
   - Kitchen: transactions
@@ -396,6 +416,10 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   ingredients: Record<string, number> // { inventory_id: amount }
   availableAddons: Array<{ name: string, price: number }>
   description?: string
+  manualHpp?: number // HPP manual jika tanpa komposisi bahan
+  kitchenTarget?: string // Target printer dapur ("Bar", "Dapur Makanan")
+  showSugarLevel?: boolean // false = sembunyikan opsi level gula
+  showTemperature?: boolean // false = sembunyikan opsi suhu (untuk makanan)
 }
 ```
 
@@ -419,6 +443,8 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   customerId?: string
   customerName?: string
   hpp: number (total cost of goods sold)
+  tax?: number // nilai pajak dalam Rupiah
+  orderType?: 'Dine In' | 'Take Away' // tipe pesanan
 }
 ```
 
@@ -434,6 +460,9 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
   sugar: 'Normal' | 'Less' | 'None'
   addons: Array<{ name: string, price: number }>
   subtotal: number
+  kitchenTarget?: string // target printer dapur untuk split print
+  showSugarLevel?: boolean
+  showTemperature?: boolean
 }
 ```
 
@@ -555,6 +584,7 @@ rempah-story-pos/
     │   ├── Modal.tsx         # Reusable modal component
     │   ├── PinModal.tsx      # PIN verification modal
     │   ├── ConfirmDialog.tsx # Reusable confirmation dialog (delete actions)
+    │   ├── ErrorBoundary.tsx # React error boundary untuk crash recovery
     │   ├── ToastContainer.tsx # Toast notification renderer
     │   └── OpenShiftModal.tsx # Open shift modal for Kasir
     └── pages/
@@ -569,6 +599,7 @@ rempah-story-pos/
         ├── Reports.tsx       # Reports (P&L, Transactions, Cash, Stock, Shift) + PDF
         ├── Customers.tsx     # CRM & WhatsApp marketing
         ├── AuditLog.tsx      # Audit log viewer (Manager only)
+        ├── StockOpname.tsx   # Modul Stock Opname / rekonsiliasi stok fisik
         └── SettingsPage.tsx  # Store, PIN, Printer, User settings
 ```
 
@@ -591,6 +622,7 @@ Semua store menggunakan Zustand `persist` middleware dengan localStorage:
 | stockLogStore | `rempah-stock-logs` |
 | promoStore | `rempah-promos` |
 | auditLogStore | `rempah-audit-logs` |
+| stockOpnameStore | `rempah-stock-opnames` |
 
 **Catatan**: `toastStore` tidak di-persist (transient UI state).
 
@@ -693,6 +725,12 @@ Fitur berikut sudah disiapkan arsitekturnya untuk fase pengembangan selanjutnya:
 - ~~KDS Today Filter~~ ✅ (Hanya transaksi hari ini)
 - ~~Custom Categories Sync~~ ✅ (Cloud sync via settings table)
 - ~~Dark Mode Overhaul & Login Contrast~~ ✅ (Dark mode premium & halaman login bebas kontras)
+- ~~Temperature/Sugar Level per Product~~ ✅ (Toggle show/hide per menu item)
+- ~~Order Type (Dine In / Take Away)~~ ✅ (Seleksi di POS, display di KDS, cetak di struk, analitik di Reports)
+- ~~Stock Opname~~ ✅ (Rekonsiliasi stok fisik vs sistem dengan PIN verification)
+- ~~Error Boundary~~ ✅ (Crash recovery UI di level root)
+- ~~Offline Queue Indicator~~ ✅ (Badge pending operations di sidebar)
+- ~~Settings Merge Conflict Notification~~ ✅ (Toast warning saat cloud menimpa lokal)
 - ~~Multi-device Session Restriction~~ ✅ (Pembatasan satu session aktif per user via Supabase Realtime)
 
 ---
@@ -797,4 +835,4 @@ git push origin main
 
 ---
 
-*Document ini mencakup seluruh fitur yang sudah diimplementasi pada aplikasi BerdikariPOS v3.1. Gunakan sebagai referensi lengkap untuk pengembangan lebih lanjut.*
+*Document ini mencakup seluruh fitur yang sudah diimplementasi pada aplikasi BerdikariPOS v3.4. Gunakan sebagai referensi lengkap untuk pengembangan lebih lanjut.*

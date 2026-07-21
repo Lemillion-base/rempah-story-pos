@@ -16,6 +16,7 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 - Tampilan grid produk dengan foto atau inisial
 - Filter kategori + pencarian cepat
 - Kustomisasi pesanan: suhu (hangat/dingin), level gula, add-ons
+  - Suhu dan level gula dapat dinonaktifkan per produk (misal makanan tanpa pilihan suhu)
 - Keranjang belanja dengan quantity controls
 - **Kosongkan keranjang 1-klik** (muncul jika item ≥ 2, dengan konfirmasi)
 - Diskon manual (nominal Rupiah)
@@ -28,11 +29,12 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 - Validasi stok sebelum checkout (warning jika bahan kurang)
 - Keyboard shortcut: F1 = Bayar, Esc = Batal
 - Mobile: keranjang minimize/maximize (floating bar)
+- **Tipe pesanan**: Dine In / Take Away (pilihan di checkout)
 - **Real-time sync**: perubahan menu/inventory/customer/settings dari device lain langsung ter-reflect
 
 ### 2. 🍳 Kitchen Display System (KDS)
 - Kanban board 3 kolom: Menunggu → Proses → Selesai
-- Detail pesanan: nomor antrean, item, suhu, gula, add-ons, quantity
+- Detail pesanan: nomor antrean, item, suhu, gula, add-ons, quantity, **tipe pesanan (Dine In/Take Away)**
 - Info waktu masuk + nama kasir per pesanan
 - Alert visual + suara jika pesanan menunggu > 5 menit
 - Tombol 1-klik untuk pindah status
@@ -60,6 +62,7 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 ### 5. 📋 Laporan Komprehensif
 - **5 tab laporan**: Laba Rugi, Transaksi, Kas Kasir, Stok Bahan, Shift Karyawan
 - Filter periode: Hari Ini, 7 Hari, Bulan, Custom (date range)
+- **Distribusi Tipe Pesanan**: Doughnut chart Dine In vs Take Away
 - Export ke **CSV** (Excel-compatible)
 - Export ke **PDF** (profesional, siap share ke investor)
 - Tabel scrollable dengan sticky header
@@ -81,6 +84,13 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 - Import/Export CSV
 - Pagination (10/25/50/100 per halaman)
 - Summary cards: total item, stok rendah, nilai inventaris
+
+### 7a. 📋 Stock Opname
+- Rekonsiliasi stok fisik vs stok sistem secara berkala
+- Input stok aktual per item, otomatis hitung selisih & kerugian
+- Pencatatan alasan penyesuaian per item (Basi, Rusak, Salah Input)
+- Verifikasi PIN Manager untuk selisih signifikan
+- Riwayat opname tersimpan dan tercatat di stock log
 
 ### 8. 🎁 Promo, Voucher & Loyalty
 - CRUD promo/voucher dengan masa berlaku
@@ -121,6 +131,7 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 - **Konfirmasi void/cancel**: Manager mendapat dialog konfirmasi sebelum void/cancel transaksi
 - **Restriksi Multi-login Device**: membatasi masing-masing user agar hanya bisa login aktif di satu perangkat saja (login di perangkat baru otomatis mengeluarkan perangkat lama)
 - Export audit log ke CSV
+- **Customer visit revert**: visitCount & totalSpent otomatis dikurangi saat transaksi di-cancel
 
 ### 12. ⚙️ Settings & Konfigurasi
 - **Tabbed Layout**: Halaman pengaturan diorganisasikan ke dalam 3 tab utama (*Umum & Tampilan*, *Printer & KDS*, *Pengguna & Sistem*) untuk tampilan yang rapi dan menghemat space di desktop maupun mobile.
@@ -167,6 +178,8 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 | **fullSync** | Delete propagation antar device — cloud = sumber kebenaran |
 | **Code-splitting** | React.lazy() per halaman, fast initial load |
 | **Error boundary** | Crash tidak white-screen, ada recovery UI |
+| **Offline queue indicator** | Badge real-time di sidebar menampilkan jumlah operasi pending sync |
+| **Settings conflict notification** | Toast warning saat perubahan lokal ditimpa oleh cloud |
 | **Type-safe** | Full TypeScript, 0 compile errors |
 | **Modern UI** | TailwindCSS, responsive, dark-friendly colors |
 
@@ -201,6 +214,7 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 | Pelanggan | ✅ | ✅ | ❌ |
 | Audit Log | ✅ | ❌ | ❌ |
 | Settings | ✅ | ❌ | ❌ |
+| Stock Opname | ✅ | ❌ | ❌ |
 
 ---
 
@@ -229,6 +243,18 @@ Cocok untuk:
 - [ ] Multi-language (English)
 - [ ] AI menu recommendation
 
+### ✅ Recently Completed (v3.2–v3.4)
+- [x] Pengaturan suhu & gula per produk (sembunyikan untuk makanan)
+- [x] Tipe pesanan Dine In / Take Away
+- [x] Stock Opname module (rekonsiliasi stok fisik)
+- [x] Error Boundary (crash recovery UI)
+- [x] Offline queue indicator di sidebar
+- [x] Order type analytics di laporan (Doughnut chart)
+- [x] Settings merge conflict notification
+- [x] Customer visit revert saat transaksi cancel
+- [x] Discount preview capping (konsisten dengan checkout)
+- [x] Offline queue dependency-ordered flush
+
 ---
 
-*Dokumen ini menggambarkan fitur aplikasi BerdikariPOS v3.1 yang sudah live di production.*
+*Dokumen ini menggambarkan fitur aplikasi BerdikariPOS v3.4 yang sudah live di production.*

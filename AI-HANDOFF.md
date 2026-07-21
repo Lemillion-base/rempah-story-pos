@@ -1,4 +1,4 @@
-# 🤖 Panduan Handoff ke AI Developer Lain — BerdikariPOS
+# 🤖 Panduan Handoff ke AI Developer Lain — BerdikariPOS v3.4
 
 ## Cara Melanjutkan Pengembangan dengan AI Lain (Antigravity, Cursor, dll)
 
@@ -43,7 +43,7 @@ Berikan file-file ini sebagai konteks awal agar AI memahami seluruh aplikasi:
 Copy-paste prompt ini saat memulai percakapan dengan AI baru:
 
 ```
-Saya memiliki aplikasi POS (Point of Sale) bernama "BerdikariPOS" yang sudah production dan bersifat umum/multi-purpose.
+Saya memiliki aplikasi POS (Point of Sale) bernama "BerdikariPOS" yang sudah production dan bersifat umum/multi-purpose (v3.4).
 
 Tech Stack:
 - React 18 + TypeScript + Vite 5
@@ -112,9 +112,9 @@ Tolong pelajari dulu sebelum mulai coding.
 ```
 
 ### Cloud Sync Coverage (100%):
-- **13 data types** di-push ke cloud (termasuk customCategories)
-- **10 stores** fetch dari cloud saat boot
-- **6 stores** support `fullSync` mode untuk delete propagation
+- **14 data types** di-push ke cloud (termasuk customCategories, themeColor, themeShades, stock_opname)
+- **11 stores** fetch dari cloud saat boot (ditambah stockOpnameStore)
+- **7 stores** support `fullSync` mode untuk delete propagation (ditambah stockOpnameStore)
 - **Real-time subscriptions** di SEMUA halaman:
   - `POS.tsx`: menus, inventory, customers, settings
   - `Kitchen.tsx`: transactions
@@ -124,8 +124,11 @@ Tolong pelajari dulu sebelum mulai coding.
   - `Inventory.tsx`: inventory
   - `Promos.tsx`: promos
   - `SettingsPage.tsx`: users
+  - `StockOpname.tsx`: stock_opnames, inventory
   - `App.tsx` (Global): users (untuk restriksi multi-login device secara real-time)
 - **fullSync pattern**: Saat real-time event, cloud = sumber kebenaran. Item yang dihapus di cloud dihapus dari lokal (grace period 30s untuk item baru).
+- **Offline queue sorting**: Queue di-sort (insert -> upsert -> update -> delete) sebelum flush untuk menjaga integritas dependensi.
+- **Settings merge conflict warning**: Saat cloud settings menimpa modifikasi lokal yang bertabrakan, user diberi tahu via warning toast.
 
 ### Konvensi Kode:
 - **Store pattern**: Zustand + persist + cloud sync di setiap mutasi
@@ -152,7 +155,7 @@ git push origin main → Vercel auto-deploy (1-2 menit)
 - Schema di `supabase/schema.sql`
 - Semua tabel di schema `public`
 - RLS enabled dengan policy "allow all" (MVP)
-- Real-time enabled untuk SEMUA tabel (transactions, menus, inventory, customers, users, promos, settings)
+- Real-time enabled untuk SEMUA tabel (transactions, menus, inventory, customers, users, promos, settings, stock_opnames)
 - `settings` table rows: id=1 (app settings, including loyalty settings, custom categories, theme_color, and theme_shades consolidated on id=1 to satisfy check constraints)
 
 ---
