@@ -83,7 +83,7 @@ Setiap klien (toko) yang beli aplikasi Anda perlu:
 1. Buat Supabase project baru (gratis)
 2. Jalankan `schema.sql` di SQL Editor.
    > [!NOTE]
-   > Jika meng-upgrade database klien lama ke versi 3.1, jalankan perintah berikut di SQL Editor Supabase untuk mendukung fitur pembatasan login device, split printing dapur, tema warna dinamis, dan fleksibilitas opsi level gula menu:
+   > Jika meng-upgrade database klien lama ke versi 3.4, jalankan perintah berikut di SQL Editor Supabase untuk mendukung fitur pembatasan login device, split printing dapur, tema warna dinamis, fleksibilitas opsi level gula & suhu, tipe pesanan (Dine In / Take Away), dan modul Stock Opname:
    > ```sql
    > ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session_id TEXT;
    > ALTER TABLE menus ADD COLUMN IF NOT EXISTS kitchen_target TEXT DEFAULT NULL;
@@ -91,6 +91,28 @@ Setiap klien (toko) yang beli aplikasi Anda perlu:
    > ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_color TEXT;
    > ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_shades JSONB;
    > ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_sugar_level BOOLEAN DEFAULT TRUE;
+   > ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_temperature BOOLEAN DEFAULT TRUE;
+   > ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tax FLOAT DEFAULT 0;
+   > ALTER TABLE transactions ADD COLUMN IF NOT EXISTS order_type TEXT;
+   > 
+   > CREATE TABLE IF NOT EXISTS stock_opnames (
+   >   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   >   date TIMESTAMPTZ DEFAULT now(),
+   >   staff_id TEXT NOT NULL,
+   >   staff_name TEXT NOT NULL,
+   >   items JSONB NOT NULL DEFAULT '[]',
+   >   total_loss_value FLOAT DEFAULT 0,
+   >   total_items INT DEFAULT 0,
+   >   items_with_difference INT DEFAULT 0,
+   >   pin_verified BOOLEAN DEFAULT false,
+   >   notes TEXT
+   > );
+   > 
+   > DO $$
+   > BEGIN
+   >   ALTER PUBLICATION supabase_realtime ADD TABLE stock_opnames;
+   > EXCEPTION WHEN duplicate_object THEN NULL;
+   > END $$;
    > ```
 3. Deploy frontend ke Vercel dengan env variables klien tersebut
 4. Berikan URL + akun login ke klien
