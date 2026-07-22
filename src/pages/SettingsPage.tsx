@@ -162,6 +162,33 @@ export default function SettingsPage() {
   const [newSuperPin, setNewSuperPin] = useState('');
   const [activeTab, setActiveTab] = useState<'general' | 'printers' | 'users'>('general');
 
+  // Table settings local state
+  const [newTableInput, setNewTableInput] = useState('');
+
+  const handleAddTable = () => {
+    if (!newTableInput.trim()) return;
+    const currentTables = settings.availableTableNumbers || [];
+    if (currentTables.includes(newTableInput.trim())) {
+      alert('Nomor meja tersebut sudah terdaftar.');
+      return;
+    }
+    const updated = [...currentTables, newTableInput.trim()];
+    updateSettings({ availableTableNumbers: updated });
+    setNewTableInput('');
+    if (currentUser) {
+      addLog(currentUser.id, currentUser.name, currentUser.role, 'update_settings', `Tambah nomor meja: ${newTableInput.trim()}`);
+    }
+  };
+
+  const handleRemoveTable = (table: string) => {
+    const currentTables = settings.availableTableNumbers || [];
+    const updated = currentTables.filter((t) => t !== table);
+    updateSettings({ availableTableNumbers: updated });
+    if (currentUser) {
+      addLog(currentUser.id, currentUser.name, currentUser.role, 'update_settings', `Hapus nomor meja: ${table}`);
+    }
+  };
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -824,6 +851,77 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Pengaturan Nomor Meja */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <Store size={18} className="text-brand-600" />
+              Fitur Nomor Meja Konsumen
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Kelola nomor meja untuk pesanan makan di tempat (Dine In)
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.tableFeaturesEnabled || false}
+              onChange={(e) => updateSettings({ tableFeaturesEnabled: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+          </label>
+        </div>
+
+        {settings.tableFeaturesEnabled && (
+          <div className="space-y-4">
+            <div>
+              <label className="label text-sm font-semibold">Daftar Nomor Meja yang Tersedia</label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Contoh: Meja 6, Area Outdoor 2..."
+                  value={newTableInput}
+                  onChange={(e) => setNewTableInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddTable()}
+                  className="input text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTable}
+                  className="btn-primary text-sm whitespace-nowrap"
+                >
+                  <Plus size={16} /> Tambah Meja
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-slate-100 dark:border-slate-700/50 rounded-xl bg-slate-50/50 dark:bg-slate-800/30">
+                {(settings.availableTableNumbers || []).length === 0 ? (
+                  <p className="text-xs text-slate-400 p-3 w-full text-center">Belum ada nomor meja yang terdaftar</p>
+                ) : (
+                  (settings.availableTableNumbers || []).map((t, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-xs font-medium text-slate-700 dark:text-slate-300 shadow-sm"
+                    >
+                      <span>{t}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTable(t)}
+                        className="text-slate-400 hover:text-red-500 rounded-full p-0.5"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       </div>
       )}
 
@@ -859,6 +957,7 @@ export default function SettingsPage() {
                     <span className={`badge ${
                       u.role === 'Manager' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
                       u.role === 'Kasir' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                      u.role === 'Staf Gudang' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' :
                       'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
                     }`}>
                       {u.role}
@@ -916,6 +1015,7 @@ export default function SettingsPage() {
               <option value="Manager">Manager</option>
               <option value="Kasir">Kasir</option>
               <option value="Acaraki">Acaraki</option>
+              <option value="Staf Gudang">Staf Gudang</option>
             </select>
           </div>
           <div className="flex gap-3 pt-3 border-t border-slate-100">

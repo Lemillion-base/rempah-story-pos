@@ -117,13 +117,31 @@ export async function runMigrations() {
       console.warn('  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS order_type TEXT;');
       migrationNeeded.orderType = true;
     }
+
+    // Migration 11: Add table_features column to settings table
+    const { error: tableFeaturesError } = await supabase.from('settings').select('table_features').limit(1);
+    if (tableFeaturesError && tableFeaturesError.message.includes('table_features')) {
+      console.warn('[Migration] Column "table_features" missing in settings table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE settings ADD COLUMN IF NOT EXISTS table_features JSONB DEFAULT \'{"enabled": false, "tables": ["Meja 1", "Meja 2", "Meja 3", "Meja 4", "Meja 5"]}\';');
+      migrationNeeded.tableFeatures = true;
+    }
+
+    // Migration 12: Add table_number column to transactions table
+    const { error: tableNumError } = await supabase.from('transactions').select('table_number').limit(1);
+    if (tableNumError && tableNumError.message.includes('table_number')) {
+      console.warn('[Migration] Column "table_number" missing in transactions table.');
+      console.warn('[Migration] Please run this SQL in Supabase SQL Editor:');
+      console.warn('  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS table_number TEXT;');
+      migrationNeeded.tableNumber = true;
+    }
   } catch (e) {
     console.warn('[Migration] Could not verify schema:', e);
   }
 }
 
 // Track which migrations are needed so sync functions can adapt
-const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false, showSugarLevel: false, themeColor: false, themeShades: false, showTemperature: false, orderType: false };
+const migrationNeeded = { manualHpp: false, activeSessionId: false, tax: false, kitchenTarget: false, kitchenPrinters: false, showSugarLevel: false, themeColor: false, themeShades: false, showTemperature: false, orderType: false, tableFeatures: false, tableNumber: false };
 export function isMigrationNeeded(key: keyof typeof migrationNeeded) {
   return migrationNeeded[key];
 }
@@ -161,6 +179,9 @@ export async function syncTransaction(tx: Transaction) {
   }
   if (!migrationNeeded.orderType) {
     data.order_type = tx.orderType || null;
+  }
+  if (!migrationNeeded.tableNumber) {
+    data.table_number = tx.tableNumber || null;
   }
   await smartUpsert('transactions', data);
 }
@@ -210,6 +231,7 @@ export async function fetchTransactionsFromCloud(): Promise<Transaction[] | null
       hpp: row.hpp,
       tax: row.tax || 0,
       orderType: row.order_type || undefined,
+      tableNumber: row.table_number || undefined,
     })) || null;
   } catch (e) {
     console.error('[CloudSync] Fetch EXCEPTION:', e);
@@ -441,6 +463,12 @@ export async function syncSettings(settings: AppSettings) {
   if (!migrationNeeded.themeShades) {
     data.theme_shades = settings.themeShades || null;
   }
+  if (!migrationNeeded.tableFeatures) {
+    data.table_features = {
+      enabled: settings.tableFeaturesEnabled ?? false,
+      tables: settings.availableTableNumbers ?? ['Meja 1', 'Meja 2', 'Meja 3', 'Meja 4', 'Meja 5']
+    };
+  }
   await smartUpsert('settings', data);
 }
 
@@ -465,6 +493,8 @@ export async function fetchSettingsFromCloud(): Promise<AppSettings | null> {
       demoMode: data.demo_mode !== false,
       themeColor: data.theme_color || undefined,
       themeShades: data.theme_shades || undefined,
+      tableFeaturesEnabled: data.table_features?.enabled || false,
+      availableTableNumbers: data.table_features?.tables || ['Meja 1', 'Meja 2', 'Meja 3', 'Meja 4', 'Meja 5'],
     };
   } catch (e) {
     console.warn('[CloudSync] Fetch settings failed:', e);

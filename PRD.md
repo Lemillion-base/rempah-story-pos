@@ -46,7 +46,7 @@
 
 ## 2. User Personas & Roles (RBAC)
 
-Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
+Sistem menggunakan Role-Based Access Control (RBAC) dengan 4 peran utama:
 
 ### 2.1. Manager (Admin)
 - **Akses**: Seluruh sistem (Dashboard, POS, Dapur, Transaksi, Katalog, Inventaris, Laporan, Pelanggan, Settings)
@@ -62,22 +62,27 @@ Sistem menggunakan Role-Based Access Control (RBAC) dengan 3 peran utama:
 - **Fokus**: Mengubah status antrean pesanan (Waiting → Processing → Done)
 - **Wajib**: Print ringkasan pesanan selesai saat logout (opsional skip)
 
+### 2.4. Staf Gudang (Warehouse Staff)
+- **Akses**: Inventaris (modul bahan baku & stock opname) saja
+- **Fokus**: Melihat, menambah, dan mengubah detail bahan baku serta melakukan Stock Opname (rekonsiliasi fisik)
+
 ---
 
 ## 3. Functional Requirements (Fitur Lengkap)
 
 ### 3.1. Modul Autentikasi
 - **Login**: Username + password
-- **Routing otomatis**: Manager → Dashboard, Kasir → POS, Acaraki → Kitchen
+- **Routing otomatis**: Manager → Dashboard, Kasir → POS, Acaraki → Kitchen, Staf Gudang → Inventaris
 - **Demo accounts** ditampilkan di halaman login:
   - Manager: `manager` / `manager123`
   - Kasir: `kasir` / `kasir123`
   - Acaraki: `acaraki` / `acaraki123`
+  - Staf Gudang: `gudang` / `gudang123`
 - **Restriksi Multi-login Device**: Setiap user dibatasi hanya boleh memiliki satu session aktif di satu perangkat. Jika user login di perangkat/browser lain, session di perangkat lama otomatis ter-logout (kicked out) secara real-time via Supabase realtime subscription.
 
 ### 3.2. Modul Shift Management (Kasir)
 - **Buka Shift (Wajib)**:
-  - Modal muncul otomatis setelah login Kasir
+  - Modal muncul otomatis setelah login Kasir. Untuk Manager, kemunculan modal ditunda hingga ia mengakses menu POS.
   - Input modal kas awal (quick amount buttons: 100rb–1jt)
   - Tidak bisa mengakses POS sebelum shift dibuka
   - Indikator "Shift Aktif" di sidebar dengan info modal awal

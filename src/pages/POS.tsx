@@ -47,6 +47,10 @@ export default function POS() {
   const { getActivePromos, getPromoByCode, incrementUsage, getCustomerDiscount } = usePromoStore();
   const { addLog } = useAuditLogStore();
 
+  // Order type & Table features state
+  const [orderType, setOrderType] = useState<OrderType>('Dine In');
+  const [tableNumber, setTableNumber] = useState('');
+
   // GAP-3 fix: Real-time sync for menus, inventory, and customers (with GAP-2 auto-reconnect)
   // So Kasir sees changes from Manager's device even without navigating away
   useEffect(() => {
@@ -123,6 +127,10 @@ export default function POS() {
   // BUG-C5 fix: useCallback + proper dependency array instead of re-binding every render
   const handleCheckoutCb = useCallback(() => {
     if (cart.items.length === 0) return;
+    if (orderType === 'Dine In' && settings.tableFeaturesEnabled && !tableNumber) {
+      addToast('Silakan pilih nomor meja terlebih dahulu!', 'warning');
+      return;
+    }
     const warnings = checkStockAvailability(cart.items, menus, inventory);
     if (warnings.length > 0) {
       setStockWarnings(warnings);
@@ -130,7 +138,7 @@ export default function POS() {
       return;
     }
     setShowCheckout(true);
-  }, [cart.items, menus, inventory]);
+  }, [cart.items, menus, inventory, orderType, tableNumber, settings.tableFeaturesEnabled, addToast]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -174,9 +182,6 @@ export default function POS() {
   const [sugar, setSugar] = useState<SugarLevel>('Normal');
   const [selectedAddons, setSelectedAddons] = useState<AddOn[]>([]);
   const [qty, setQty] = useState(1);
-
-  // Order type state (Dine In / Take Away)
-  const [orderType, setOrderType] = useState<OrderType>('Dine In');
 
   // Checkout state
   const [payMethod, setPayMethod] = useState<PaymentMethod>('Cash');
@@ -362,6 +367,10 @@ export default function POS() {
   };
 
   const finalizeTransaction = async () => {
+    if (orderType === 'Dine In' && settings.tableFeaturesEnabled && !tableNumber) {
+      addToast('Silakan pilih nomor meja terlebih dahulu!', 'warning');
+      return;
+    }
     const manualDiscount = parseInt(discountInput) || 0;
     const rawTotalDiscount = manualDiscount + promoDiscount + loyaltyDiscount;
     const subtotal = cart.getSubtotal();
@@ -414,6 +423,7 @@ export default function POS() {
       customerName: selectedCustomer?.name || undefined,
       hpp,
       orderType,
+      tableNumber: orderType === 'Dine In' && settings.tableFeaturesEnabled ? tableNumber : undefined,
     };
 
     addTransaction(tx);
@@ -445,6 +455,7 @@ export default function POS() {
     setSelectedCustomerId(null);
     clearPromo();
     setOrderType('Dine In');
+    setTableNumber('');
     addToast(`Pesanan #${queueNum} berhasil! 🎉`, 'success');
   };
 
@@ -755,6 +766,43 @@ export default function POS() {
               ))}
             </select>
           </div>
+
+          {/* Tipe Pesanan & Nomor Meja */}
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Tipe</label>
+              <select
+                value={orderType}
+                onChange={(e) => {
+                  const val = e.target.value as OrderType;
+                  setOrderType(val);
+                  if (val === 'Take Away') setTableNumber('');
+                }}
+                className="input text-xs"
+              >
+                <option value="Dine In">Dine In</option>
+                <option value="Take Away">Take Away</option>
+              </select>
+            </div>
+
+            {settings.tableFeaturesEnabled && orderType === 'Dine In' && (
+              <div>
+                <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Meja</label>
+                <select
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  className="input text-xs"
+                >
+                  <option value="">-- Pilih --</option>
+                  {(settings.availableTableNumbers || []).map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -1046,6 +1094,25 @@ export default function POS() {
               ))}
             </div>
           </div>
+
+          {/* Table Number (if Dine In & enabled) */}
+          {settings.tableFeaturesEnabled && orderType === 'Dine In' && (
+            <div>
+              <label className="label text-slate-700 dark:text-slate-300">Nomor Meja</label>
+              <select
+                value={tableNumber}
+                onChange={(e) => setTableNumber(e.target.value)}
+                className="input"
+              >
+                <option value="">-- Pilih Meja --</option>
+                {(settings.availableTableNumbers || []).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Payment Method */}
           <div>

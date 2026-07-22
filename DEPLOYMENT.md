@@ -115,6 +115,14 @@ Setiap klien (toko) yang beli aplikasi Anda perlu:
    > END $$;
    > ```
 3. Deploy frontend ke Vercel dengan env variables klien tersebut
+
+### Upgrade ke v3.5 (Roadmap Iteration 1 — Shift & Staf Gudang):
+Jika meng-upgrade database klien lama ke versi 3.5, jalankan perintah berikut di SQL Editor Supabase untuk memperbarui check constraint role:
+```sql
+-- Memperbarui Check Constraint Role di tabel users untuk mendukung Staf Gudang
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('Manager', 'Kasir', 'Acaraki', 'Staf Gudang'));
+```
 4. Berikan URL + akun login ke klien
 5. Klien bisa langsung pakai
 

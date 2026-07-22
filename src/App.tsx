@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useShiftStore } from './store/shiftStore';
@@ -44,10 +44,14 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
 function ShiftGuard({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuthStore();
   const { activeShift } = useShiftStore();
+  const location = useLocation();
 
-  // BUG-K4 fix: Both Kasir and Manager must open shift before working
-  // so all POS transactions are tracked for accurate cash reconciliation
-  const needsShift = currentUser && (currentUser.role === 'Kasir' || currentUser.role === 'Manager') && !activeShift;
+  // ROADMAP-1: Manager only opens shift when they click POS menu (on '/pos' route)
+  const isPosPath = location.pathname === '/pos';
+  const needsShift = currentUser && (
+    (currentUser.role === 'Kasir') || 
+    (currentUser.role === 'Manager' && isPosPath)
+  ) && !activeShift;
 
   return (
     <>
@@ -159,7 +163,18 @@ export default function App() {
           path="/"
           element={
             currentUser ? (
-              <Navigate to={currentUser.role === 'Manager' ? '/dashboard' : currentUser.role === 'Kasir' ? '/pos' : '/kitchen'} replace />
+              <Navigate
+                to={
+                  currentUser.role === 'Manager'
+                    ? '/dashboard'
+                    : currentUser.role === 'Kasir'
+                    ? '/pos'
+                    : currentUser.role === 'Staf Gudang'
+                    ? '/inventory'
+                    : '/kitchen'
+                }
+                replace
+              />
             ) : (
               <Login />
             )
@@ -180,7 +195,7 @@ export default function App() {
           <Route path="/transactions" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Transactions /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['Manager']}><Dashboard /></ProtectedRoute>} />
           <Route path="/catalog" element={<ProtectedRoute allowedRoles={['Manager']}><Catalog /></ProtectedRoute>} />
-          <Route path="/inventory" element={<ProtectedRoute allowedRoles={['Manager']}><Inventory /></ProtectedRoute>} />
+          <Route path="/inventory" element={<ProtectedRoute allowedRoles={['Manager', 'Staf Gudang']}><Inventory /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute allowedRoles={['Manager']}><Reports /></ProtectedRoute>} />
           <Route path="/customers" element={<ProtectedRoute allowedRoles={['Manager', 'Kasir']}><Customers /></ProtectedRoute>} />
           <Route path="/promos" element={<ProtectedRoute allowedRoles={['Manager']}><Promos /></ProtectedRoute>} />

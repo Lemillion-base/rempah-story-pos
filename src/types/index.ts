@@ -1,6 +1,6 @@
 // Data Model sesuai PRD Section 5
 
-export type Role = 'Manager' | 'Kasir' | 'Acaraki';
+export type Role = 'Manager' | 'Kasir' | 'Acaraki' | 'Staf Gudang';
 
 export interface User {
   id: string;
@@ -64,6 +64,7 @@ export interface CartItem {
   kitchenTarget?: string; // target kitchen for split printing
   showSugarLevel?: boolean;
   showTemperature?: boolean;
+  tableNumber?: string;
 }
 
 export interface Transaction {
@@ -86,6 +87,7 @@ export interface Transaction {
   hpp: number; // total cost of goods sold
   tax?: number; // GAP-3 fix: Nilai pajak
   orderType?: 'Dine In' | 'Take Away'; // Tipe pesanan: makan di tempat atau bawa pulang
+  tableNumber?: string; // Fitur nomor meja
 }
 
 // CRM (extension beyond PRD MVP)
@@ -141,6 +143,8 @@ export interface AppSettings {
     800: string;
     900: string;
   };
+  tableFeaturesEnabled?: boolean;
+  availableTableNumbers?: string[];
 }
 
 // Shift Management
