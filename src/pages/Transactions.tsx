@@ -205,7 +205,7 @@ export default function Transactions() {
                           ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
                           : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
                       }`}>
-                        {tx.orderType}
+                        {tx.orderType}{tx.tableNumber ? ` (${tx.tableNumber})` : ''}
                       </span>
                     )}
                   </p>

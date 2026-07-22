@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from './Modal';
 import { useShiftStore } from '../store/shiftStore';
 import { useAuthStore } from '../store/authStore';
@@ -12,6 +13,7 @@ interface OpenShiftModalProps {
 
 export default function OpenShiftModal({ open }: OpenShiftModalProps) {
   const [cashInput, setCashInput] = useState('');
+  const navigate = useNavigate();
   const { openShift } = useShiftStore();
   const { currentUser } = useAuthStore();
   const { addLog } = useAuditLogStore();
@@ -25,7 +27,7 @@ export default function OpenShiftModal({ open }: OpenShiftModalProps) {
   };
 
   return (
-    <Modal open={open} onClose={() => {}} title="Buka Shift Kasir">
+    <Modal open={open} onClose={() => {}} title="Buka Shift Kasir" dismissible={false}>
       <div className="space-y-5">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto rounded-full bg-brand-100 flex items-center justify-center mb-3">
@@ -68,13 +70,24 @@ export default function OpenShiftModal({ open }: OpenShiftModalProps) {
           ))}
         </div>
 
-        <button
-          onClick={handleOpen}
-          className="btn-primary w-full text-base"
-          disabled={!cashInput || parseInt(cashInput) <= 0}
-        >
-          <Wallet size={18} /> Mulai Shift
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={handleOpen}
+            className="btn-primary w-full text-base"
+            disabled={!cashInput || parseInt(cashInput) <= 0}
+          >
+            <Wallet size={18} /> Mulai Shift
+          </button>
+          {currentUser?.role === 'Manager' && (
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="w-full btn-secondary text-base py-2.5"
+            >
+              Batal & Kembali ke Dashboard
+            </button>
+          )}
+        </div>
       </div>
     </Modal>
   );

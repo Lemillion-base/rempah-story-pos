@@ -52,6 +52,9 @@ const navItems = {
     { to: '/customers', icon: Users, label: 'Pelanggan' },
   ],
   Acaraki: [{ to: '/kitchen', icon: ChefHat, label: 'Dapur' }],
+  'Staf Gudang': [
+    { to: '/inventory', icon: Warehouse, label: 'Inventaris' },
+  ],
 };
 
 export default function Layout() {

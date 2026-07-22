@@ -191,16 +191,20 @@ export default function Inventory() {
           <button onClick={openAdd} className="btn-primary text-sm">
             <Plus size={16} /> Tambah Bahan
           </button>
-          <button onClick={() => setShowMinStockSetting(true)} className="btn-secondary text-sm">
-            <Settings2 size={16} /> Min. Stok
-          </button>
+          {currentUser?.role !== 'Staf Gudang' && (
+            <button onClick={() => setShowMinStockSetting(true)} className="btn-secondary text-sm">
+              <Settings2 size={16} /> Min. Stok
+            </button>
+          )}
           <button onClick={handleExport} className="btn-secondary text-sm">
             <Download size={16} /> Export
           </button>
-          <label className="btn-secondary text-sm cursor-pointer">
-            <Upload size={16} /> Import
-            <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
-          </label>
+          {currentUser?.role !== 'Staf Gudang' && (
+            <label className="btn-secondary text-sm cursor-pointer">
+              <Upload size={16} /> Import
+              <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
+            </label>
+          )}
         </div>
       </div>
 
@@ -328,12 +332,14 @@ export default function Inventory() {
                     </td>
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                        <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-slate-100" title="Edit Bahan">
                           <Pencil size={14} />
                         </button>
-                        <button onClick={() => setDeleteInvId(item.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
-                          <Trash2 size={14} />
-                        </button>
+                        {currentUser?.role !== 'Staf Gudang' && (
+                          <button onClick={() => setDeleteInvId(item.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="Hapus Bahan">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

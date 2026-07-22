@@ -44,7 +44,7 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 - Reset tampilan saat Acaraki logout + print ringkasan
 
 ### 3. 💰 Manajemen Shift & Kas
-- Buka shift wajib: input modal kas awal sebelum mulai kerja
+- Buka shift wajib: input modal kas awal sebelum mulai kerja (untuk Manager, ditunda dan hanya ditanyakan saat mengakses halaman POS)
 - Tutup shift wajib: input kas aktual di laci (tidak bisa skip)
 - Kalkulasi otomatis: expected cash vs aktual → selisih
 - Print ringkasan transaksi saat tutup shift
@@ -124,7 +124,7 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 - Password hashing (bcrypt, 10 salt rounds)
 - PIN Manager untuk otorisasi void/hapus transaksi
 - Super Admin PIN untuk akses Manajemen Data
-- Role-Based Access Control (3 role)
+- Role-Based Access Control (4 role: Manager, Kasir, Acaraki, Staf Gudang)
 - Konfirmasi dialog untuk semua aksi destruktif
 - Validasi username unik
 - **Audit Log**: semua aksi user tercatat (login, CRUD, transaksi, shift)

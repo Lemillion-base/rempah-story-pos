@@ -1,4 +1,4 @@
-# 🤖 Panduan Handoff ke AI Developer Lain — BerdikariPOS v3.4
+# 🤖 Panduan Handoff ke AI Developer Lain — BerdikariPOS v3.5
 
 ## Cara Melanjutkan Pengembangan dengan AI Lain (Antigravity, Cursor, dll)
 
@@ -43,7 +43,7 @@ Berikan file-file ini sebagai konteks awal agar AI memahami seluruh aplikasi:
 Copy-paste prompt ini saat memulai percakapan dengan AI baru:
 
 ```
-Saya memiliki aplikasi POS (Point of Sale) bernama "BerdikariPOS" yang sudah production dan bersifat umum/multi-purpose (v3.4).
+Saya memiliki aplikasi POS (Point of Sale) bernama "BerdikariPOS" yang sudah production dan bersifat umum/multi-purpose (v3.5).
 
 Tech Stack:
 - React 18 + TypeScript + Vite 5

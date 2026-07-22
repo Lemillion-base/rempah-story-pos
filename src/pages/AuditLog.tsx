@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { formatDate } from '../utils/format';
 import { Search, Shield, Download, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../components/ConfirmDialog';
+import PinModal from '../components/PinModal';
 
 const actionLabels: Record<string, string> = {
   login: 'Login',
@@ -46,11 +48,29 @@ const actionColors: Record<string, string> = {
 };
 
 export default function AuditLog() {
-  const { logs, clearOldLogs } = useAuditLogStore();
+  const { logs, clearOldLogs, clearAllLogs } = useAuditLogStore();
   const [search, setSearch] = useState('');
   const [filterAction, setFilterAction] = useState('all');
   const [page, setPage] = useState(1);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
   const perPage = 25;
+
+  const handleClearConfirm = () => {
+    setShowClearConfirm(false);
+    setShowPinModal(true);
+  };
+
+  const handleClearSuccess = async () => {
+    setShowPinModal(false);
+    const ok = await clearAllLogs();
+    if (ok) {
+      alert('✅ Semua log audit berhasil dihapus dari lokal dan cloud.');
+    } else {
+      alert('⚠️ Log audit terhapus lokal, namun gagal menyinkronkan penghapusan ke cloud.');
+    }
+    setPage(1);
+  };
 
   const filtered = useMemo(() => {
     let list = logs;
@@ -102,8 +122,11 @@ export default function AuditLog() {
           <button onClick={handleExport} className="btn-secondary text-sm">
             <Download size={14} /> Export
           </button>
-          <button onClick={() => clearOldLogs(90)} className="btn-secondary text-sm text-red-600">
-            <Trash2 size={14} /> Hapus &gt; 90 hari
+          <button onClick={() => clearOldLogs(90)} className="btn-secondary text-sm">
+            Hapus &gt; 90 hari
+          </button>
+          <button onClick={() => setShowClearConfirm(true)} className="btn-secondary text-sm text-red-600 flex items-center gap-1">
+            <Trash2 size={14} /> Hapus Semua Log
           </button>
         </div>
       </div>
@@ -194,6 +217,25 @@ export default function AuditLog() {
           </div>
         )}
       </div>
+
+      {/* Dialog Konfirmasi & Otorisasi PIN */}
+      <ConfirmDialog
+        open={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClearConfirm}
+        title="Hapus Semua Log Audit"
+        message="Apakah Anda yakin ingin menghapus SELURUH riwayat log audit? Tindakan ini akan menghapus log di perangkat lokal dan database cloud (Supabase) secara permanen."
+        confirmText="Ya, Hapus Semua"
+        cancelText="Batal"
+        variant="danger"
+      />
+
+      <PinModal
+        open={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={handleClearSuccess}
+        title="Otorisasi Hapus Log Audit"
+      />
     </div>
   );
 }

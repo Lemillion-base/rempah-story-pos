@@ -30,6 +30,14 @@ export const seedUsers: User[] = [
     role: 'Acaraki',
     createdAt: new Date().toISOString(),
   },
+  {
+    id: 'seed-gudang-001',
+    name: 'Staf Gudang 1',
+    username: 'gudang',
+    password: 'gudang123',
+    role: 'Staf Gudang',
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 export const seedInventory: InventoryItem[] = [
@@ -147,6 +155,8 @@ export const seedSettings: AppSettings = {
   kitchenPrinters: [],
   superAdminPin: '000000',
   demoMode: true,
+  tableFeaturesEnabled: false,
+  availableTableNumbers: ['Meja 1', 'Meja 2', 'Meja 3', 'Meja 4', 'Meja 5'],
   themeColor: '#b85f21',
   themeShades: {
     50: '#fdf8f3',

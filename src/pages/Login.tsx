@@ -71,6 +71,7 @@ export default function Login() {
             <p>Manager: manager / manager123</p>
             <p>Kasir: kasir / kasir123</p>
             <p>Acaraki: acaraki / acaraki123</p>
+            <p>Staf Gudang: gudang / gudang123</p>
           </div>
         )}
       </div>

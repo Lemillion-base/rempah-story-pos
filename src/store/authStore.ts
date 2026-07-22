@@ -125,6 +125,8 @@ export const useAuthStore = create<AuthState>()(
             return '/pos';
           case 'Acaraki':
             return '/kitchen';
+          case 'Staf Gudang':
+            return '/inventory';
           default:
             return '/';
         }

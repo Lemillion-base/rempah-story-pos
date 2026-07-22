@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('Manager', 'Kasir', 'Acaraki')),
+  role TEXT NOT NULL CHECK (role IN ('Manager', 'Kasir', 'Acaraki', 'Staf Gudang')),
   active_session_id TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   customer_id TEXT,
   customer_name TEXT,
   hpp FLOAT DEFAULT 0,
+  order_type TEXT DEFAULT 'Dine In',
+  table_number TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -154,7 +156,9 @@ CREATE TABLE IF NOT EXISTS settings (
   super_admin_pin TEXT DEFAULT '000000',
   loyalty_enabled BOOLEAN DEFAULT false,
   loyalty_settings JSONB DEFAULT '{}',
-  kitchen_printers JSONB DEFAULT '[]'
+  kitchen_printers JSONB DEFAULT '[]',
+  table_features_enabled BOOLEAN DEFAULT false,
+  available_table_numbers JSONB DEFAULT '[]'
 );
 
 -- Insert default settings row
@@ -267,6 +271,7 @@ ALTER TABLE promos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_opnames ENABLE ROW LEVEL SECURITY;
 
 -- MVP policies — allow all operations with anon key
 -- TODO: Replace with auth-based policies before scaling to multi-tenant
@@ -280,6 +285,7 @@ CREATE POLICY "Allow all for anon" ON promos FOR ALL USING (true) WITH CHECK (tr
 CREATE POLICY "Allow all for anon" ON audit_logs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON stock_logs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON stock_opnames FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
 -- Seed Data (same as localStorage seed)
@@ -287,7 +293,8 @@ CREATE POLICY "Allow all for anon" ON settings FOR ALL USING (true) WITH CHECK (
 INSERT INTO users (name, username, password, role) VALUES
   ('Admin Manager', 'manager', 'manager123', 'Manager'),
   ('Kasir 1', 'kasir', 'kasir123', 'Kasir'),
-  ('Acaraki Dapur', 'acaraki', 'acaraki123', 'Acaraki')
+  ('Acaraki Dapur', 'acaraki', 'acaraki123', 'Acaraki'),
+  ('Staf Gudang 1', 'gudang', 'gudang123', 'Staf Gudang')
 ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO inventory (id, name, stock, unit, cost_per_unit, min_stock) VALUES

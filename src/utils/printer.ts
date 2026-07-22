@@ -30,6 +30,7 @@ export interface ReceiptData {
   cashReceived?: number;
   change?: number;
   orderType?: 'Dine In' | 'Take Away';
+  tableNumber?: string;
 }
 
 export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettings): ReceiptData {
@@ -50,6 +51,7 @@ export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettin
     cashReceived: tx.cashReceived,
     change: tx.change,
     orderType: tx.orderType,
+    tableNumber: tx.tableNumber,
   };
 }
 
@@ -76,7 +78,7 @@ export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
   lines.push(`Tgl: ${dateStr}`);
   lines.push(`Kasir: ${data.cashierName}`);
   if (data.customerName) lines.push(`Pelanggan: ${data.customerName}`);
-  if (data.orderType) lines.push(`Tipe: ${data.orderType}`);
+  if (data.orderType) lines.push(`Tipe: ${data.orderType}${data.tableNumber ? ` (${data.tableNumber})` : ''}`);
   lines.push(separator);
 
   // Items
@@ -272,7 +274,7 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
     commands.push(...encoder.encode(`Pelanggan: ${data.customerName}\n`));
   }
   if (data.orderType) {
-    commands.push(...encoder.encode(`Tipe: ${data.orderType}\n`));
+    commands.push(...encoder.encode(`Tipe: ${data.orderType}${data.tableNumber ? ` (${data.tableNumber})` : ''}\n`));
   }
   commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
 
@@ -364,7 +366,7 @@ export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[],
   lines.push(`Tgl: ${dateStr}`);
   lines.push(`Kasir: ${data.cashierName}`);
   if (data.customerName) lines.push(`Pelanggan: ${data.customerName}`);
-  if (data.orderType) lines.push(`Tipe: ${data.orderType}`);
+  if (data.orderType) lines.push(`Tipe: ${data.orderType}${data.tableNumber ? ` (${data.tableNumber})` : ''}`);
   lines.push(separator);
 
   // Items
@@ -439,7 +441,7 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
     commands.push(...encoder.encode(`Pelanggan: ${data.customerName}\n`));
   }
   if (data.orderType) {
-    commands.push(...encoder.encode(`Tipe: ${data.orderType}\n`));
+    commands.push(...encoder.encode(`Tipe: ${data.orderType}${data.tableNumber ? ` (${data.tableNumber})` : ''}\n`));
   }
   commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
 
