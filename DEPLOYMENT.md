@@ -123,6 +123,9 @@ Jika meng-upgrade database klien lama ke versi 3.5, jalankan perintah berikut di
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('Manager', 'Kasir', 'Acaraki', 'Staf Gudang'));
 ```
+
+### Upgrade ke v4.0 (Bluetooth Printer Device Registry & Split Printing Refactor):
+Metadata perangkat Bluetooth (`bluetoothDeviceId`, `bluetoothDeviceName`, `cashierBluetoothDeviceId`, `cashierBluetoothDeviceName`) disimpan di dalam kolom JSONB `kitchen_printers` dan `settings` yang sudah ada. **Tidak ada migrasi SQL database yang diperlukan** untuk upgrade ke v4.0.
 4. Berikan URL + akun login ke klien
 5. Klien bisa langsung pakai
 

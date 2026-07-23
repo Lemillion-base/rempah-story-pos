@@ -1,4 +1,4 @@
-# 🤖 Panduan Handoff ke AI Developer Lain — BerdikariPOS v3.5
+# 🤖 Panduan Handoff ke AI Developer Lain — BerdikariPOS v4.0
 
 ## Cara Melanjutkan Pengembangan dengan AI Lain (Antigravity, Cursor, dll)
 
@@ -129,6 +129,7 @@ Tolong pelajari dulu sebelum mulai coding.
 - **fullSync pattern**: Saat real-time event, cloud = sumber kebenaran. Item yang dihapus di cloud dihapus dari lokal (grace period 30s untuk item baru).
 - **Offline queue sorting**: Queue di-sort (insert -> upsert -> update -> delete) sebelum flush untuk menjaga integritas dependensi.
 - **Settings merge conflict warning**: Saat cloud settings menimpa modifikasi lokal yang bertabrakan, user diberi tahu via warning toast.
+- **Bluetooth Printer Device Registry (v4.0)**: Setiap logical printer (Kasir, Kitchen Makanan, Kitchen Minuman) memiliki koneksi Bluetooth & device binding independen via `Map<string, BluetoothConnection>`. Penanganan error print menggunakan `Promise.allSettled` (error isolation), dilengkapi Test Print per printer dan warning duplicate physical device.
 
 ### Konvensi Kode:
 - **Store pattern**: Zustand + persist + cloud sync di setiap mutasi

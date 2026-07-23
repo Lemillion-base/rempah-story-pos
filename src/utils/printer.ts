@@ -1,16 +1,19 @@
 /**
- * Thermal Printer Utility
+ * Thermal Printer Utility — v4.0 (Printer Device Registry)
  * 
  * Supports two modes:
  * 1. Browser Print — opens a styled print window optimized for thermal paper
  * 2. Bluetooth ESC/POS — connects to thermal printer via Web Bluetooth API
+ * 
+ * v4.0: Each logical printer (cashier, kitchen-food, kitchen-drink) has its own
+ * independent Bluetooth device binding via a Printer Device Registry.
  */
 
-import type { AppSettings, Transaction, CartItem } from '../types';
+import type { AppSettings, Transaction, CartItem, KitchenPrinterConfig } from '../types';
 import { formatRupiah } from './format';
 
 // ============================================================
-// RECEIPT GENERATION (shared between both modes)
+// RECEIPT DATA TYPES
 // ============================================================
 
 export interface ReceiptData {
@@ -24,7 +27,7 @@ export interface ReceiptData {
   items: CartItem[];
   subtotal: number;
   discount: number;
-  tax?: number; // GAP-3 fix: Pajak
+  tax?: number;
   total: number;
   paymentMethod: string;
   cashReceived?: number;
@@ -48,7 +51,7 @@ export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettin
     items: tx.items,
     subtotal: tx.subtotal,
     discount: tx.discount,
-    tax: tx.tax, // GAP-3 fix: Pajak
+    tax: tx.tax,
     total: tx.totalAmount,
     paymentMethod: tx.paymentMethod,
     cashReceived: tx.cashReceived,
@@ -62,13 +65,232 @@ export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettin
 }
 
 // ============================================================
+// PRINTER DEVICE REGISTRY (Multiple Bluetooth Connections)
+// ============================================================
+
+interface BluetoothConnection {
+  device: BluetoothDevice;
+  characteristic: BluetoothRemoteGATTCharacteristic;
+  deviceName: string;
+  deviceId: string;
+}
+
+export interface PrinterStatus {
+  printerId: string;
+  connected: boolean;
+  deviceName?: string;
+  deviceId?: string;
+}
+
+export interface PrintJobResult {
+  printer: string;
+  status: 'success' | 'error';
+  error?: string;
+}
+
+/**
+ * Registry: Maps a logical printer ID to its Bluetooth connection.
+ * - '__cashier__' → Cashier receipt printer
+ * - '<kitchen-printer-uuid>' → Kitchen/bar printer
+ */
+const printerRegistry = new Map<string, BluetoothConnection>();
+export const CASHIER_PRINTER_ID = '__cashier__';
+
+// ============================================================
+// BLUETOOTH CONNECTION MANAGEMENT
+// ============================================================
+
+/**
+ * Connect a Bluetooth printer and register it under a specific printer ID.
+ * Each call opens the browser's Bluetooth device picker independently.
+ */
+export async function connectBluetoothPrinter(
+  printerId: string = CASHIER_PRINTER_ID
+): Promise<{ success: boolean; deviceId?: string; deviceName?: string }> {
+  try {
+    if (!navigator.bluetooth) {
+      alert('Browser ini tidak mendukung Web Bluetooth. Gunakan Chrome atau Edge.');
+      return { success: false };
+    }
+
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [
+        { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+      ],
+      optionalServices: [
+        '000018f0-0000-1000-8000-00805f9b34fb',
+        '0000ff00-0000-1000-8000-00805f9b34fb',
+        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+      ],
+    });
+
+    if (!device) return { success: false };
+
+    const gatt = device.gatt;
+    if (!gatt) {
+      alert('Printer tidak mendukung GATT. Coba pairing ulang.');
+      return { success: false };
+    }
+    const server = await gatt.connect();
+
+    // Try common thermal printer services
+    const serviceUUIDs = [
+      '000018f0-0000-1000-8000-00805f9b34fb',
+      '0000ff00-0000-1000-8000-00805f9b34fb',
+      'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+    ];
+
+    for (const uuid of serviceUUIDs) {
+      try {
+        const service = await server.getPrimaryService(uuid);
+        const characteristics = await service.getCharacteristics();
+        for (const char of characteristics) {
+          if (char.properties.write || char.properties.writeWithoutResponse) {
+            // Register connection under this printerId
+            printerRegistry.set(printerId, {
+              device,
+              characteristic: char,
+              deviceName: device.name || 'Unknown Printer',
+              deviceId: device.id,
+            });
+
+            // Listen for disconnection
+            device.addEventListener('gattserverdisconnected', () => {
+              printerRegistry.delete(printerId);
+              console.log(`[PrinterRegistry] ${printerId} disconnected (${device.name})`);
+            });
+
+            return {
+              success: true,
+              deviceId: device.id,
+              deviceName: device.name || 'Unknown Printer',
+            };
+          }
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    alert('Printer ditemukan tapi tidak bisa menulis. Pastikan printer thermal Bluetooth kompatibel.');
+    return { success: false };
+  } catch (err: any) {
+    if (err.name !== 'NotFoundError') {
+      console.error('Bluetooth error:', err);
+      alert(`Gagal connect: ${err.message}`);
+    }
+    return { success: false };
+  }
+}
+
+/**
+ * Check if a specific printer is connected.
+ */
+export function isBluetoothConnected(printerId: string = CASHIER_PRINTER_ID): boolean {
+  const conn = printerRegistry.get(printerId);
+  return !!(conn?.device?.gatt?.connected && conn?.characteristic);
+}
+
+/**
+ * Get the status of a specific printer.
+ */
+export function getBluetoothStatus(printerId: string = CASHIER_PRINTER_ID): PrinterStatus {
+  const conn = printerRegistry.get(printerId);
+  const connected = !!(conn?.device?.gatt?.connected && conn?.characteristic);
+  return {
+    printerId,
+    connected,
+    deviceName: connected ? conn?.deviceName : undefined,
+    deviceId: connected ? conn?.deviceId : undefined,
+  };
+}
+
+/**
+ * Disconnect a specific printer from the registry.
+ */
+export async function disconnectBluetoothPrinter(printerId: string = CASHIER_PRINTER_ID) {
+  const conn = printerRegistry.get(printerId);
+  if (conn?.device?.gatt?.connected) {
+    conn.device.gatt.disconnect();
+  }
+  printerRegistry.delete(printerId);
+}
+
+/**
+ * Check if a Bluetooth device is already used by another printer in the registry.
+ * Returns the printer ID and name that's using the device, or null.
+ */
+export function getDuplicateDeviceInfo(
+  deviceId: string,
+  excludePrinterId: string,
+  settings: AppSettings
+): { printerId: string; printerName: string } | null {
+  for (const [regId, conn] of printerRegistry.entries()) {
+    if (regId !== excludePrinterId && conn.deviceId === deviceId) {
+      // Find human-readable name
+      let printerName = 'Printer Kasir';
+      if (regId !== CASHIER_PRINTER_ID) {
+        const kp = (settings.kitchenPrinters || []).find(p => p.id === regId);
+        printerName = kp?.name || regId;
+      }
+      return { printerId: regId, printerName };
+    }
+  }
+  return null;
+}
+
+/**
+ * Get statuses for all registered printers (for UI display).
+ */
+export function getAllPrinterStatuses(): PrinterStatus[] {
+  const statuses: PrinterStatus[] = [];
+  for (const [id, conn] of printerRegistry.entries()) {
+    const connected = !!(conn.device?.gatt?.connected && conn.characteristic);
+    statuses.push({
+      printerId: id,
+      connected,
+      deviceName: conn.deviceName,
+      deviceId: conn.deviceId,
+    });
+  }
+  return statuses;
+}
+
+// ============================================================
+// INTERNAL: Send ESC/POS byte data to a specific printer
+// ============================================================
+
+async function sendToBluetoothPrinter(printerId: string, data: Uint8Array): Promise<void> {
+  const conn = printerRegistry.get(printerId);
+  if (!conn || !conn.characteristic) {
+    throw new Error(`Printer "${printerId}" tidak terhubung.`);
+  }
+
+  // Verify GATT is still connected
+  if (!conn.device.gatt?.connected) {
+    printerRegistry.delete(printerId);
+    throw new Error(`Koneksi Bluetooth ke printer "${conn.deviceName}" terputus.`);
+  }
+
+  const chunkSize = 20;
+  for (let i = 0; i < data.length; i += chunkSize) {
+    const chunk = data.slice(i, i + chunkSize);
+    if (conn.characteristic.properties.writeWithoutResponse) {
+      await conn.characteristic.writeValueWithoutResponse(chunk);
+    } else {
+      await conn.characteristic.writeValue(chunk);
+    }
+    await new Promise((r) => setTimeout(r, 20));
+  }
+}
+
+// ============================================================
 // MODE 1: BROWSER PRINT (window.print)
 // ============================================================
 
 export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
   const fontSize = width === '58mm' ? '10px' : '12px';
   const paperWidth = width === '58mm' ? '48mm' : '72mm';
-  // ITEM-3 fix: Use pure ASCII characters ('-') to prevent corrupt symbols on thermal printers
   const separator = width === '58mm' ? '-'.repeat(32) : '-'.repeat(42);
 
   const dateStr = new Date(data.date).toLocaleString('id-ID');
@@ -160,125 +382,38 @@ export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
   `);
   printWindow.document.close();
 
-  // Auto print after a short delay for rendering
   setTimeout(() => {
     printWindow.print();
-    // Close after print dialog
     setTimeout(() => printWindow.close(), 1000);
   }, 300);
 }
 
 // ============================================================
-// MODE 2: BLUETOOTH ESC/POS
+// MODE 2: BLUETOOTH ESC/POS — Cashier Receipt
 // ============================================================
 
-let bluetoothDevice: BluetoothDevice | null = null;
-let bluetoothCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
-
-export async function connectBluetoothPrinter(): Promise<boolean> {
-  try {
-    if (!navigator.bluetooth) {
-      alert('Browser ini tidak mendukung Web Bluetooth. Gunakan Chrome atau Edge.');
-      return false;
-    }
-
-    bluetoothDevice = await navigator.bluetooth.requestDevice({
-      filters: [
-        { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Common thermal printer service
-      ],
-      optionalServices: [
-        '000018f0-0000-1000-8000-00805f9b34fb',
-        '0000ff00-0000-1000-8000-00805f9b34fb',
-        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-      ],
-    });
-
-    if (!bluetoothDevice) return false;
-
-    const gatt = bluetoothDevice.gatt;
-    if (!gatt) {
-      alert('Printer tidak mendukung GATT. Coba pairing ulang.');
-      return false;
-    }
-    const server = await gatt.connect();
-
-    // Try common thermal printer services
-    const serviceUUIDs = [
-      '000018f0-0000-1000-8000-00805f9b34fb',
-      '0000ff00-0000-1000-8000-00805f9b34fb',
-      'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-    ];
-
-    for (const uuid of serviceUUIDs) {
-      try {
-        const service = await server.getPrimaryService(uuid);
-        const characteristics = await service.getCharacteristics();
-        // Find writable characteristic
-        for (const char of characteristics) {
-          if (char.properties.write || char.properties.writeWithoutResponse) {
-            bluetoothCharacteristic = char;
-            return true;
-          }
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    alert('Printer ditemukan tapi tidak bisa menulis. Pastikan printer thermal Bluetooth kompatibel.');
-    return false;
-  } catch (err: any) {
-    if (err.name !== 'NotFoundError') { // User cancelled
-      console.error('Bluetooth error:', err);
-      alert(`Gagal connect: ${err.message}`);
-    }
-    return false;
-  }
-}
-
-export function isBluetoothConnected(): boolean {
-  return !!(bluetoothDevice?.gatt?.connected && bluetoothCharacteristic);
-}
-
-export async function disconnectBluetoothPrinter() {
-  if (bluetoothDevice?.gatt?.connected) {
-    bluetoothDevice.gatt.disconnect();
-  }
-  bluetoothDevice = null;
-  bluetoothCharacteristic = null;
-}
-
-export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '80mm') {
-  if (!bluetoothCharacteristic) {
-    const connected = await connectBluetoothPrinter();
-    if (!connected) return;
-  }
-
+async function buildReceiptESCPOS(data: ReceiptData, width: '58mm' | '80mm'): Promise<Uint8Array> {
   const maxChars = width === '58mm' ? 32 : 42;
   const encoder = new TextEncoder();
-
-  // ESC/POS commands
   const ESC = 0x1B;
   const GS = 0x1D;
   const commands: number[] = [];
 
   // Initialize printer
-  commands.push(ESC, 0x40); // ESC @ - Initialize
+  commands.push(ESC, 0x40);
 
-  // Center align
-  commands.push(ESC, 0x61, 0x01); // ESC a 1 - Center
-
-  // Bold on
-  commands.push(ESC, 0x45, 0x01); // ESC E 1 - Bold on
+  // Center align + Bold store name
+  commands.push(ESC, 0x61, 0x01);
+  commands.push(ESC, 0x45, 0x01);
   commands.push(...encoder.encode(data.storeName + '\n'));
-  commands.push(ESC, 0x45, 0x00); // Bold off
+  commands.push(ESC, 0x45, 0x00);
 
   if (data.storeAddress) {
     commands.push(...encoder.encode(data.storeAddress + '\n'));
   }
 
   // Left align
-  commands.push(ESC, 0x61, 0x00); // ESC a 0 - Left
+  commands.push(ESC, 0x61, 0x00);
   if (data.isReprint) {
     commands.push(...encoder.encode('*** CETAK ULANG ***\n'));
   }
@@ -342,32 +477,24 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
   commands.push(...encoder.encode(`\n${footerText}\n\n`));
 
   // Feed and cut
-  commands.push(ESC, 0x64, 0x04); // Feed 4 lines
-  commands.push(GS, 0x56, 0x00); // Cut paper
+  commands.push(ESC, 0x64, 0x04);
+  commands.push(GS, 0x56, 0x00);
 
-  // Send data in chunks (BLE has MTU limit ~20 bytes)
-  const data_array = new Uint8Array(commands);
-  const chunkSize = 20;
+  return new Uint8Array(commands);
+}
 
-  for (let i = 0; i < data_array.length; i += chunkSize) {
-    const chunk = data_array.slice(i, i + chunkSize);
-    try {
-      if (bluetoothCharacteristic!.properties.writeWithoutResponse) {
-        await bluetoothCharacteristic!.writeValueWithoutResponse(chunk);
-      } else {
-        await bluetoothCharacteristic!.writeValue(chunk);
-      }
-      // Small delay between chunks
-      await new Promise((r) => setTimeout(r, 20));
-    } catch (err) {
-      console.error('Print chunk error:', err);
-      break;
-    }
+async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '80mm') {
+  if (!isBluetoothConnected(CASHIER_PRINTER_ID)) {
+    const result = await connectBluetoothPrinter(CASHIER_PRINTER_ID);
+    if (!result.success) return;
   }
+
+  const escposData = await buildReceiptESCPOS(data, width);
+  await sendToBluetoothPrinter(CASHIER_PRINTER_ID, escposData);
 }
 
 // ============================================================
-// MAIN PRINT FUNCTION (auto-selects mode based on settings)
+// KITCHEN TICKET — Browser Print
 // ============================================================
 
 export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[], kp: KitchenPrinterConfig) {
@@ -444,7 +571,11 @@ export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[],
   }, 300);
 }
 
-export async function printKitchenReceiptBluetooth(data: ReceiptData, items: CartItem[], kp: KitchenPrinterConfig) {
+// ============================================================
+// KITCHEN TICKET — Bluetooth ESC/POS
+// ============================================================
+
+async function buildKitchenESCPOS(data: ReceiptData, items: CartItem[], kp: KitchenPrinterConfig): Promise<Uint8Array> {
   const maxChars = kp.width === '58mm' ? 32 : 42;
   const encoder = new TextEncoder();
   const ESC = 0x1B;
@@ -493,71 +624,140 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
   commands.push(ESC, 0x64, 0x04);
   commands.push(GS, 0x56, 0x00);
 
-  const data_array = new Uint8Array(commands);
-  const chunkSize = 20;
-
-  if (!bluetoothCharacteristic) {
-    alert(`Printer Bluetooth untuk ${kp.name} belum terhubung. Sambungkan printer terlebih dahulu.`);
-    return;
-  }
-
-  for (let i = 0; i < data_array.length; i += chunkSize) {
-    const chunk = data_array.slice(i, i + chunkSize);
-    try {
-      if (bluetoothCharacteristic.properties.writeWithoutResponse) {
-        await bluetoothCharacteristic.writeValueWithoutResponse(chunk);
-      } else {
-        await bluetoothCharacteristic.writeValue(chunk);
-      }
-      await new Promise((r) => setTimeout(r, 20));
-    } catch (err) {
-      console.error('Print chunk error:', err);
-      break;
-    }
-  }
+  return new Uint8Array(commands);
 }
 
-import type { KitchenPrinterConfig } from '../types';
+async function printKitchenReceiptBluetooth(data: ReceiptData, items: CartItem[], kp: KitchenPrinterConfig): Promise<void> {
+  if (!isBluetoothConnected(kp.id)) {
+    throw new Error(`Printer Bluetooth "${kp.name}" belum terhubung. Sambungkan printer terlebih dahulu di Settings.`);
+  }
+
+  const escposData = await buildKitchenESCPOS(data, items, kp);
+  await sendToBluetoothPrinter(kp.id, escposData);
+}
+
+// ============================================================
+// MAIN PRINT ORCHESTRATOR — Error Isolation with Promise.allSettled
+// ============================================================
 
 export async function printReceipt(
   data: ReceiptData,
   settings: AppSettings,
   targetPrinter: 'all' | 'cashier' = 'all'
-) {
-  // 1. Print full receipt on cashier printer if enabled
+): Promise<PrintJobResult[]> {
+  const results: PrintJobResult[] = [];
+
+  // 1. Print cashier receipt
   if (settings.printerEnabled) {
-    if (settings.printerType === 'bluetooth') {
-      await printReceiptBluetooth(data, settings.printerWidth);
-    } else {
-      printReceiptBrowser(data, settings.printerWidth);
+    try {
+      if (settings.printerType === 'bluetooth') {
+        await printReceiptBluetooth(data, settings.printerWidth);
+      } else {
+        printReceiptBrowser(data, settings.printerWidth);
+      }
+      results.push({ printer: 'Printer Kasir', status: 'success' });
+    } catch (err: any) {
+      console.error('[PrintReceipt] Cashier print failed:', err);
+      results.push({ printer: 'Printer Kasir', status: 'error', error: err.message });
     }
   }
 
-  // 2. Print split kitchen receipts ONLY if targetPrinter === 'all'
+  // 2. Print kitchen tickets (only when target is 'all')
   if (targetPrinter === 'all' && settings.kitchenPrinters && settings.kitchenPrinters.length > 0) {
-    for (const kp of settings.kitchenPrinters) {
-      if (!kp.enabled) continue;
+    const kitchenJobs = settings.kitchenPrinters
+      .filter(kp => kp.enabled)
+      .map(async (kp): Promise<PrintJobResult> => {
+        // Filter items by kitchen target
+        const matchingItems = data.items.filter((item) => {
+          const itemTarget = (item.kitchenTarget || '').trim().toLowerCase();
+          const printerTarget = (kp.targetCategory || '').trim().toLowerCase();
+          return itemTarget === printerTarget && printerTarget !== '';
+        });
 
-      // Filter items matching the targeted kitchen/bar category
-      const matchingItems = data.items.filter((item) => {
-        const itemTarget = (item.kitchenTarget || '').trim().toLowerCase();
-        const printerTarget = (kp.targetCategory || '').trim().toLowerCase();
-        return itemTarget === printerTarget && printerTarget !== '';
+        if (matchingItems.length === 0) {
+          return { printer: kp.name, status: 'success' }; // Nothing to print = success
+        }
+
+        try {
+          if (kp.type === 'bluetooth') {
+            await printKitchenReceiptBluetooth(data, matchingItems, kp);
+          } else {
+            printKitchenReceiptBrowser(data, matchingItems, kp);
+          }
+          return { printer: kp.name, status: 'success' };
+        } catch (err: any) {
+          console.error(`[PrintReceipt] Kitchen print failed for ${kp.name}:`, err);
+          return { printer: kp.name, status: 'error', error: err.message };
+        }
       });
 
-      if (matchingItems.length === 0) continue;
-
-      // Print kitchen ticket
-      if (kp.type === 'bluetooth') {
-        await printKitchenReceiptBluetooth(data, matchingItems, kp);
+    const kitchenResults = await Promise.allSettled(kitchenJobs);
+    for (const result of kitchenResults) {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
       } else {
-        printKitchenReceiptBrowser(data, matchingItems, kp);
+        results.push({ printer: 'Kitchen (unknown)', status: 'error', error: result.reason?.message });
       }
     }
   }
+
+  return results;
 }
 
-// GAP-7 fix: General raw text printing utility (supporting bluetooth & browser fallback)
+// ============================================================
+// TEST PRINT — Independent per printer
+// ============================================================
+
+export async function testPrintBluetooth(
+  printerId: string,
+  printerName: string,
+  targetLabel: string,
+  width: '58mm' | '80mm' = '58mm'
+): Promise<void> {
+  if (!isBluetoothConnected(printerId)) {
+    throw new Error(`Printer "${printerName}" belum terhubung.`);
+  }
+
+  const conn = printerRegistry.get(printerId);
+  const deviceName = conn?.deviceName || 'Unknown';
+
+  const maxChars = width === '58mm' ? 32 : 42;
+  const encoder = new TextEncoder();
+  const ESC = 0x1B;
+  const GS = 0x1D;
+  const commands: number[] = [];
+
+  commands.push(ESC, 0x40); // Initialize
+  commands.push(ESC, 0x61, 0x01); // Center
+
+  commands.push(ESC, 0x45, 0x01); // Bold on
+  commands.push(...encoder.encode('BERDIKARIPOS\n'));
+  commands.push(...encoder.encode('TEST PRINT\n'));
+  commands.push(ESC, 0x45, 0x00); // Bold off
+
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
+  commands.push(ESC, 0x61, 0x00); // Left align
+  commands.push(...encoder.encode(`Printer: ${printerName}\n`));
+  commands.push(...encoder.encode(`Target: ${targetLabel}\n`));
+  commands.push(...encoder.encode(`Device: ${deviceName}\n`));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
+
+  commands.push(ESC, 0x61, 0x01); // Center
+  commands.push(ESC, 0x45, 0x01);
+  commands.push(...encoder.encode('\nStatus: OK\n\n'));
+  commands.push(ESC, 0x45, 0x00);
+
+  commands.push(ESC, 0x64, 0x04); // Feed
+  commands.push(GS, 0x56, 0x00); // Cut
+
+  const data = new Uint8Array(commands);
+  await sendToBluetoothPrinter(printerId, data);
+}
+
+// ============================================================
+// RAW TEXT PRINTING (for shift summary etc.)
+// ============================================================
+
 export async function printTextRaw(lines: string[], settings: AppSettings) {
   if (!settings.printerEnabled) {
     fallbackBrowserPrintText(lines, '58mm');
@@ -565,44 +765,37 @@ export async function printTextRaw(lines: string[], settings: AppSettings) {
   }
 
   if (settings.printerType === 'bluetooth') {
-    const connected = bluetoothCharacteristic ? true : await connectBluetoothPrinter();
-    if (!connected) {
-      fallbackBrowserPrintText(lines, settings.printerWidth);
-      return;
+    // Ensure cashier printer is connected
+    if (!isBluetoothConnected(CASHIER_PRINTER_ID)) {
+      const result = await connectBluetoothPrinter(CASHIER_PRINTER_ID);
+      if (!result.success) {
+        fallbackBrowserPrintText(lines, settings.printerWidth);
+        return;
+      }
     }
+
     const maxChars = settings.printerWidth === '58mm' ? 32 : 42;
     const encoder = new TextEncoder();
     const ESC = 0x1B;
     const GS = 0x1D;
     const commands: number[] = [];
 
-    // Initialize printer
-    commands.push(ESC, 0x40); // ESC @
-    commands.push(ESC, 0x61, 0x00); // Left align
+    commands.push(ESC, 0x40);
+    commands.push(ESC, 0x61, 0x00);
 
     for (const line of lines) {
       commands.push(...encoder.encode(line + '\n'));
     }
 
-    // Feed and cut
-    commands.push(ESC, 0x64, 0x04); // Feed 4 lines
-    commands.push(GS, 0x56, 0x00); // Cut paper
+    commands.push(ESC, 0x64, 0x04);
+    commands.push(GS, 0x56, 0x00);
 
-    const data_array = new Uint8Array(commands);
-    const chunkSize = 20;
-    for (let i = 0; i < data_array.length; i += chunkSize) {
-      const chunk = data_array.slice(i, i + chunkSize);
-      try {
-        if (bluetoothCharacteristic!.properties.writeWithoutResponse) {
-          await bluetoothCharacteristic!.writeValueWithoutResponse(chunk);
-        } else {
-          await bluetoothCharacteristic!.writeValue(chunk);
-        }
-        await new Promise((r) => setTimeout(r, 20));
-      } catch (err) {
-        console.error('Print chunk error:', err);
-        break;
-      }
+    const data = new Uint8Array(commands);
+    try {
+      await sendToBluetoothPrinter(CASHIER_PRINTER_ID, data);
+    } catch (err) {
+      console.error('printTextRaw Bluetooth error:', err);
+      fallbackBrowserPrintText(lines, settings.printerWidth);
     }
   } else {
     fallbackBrowserPrintText(lines, settings.printerWidth);
@@ -655,8 +848,7 @@ function leftRight(left: string, right: string, width: '58mm' | '80mm'): string 
 }
 
 function padLeft(text: string, width: '58mm' | '80mm'): string {
-  // BUG-R2 fix: Actually right-align within remaining line space
   const maxChars = width === '58mm' ? 32 : 42;
-  const pad = Math.max(1, maxChars - text.length - 10); // account for qty prefix
+  const pad = Math.max(1, maxChars - text.length - 10);
   return ' '.repeat(pad) + text;
 }
