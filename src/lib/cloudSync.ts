@@ -279,6 +279,21 @@ export function subscribeToUsers(callback: (payload: any) => void) {
   return channel;
 }
 
+export function subscribeToStockOpnames(callback: (payload: any) => void) {
+  if (!isSupabaseConfigured) return null;
+
+  const channel = supabase
+    .channel('stock-opnames-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'stock_opnames' },
+      callback
+    )
+    .subscribe();
+
+  return channel;
+}
+
 // ============================================================
 // INVENTORY
 // ============================================================

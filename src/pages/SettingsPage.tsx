@@ -26,6 +26,7 @@ import {
   Database,
   AlertTriangle,
   Palette,
+  FileText,
 } from 'lucide-react';
 import { generateShades, THEME_PRESETS, hexToRgbValues } from '../utils/theme';
 
@@ -265,8 +266,8 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">⚙️ Settings</h1>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">⚙️ Settings</h1>
       </div>
 
       {/* Tab Menu */}
@@ -848,6 +849,38 @@ export default function SettingsPage() {
             <p className="mt-0.5">
               • Setiap menu produk dapat diatur target dapurnya (misal: Produk A di-set target <strong>Minuman</strong>, Produk B di-set target <strong>Makanan</strong>).
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Pengaturan Format & Teks Struk (Item 6) */}
+      <div className="card p-5">
+        <h2 className="font-bold text-lg flex items-center gap-2 mb-4">
+          <FileText size={18} className="text-brand-600" /> Pengaturan Format Struk
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <label className="label">Teks Header Tambahan (Slogan / Pesan atas)</label>
+            <input
+              type="text"
+              value={settings.receiptHeader || ''}
+              onChange={(e) => updateSettings({ receiptHeader: e.target.value })}
+              className="input"
+              placeholder="Contoh: Selamat Datang di BerdikariPOS!"
+            />
+            <p className="text-xs text-slate-400 mt-1">Dicetak di bagian paling atas struk (bawah nama toko).</p>
+          </div>
+
+          <div>
+            <label className="label">Teks Footer Tambahan (Catatan Kaki Struk)</label>
+            <input
+              type="text"
+              value={settings.receiptFooter || ''}
+              onChange={(e) => updateSettings({ receiptFooter: e.target.value })}
+              className="input"
+              placeholder="Contoh: Terima kasih atas kunjungan Anda! IG: @berdikaripos"
+            />
+            <p className="text-xs text-slate-400 mt-1">Dicetak di bagian paling bawah struk.</p>
           </div>
         </div>
       </div>

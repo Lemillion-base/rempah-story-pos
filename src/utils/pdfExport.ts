@@ -42,6 +42,8 @@ export function exportPnlPDF(data: {
   totalTax: number; // GAP-3 fix: Pajak
   netRevenue: number; // GAP-3 fix: Pendapatan Bersih
   grossProfit: number;
+  totalOpnameLoss?: number; // BUG-02 fix: Stock Opname Loss
+  netProfit?: number; // BUG-02 fix: Net Profit after Opname Loss
   profitMargin: number;
   txCount: number;
   avgTransaction: number;
@@ -50,6 +52,9 @@ export function exportPnlPDF(data: {
   categorySales: [string, { revenue: number; qty: number }][];
 }) {
   const doc = createPDF({ title: 'Laporan Laba Rugi', storeName: data.storeName, period: data.period });
+
+  const opnameLoss = data.totalOpnameLoss || 0;
+  const netProf = data.netProfit !== undefined ? data.netProfit : data.grossProfit - opnameLoss;
 
   // P&L Table
   autoTable(doc, {
@@ -62,6 +67,8 @@ export function exportPnlPDF(data: {
       ['Pajak Terkumpul (Tax)', `+${formatRupiah(data.totalTax)}`],
       ['Harga Pokok Penjualan (HPP)', `(${formatRupiah(data.totalHPP)})`],
       ['Laba Kotor', formatRupiah(data.grossProfit)],
+      ['Kerugian Stock Opname (Bahan Basi/Rusak)', `(${formatRupiah(opnameLoss)})`],
+      ['Laba Bersih Operasional (Net Profit)', formatRupiah(netProf)],
       ['', ''],
       ['Jumlah Transaksi', String(data.txCount)],
       ['Rata-rata per Transaksi', formatRupiah(data.avgTransaction)],

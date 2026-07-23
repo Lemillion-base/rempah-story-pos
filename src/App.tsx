@@ -10,6 +10,7 @@ import { useTransactionStore } from './store/transactionStore';
 import { useMenuStore } from './store/menuStore';
 import { useInventoryStore } from './store/inventoryStore';
 import { usePromoStore } from './store/promoStore';
+import { useStockOpnameStore } from './store/stockOpnameStore';
 import { updateFavicon, updatePageTitle } from './utils/favicon';
 import { hexToRgbValues } from './utils/theme';
 import { initOfflineQueue } from './lib/offlineQueue';
@@ -118,6 +119,8 @@ export default function App() {
     usePromoStore.getState().loadFromCloud(true);
     // BUG-C3 fix: Load shifts from cloud
     useShiftStore.getState().loadFromCloud();
+    // BUG-01 fix: Load stock opnames from cloud on app startup
+    useStockOpnameStore.getState().loadFromCloud();
     fetchTransactionsFromCloud().then((txs) => {
       if (txs && txs.length > 0) useTransactionStore.getState().loadFromCloud(txs, true);
     });

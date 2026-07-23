@@ -170,4 +170,9 @@ export const seedSettings: AppSettings = {
     800: '#763b20',
     900: '#60311d',
   },
+  receiptHeader: '',
+  receiptFooter: 'Terima kasih atas kunjungan Anda!',
+  receiptAsciiOnly: true,
+  autoPrintReceipt: false,
+  autoPrintKitchen: false,
 };

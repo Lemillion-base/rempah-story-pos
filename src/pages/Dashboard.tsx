@@ -336,11 +336,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold">📊 Dashboard & Analitik</h1>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">📊 Dashboard & Analitik</h1>
         
         {/* Navigation Tabs */}
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 self-start">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 w-full sm:w-auto justify-center">
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${

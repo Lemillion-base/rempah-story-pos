@@ -12,7 +12,7 @@ import { usePromoStore } from '../store/promoStore';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatRupiah } from '../utils/format';
-import { calculateTransactionHPP } from '../utils/hpp';
+import { calculateTransactionHPP, calculateItemDeductions } from '../utils/hpp';
 import { printReceipt, buildReceiptFromTransaction } from '../utils/printer';
 import { checkStockAvailability, type StockWarning } from '../utils/stockCheck';
 import type { Menu, CartItem, Temperature, SugarLevel, AddOn, PaymentMethod, OrderType } from '../types';
@@ -372,16 +372,16 @@ export default function POS() {
       return;
     }
     const manualDiscount = parseInt(discountInput) || 0;
-    const rawTotalDiscount = manualDiscount + promoDiscount + loyaltyDiscount;
-    const subtotal = cart.getSubtotal();
-    // LOGIC-2 fix: Cap total discount to never exceed subtotal
-    const totalDiscount = Math.min(rawTotalDiscount, subtotal);
-    const netSubtotal = Math.max(0, subtotal - totalDiscount);
+    const rawTotalDiscount = Math.round(manualDiscount + promoDiscount + loyaltyDiscount);
+    const subtotal = Math.round(cart.getSubtotal());
+    // LOGIC-2 & LOGIC-05 fix: Cap total discount to never exceed subtotal & round to whole integer
+    const totalDiscount = Math.round(Math.min(rawTotalDiscount, subtotal));
+    const netSubtotal = Math.round(Math.max(0, subtotal - totalDiscount));
     
-    // GAP-3: Calculate tax
+    // GAP-3 & LOGIC-05 fix: Calculate tax rounded to whole integer Rupiah
     const taxPercent = settings.taxPercent || 0;
     const taxAmount = Math.round((netSubtotal * taxPercent) / 100);
-    const total = netSubtotal + taxAmount;
+    const total = Math.round(netSubtotal + taxAmount);
     const cash = parseInt(cashReceived) || 0;
 
     // Safety guard: Cash payment must have sufficient funds
@@ -391,16 +391,8 @@ export default function POS() {
 
     const hpp = calculateTransactionHPP(cart.items, menus, inventory);
 
-    // Deduct inventory
-    const deductions: Record<string, number> = {};
-    for (const item of cart.items) {
-      const menu = menus.find((m) => m.id === item.menuId);
-      if (menu) {
-        for (const [invId, amount] of Object.entries(menu.ingredients)) {
-          deductions[invId] = (deductions[invId] || 0) + amount * item.quantity;
-        }
-      }
-    }
+    // Deduct inventory (BUG-04 fix: includes addon ingredients via calculateItemDeductions)
+    const deductions = calculateItemDeductions(cart.items, menus);
     deductStock(deductions);
 
     const tx = {
@@ -598,7 +590,7 @@ export default function POS() {
             </div>
 
             {/* Customer Selection */}
-            <div className="px-4 pt-3">
+            <div className="px-4 pt-3 space-y-2">
               <select
                 value={selectedCustomerId || ''}
                 onChange={(e) => setSelectedCustomerId(e.target.value || null)}
@@ -611,6 +603,43 @@ export default function POS() {
                   </option>
                 ))}
               </select>
+
+              {/* Tipe Pesanan & Nomor Meja (Mobile View Fix) */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Tipe</label>
+                  <select
+                    value={orderType}
+                    onChange={(e) => {
+                      const val = e.target.value as OrderType;
+                      setOrderType(val);
+                      if (val === 'Take Away') setTableNumber('');
+                    }}
+                    className="input text-xs"
+                  >
+                    <option value="Dine In">Dine In</option>
+                    <option value="Take Away">Take Away</option>
+                  </select>
+                </div>
+
+                {settings.tableFeaturesEnabled && orderType === 'Dine In' && (
+                  <div>
+                    <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Meja</label>
+                    <select
+                      value={tableNumber}
+                      onChange={(e) => setTableNumber(e.target.value)}
+                      className="input text-xs"
+                    >
+                      <option value="">-- Pilih Meja --</option>
+                      {(settings.availableTableNumbers || []).map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Cart Items */}

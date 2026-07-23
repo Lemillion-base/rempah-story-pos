@@ -1,5 +1,5 @@
 -- ============================================================
--- BerdikariPOS — Supabase Database Schema
+-- BerdikariPOS — Supabase Database Schema (v3.6)
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
 -- ============================================================
 
@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS menus (
   available_addons JSONB DEFAULT '[]',
   manual_hpp FLOAT DEFAULT 0,
   kitchen_target TEXT DEFAULT NULL,
+  show_sugar_level BOOLEAN DEFAULT true,
+  show_temperature BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -60,6 +62,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   customer_id TEXT,
   customer_name TEXT,
   hpp FLOAT DEFAULT 0,
+  tax INT DEFAULT 0,
   order_type TEXT DEFAULT 'Dine In',
   table_number TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -157,8 +160,11 @@ CREATE TABLE IF NOT EXISTS settings (
   loyalty_enabled BOOLEAN DEFAULT false,
   loyalty_settings JSONB DEFAULT '{}',
   kitchen_printers JSONB DEFAULT '[]',
+  theme_color TEXT,
+  theme_shades JSONB,
   table_features_enabled BOOLEAN DEFAULT false,
-  available_table_numbers JSONB DEFAULT '[]'
+  available_table_numbers JSONB DEFAULT '[]',
+  table_features JSONB DEFAULT '{"enabled": false, "tables": ["Meja 1", "Meja 2", "Meja 3", "Meja 4", "Meja 5"]}'
 );
 
 -- Insert default settings row
@@ -180,14 +186,10 @@ CREATE TABLE IF NOT EXISTS stock_opnames (
 
 -- ============================================================
 -- Enable Realtime for ALL tables (required for multi-device sync)
--- Run this in Supabase SQL Editor if real-time is not working
 -- ============================================================
--- IMPORTANT: You MUST run these commands to enable real-time sync!
--- If tables are already in the publication, these will be skipped.
 
 DO $$
 BEGIN
-  -- Add all tables to realtime publication
   ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -234,31 +236,14 @@ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE stock_opnames;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- ============================================================
 -- Row Level Security (RLS)
--- ============================================================
--- 
--- SECURITY WARNING: Current policies allow ALL operations with anon key.
--- This is acceptable for MVP/single-store deployment behind a private network.
--- 
--- For production hardening, choose ONE of these strategies:
---
--- OPTION A: Supabase Auth (recommended)
---   1. Enable Supabase Auth and create auth users
---   2. Replace "Allow all" policies with auth.uid()-based policies
---   3. Example:
---      CREATE POLICY "Authenticated users only" ON transactions
---        FOR ALL USING (auth.role() = 'authenticated');
---
--- OPTION B: Service Role Key (simpler)  
---   1. Move all writes to Supabase Edge Functions
---   2. Use service_role key server-side only
---   3. Revoke anon key access to sensitive tables
---
--- OPTION C: API Key restriction (quickest)
---   1. In Supabase Dashboard → Settings → API
---   2. Add domain restriction to anon key
---   3. Only your Vercel domain can use the key
 -- ============================================================
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -273,8 +258,6 @@ ALTER TABLE stock_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_opnames ENABLE ROW LEVEL SECURITY;
 
--- MVP policies — allow all operations with anon key
--- TODO: Replace with auth-based policies before scaling to multi-tenant
 CREATE POLICY "Allow all for anon" ON users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON inventory FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON menus FOR ALL USING (true) WITH CHECK (true);
@@ -288,7 +271,7 @@ CREATE POLICY "Allow all for anon" ON settings FOR ALL USING (true) WITH CHECK (
 CREATE POLICY "Allow all for anon" ON stock_opnames FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
--- Seed Data (same as localStorage seed)
+-- Seed Data
 -- ============================================================
 INSERT INTO users (name, username, password, role) VALUES
   ('Admin Manager', 'manager', 'manager123', 'Manager'),
@@ -314,3 +297,27 @@ INSERT INTO inventory (id, name, stock, unit, cost_per_unit, min_stock) VALUES
   ('sedotan', 'Sedotan', 300, 'pcs', 150, 50),
   ('air', 'Air Galon', 40, 'L', 500, 10)
 ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- 🔄 ALTER TABLE MIGRATION SCRIPT (Untuk Database yang Sudah Ada)
+-- Copy & Run skrip di bawah ini di Supabase SQL Editor jika database Anda sudah dibuat sebelumnya:
+-- ============================================================
+/*
+ALTER TABLE menus ADD COLUMN IF NOT EXISTS manual_hpp FLOAT DEFAULT 0;
+ALTER TABLE menus ADD COLUMN IF NOT EXISTS kitchen_target TEXT DEFAULT NULL;
+ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_sugar_level BOOLEAN DEFAULT TRUE;
+ALTER TABLE menus ADD COLUMN IF NOT EXISTS show_temperature BOOLEAN DEFAULT TRUE;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session_id TEXT;
+
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tax INT DEFAULT 0;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS order_type TEXT DEFAULT 'Dine In';
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS table_number TEXT;
+
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS kitchen_printers JSONB DEFAULT '[]';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_color TEXT;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_shades JSONB;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS table_features JSONB DEFAULT '{"enabled": false, "tables": ["Meja 1", "Meja 2", "Meja 3", "Meja 4", "Meja 5"]}';
+
+ALTER PUBLICATION supabase_realtime ADD TABLE stock_opnames;
+*/

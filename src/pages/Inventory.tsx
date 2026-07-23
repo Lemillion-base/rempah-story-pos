@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useInventoryStore } from '../store/inventoryStore';
+import { useStockOpnameStore } from '../store/stockOpnameStore';
 import { useAuthStore } from '../store/authStore';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { subscribeToStockOpnames, unsubscribeChannel } from '../lib/cloudSync';
 import { formatRupiah } from '../utils/format';
 import type { InventoryItem } from '../types';
 import Modal from '../components/Modal';
@@ -28,16 +30,24 @@ export default function Inventory() {
   const { addLog } = useAuditLogStore();
   const [activeTab, setActiveTab] = useState<'inventory' | 'opname'>('inventory');
 
-  // Real-time sync for inventory
+  // LOGIC-06 fix: Real-time sync for inventory and stock opnames
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    const channel = supabase
+    const invChannel = supabase
       .channel('inventory-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
         loadFromCloud(true);
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    const opnameChannel = subscribeToStockOpnames(() => {
+      useStockOpnameStore.getState().loadFromCloud();
+    });
+
+    return () => {
+      if (invChannel) supabase.removeChannel(invChannel);
+      if (opnameChannel) unsubscribeChannel(opnameChannel);
+    };
   }, []);
 
   const [search, setSearch] = useState('');
@@ -185,22 +195,22 @@ export default function Inventory() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">📦 Inventaris</h1>
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={openAdd} className="btn-primary text-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">📦 Inventaris</h1>
+        <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+          <button onClick={openAdd} className="btn-primary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             <Plus size={16} /> Tambah Bahan
           </button>
           {currentUser?.role !== 'Staf Gudang' && (
-            <button onClick={() => setShowMinStockSetting(true)} className="btn-secondary text-sm">
+            <button onClick={() => setShowMinStockSetting(true)} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <Settings2 size={16} /> Min. Stok
             </button>
           )}
-          <button onClick={handleExport} className="btn-secondary text-sm">
+          <button onClick={handleExport} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             <Download size={16} /> Export
           </button>
           {currentUser?.role !== 'Staf Gudang' && (
-            <label className="btn-secondary text-sm cursor-pointer">
+            <label className="btn-secondary text-sm cursor-pointer flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <Upload size={16} /> Import
               <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
             </label>

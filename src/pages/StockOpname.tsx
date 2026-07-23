@@ -152,14 +152,16 @@ export default function StockOpname() {
 
   return (
     <div className="space-y-4">
-      {/* Toggle View */}
-      <div className="flex items-center gap-2">
-        <button onClick={() => setView('form')} className={`text-sm px-4 py-2 rounded-lg font-medium transition ${view === 'form' ? 'bg-brand-600 text-white' : 'btn-secondary'}`}>
-          <ClipboardCheck size={14} className="inline mr-1" /> Input Opname
-        </button>
-        <button onClick={() => setView('history')} className={`text-sm px-4 py-2 rounded-lg font-medium transition ${view === 'history' ? 'bg-brand-600 text-white' : 'btn-secondary'}`}>
-          <History size={14} className="inline mr-1" /> Riwayat
-        </button>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">📋 Stock Opname</h1>
+        <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+          <button onClick={() => setView('form')} className={`text-sm px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-1.5 w-full sm:w-auto ${view === 'form' ? 'bg-brand-600 text-white' : 'btn-secondary'}`}>
+            <ClipboardCheck size={14} /> Input Opname
+          </button>
+          <button onClick={() => setView('history')} className={`text-sm px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-1.5 w-full sm:w-auto ${view === 'history' ? 'bg-brand-600 text-white' : 'btn-secondary'}`}>
+            <History size={14} /> Riwayat
+          </button>
+        </div>
       </div>
 
       {view === 'form' && (
