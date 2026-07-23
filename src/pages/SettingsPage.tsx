@@ -6,7 +6,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useAuditLogStore } from '../store/auditLogStore';
 import { useShiftStore } from '../store/shiftStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { connectBluetoothPrinter, disconnectBluetoothPrinter, isBluetoothConnected } from '../utils/printer';
+import { connectBluetoothPrinter, disconnectBluetoothPrinter, isBluetoothConnected, CASHIER_PRINTER_ID, getBluetoothStatus, getDuplicateDeviceInfo, testPrintBluetooth } from '../utils/printer';
 import { resetToDefault, clearOperationalData, factoryReset } from '../utils/dataManager';
 import type { User, Role } from '../types';
 import Modal from '../components/Modal';
@@ -643,35 +643,71 @@ export default function SettingsPage() {
           </div>
 
           {settings.printerType === 'bluetooth' && (
-            <div className="p-3 bg-amber-50 rounded-xl text-sm text-amber-700 space-y-3">
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-xl text-sm space-y-3 border border-amber-200 dark:border-amber-900/50">
               <div>
-                <p className="font-medium">🔗 Bluetooth Printer</p>
-                <p className="text-xs mt-1">
-                  Hubungkan printer thermal Bluetooth Anda. Pastikan printer sudah menyala dan dalam mode pairing.
-                  Didukung di Chrome/Edge.
+                <p className="font-semibold text-amber-800 dark:text-amber-300">🔗 Printer Kasir — Bluetooth</p>
+                <p className="text-xs mt-1 text-amber-700 dark:text-amber-400">
+                  Hubungkan printer thermal Bluetooth untuk mencetak struk konsumen. Pastikan printer sudah menyala.
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              
+              {/* Device Info */}
+              <div className="flex items-center gap-2 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isBluetoothConnected(CASHIER_PRINTER_ID) ? 'bg-green-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">
+                    {isBluetoothConnected(CASHIER_PRINTER_ID)
+                      ? `${getBluetoothStatus(CASHIER_PRINTER_ID).deviceName}`
+                      : settings.cashierBluetoothDeviceName
+                        ? `${settings.cashierBluetoothDeviceName} (Terputus)`
+                        : 'Belum ada printer terhubung'}
+                  </p>
+                  <p className={`text-[10px] ${isBluetoothConnected(CASHIER_PRINTER_ID) ? 'text-green-600 dark:text-green-400' : 'text-slate-400'}`}>
+                    {isBluetoothConnected(CASHIER_PRINTER_ID) ? '● Connected' : '○ Disconnected'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={async () => {
-                    const ok = await connectBluetoothPrinter();
-                    if (ok) alert('Printer berhasil terhubung!');
+                    const result = await connectBluetoothPrinter(CASHIER_PRINTER_ID);
+                    if (result.success) {
+                      updateSettings({
+                        cashierBluetoothDeviceId: result.deviceId,
+                        cashierBluetoothDeviceName: result.deviceName,
+                      });
+                      alert(`Printer Kasir berhasil terhubung ke "${result.deviceName}"!`);
+                    }
                   }}
                   className="btn-primary text-xs"
                 >
-                  <Printer size={14} /> Hubungkan Printer
+                  <Printer size={14} /> {isBluetoothConnected(CASHIER_PRINTER_ID) ? 'Ganti Printer' : 'Hubungkan Printer'}
                 </button>
-                {isBluetoothConnected() && (
-                  <button
-                    onClick={() => { disconnectBluetoothPrinter(); alert('Printer diputus.'); }}
-                    className="btn-secondary text-xs text-red-600"
-                  >
-                    Putuskan
-                  </button>
+                {isBluetoothConnected(CASHIER_PRINTER_ID) && (
+                  <>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await testPrintBluetooth(CASHIER_PRINTER_ID, 'Printer Kasir', 'Kasir', settings.printerWidth);
+                          alert('Test Print Kasir berhasil!');
+                        } catch (err: any) {
+                          alert(`Test Print gagal: ${err.message}`);
+                        }
+                      }}
+                      className="btn-secondary text-xs"
+                    >
+                      🖨️ Test Print
+                    </button>
+                    <button
+                      onClick={() => { disconnectBluetoothPrinter(CASHIER_PRINTER_ID); alert('Printer Kasir diputus.'); }}
+                      className="btn-secondary text-xs text-red-600"
+                    >
+                      Putuskan
+                    </button>
+                  </>
                 )}
-                <span className={`text-xs font-medium ${isBluetoothConnected() ? 'text-green-600' : 'text-slate-400'}`}>
-                  {isBluetoothConnected() ? '● Terhubung' : '○ Tidak terhubung'}
-                </span>
               </div>
             </div>
           )}
@@ -696,7 +732,7 @@ export default function SettingsPage() {
               <Printer size={18} className="text-brand-600" />
               Printer Dapur & Bar (Split Print)
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Konfigurasikan pencetakan struk terpisah ke printer dapur/bar masing-masing</p>
+            <p className="text-xs text-slate-500 mt-0.5">Setiap printer dapur/bar memiliki koneksi Bluetooth independen</p>
           </div>
           <button
             onClick={() => {
@@ -724,22 +760,45 @@ export default function SettingsPage() {
               <p className="text-xs text-slate-400 mt-1">Struk pesanan dapur terpisah dinonaktifkan. Semua struk dicetak di kasir utama.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
-                  <tr>
-                    <th className="text-left p-3 font-semibold min-w-[150px]">Nama Printer</th>
-                    <th className="text-left p-3 font-semibold min-w-[150px]">Target Kategori Dapur</th>
-                    <th className="text-left p-3 font-semibold">Tipe</th>
-                    <th className="text-left p-3 font-semibold">Lebar</th>
-                    <th className="text-center p-3 font-semibold">Aktif</th>
-                    <th className="text-center p-3 font-semibold">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(settings.kitchenPrinters || []).map((kp, idx) => (
-                    <tr key={kp.id} className="border-b border-slate-50 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                      <td className="p-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {(settings.kitchenPrinters || []).map((kp, idx) => (
+                <div key={kp.id} className={`border rounded-xl overflow-hidden ${kp.enabled ? 'border-brand-200 dark:border-brand-800/50 bg-white dark:bg-slate-800/50' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 opacity-60'}`}>
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={kp.enabled}
+                          onChange={(e) => {
+                            const newPrinters = [...(settings.kitchenPrinters || [])];
+                            newPrinters[idx] = { ...kp, enabled: e.target.checked };
+                            updateSettings({ kitchenPrinters: newPrinters });
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+                      </label>
+                      <span className="font-semibold text-sm">{kp.name || 'Printer Dapur'}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newPrinters = (settings.kitchenPrinters || []).filter((p) => p.id !== kp.id);
+                        updateSettings({ kitchenPrinters: newPrinters });
+                      }}
+                      className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-400 hover:text-red-600"
+                      title="Hapus Printer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-3 space-y-3">
+                    {/* Config Fields */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Nama</label>
                         <input
                           type="text"
                           value={kp.name}
@@ -748,11 +807,12 @@ export default function SettingsPage() {
                             newPrinters[idx] = { ...kp, name: e.target.value };
                             updateSettings({ kitchenPrinters: newPrinters });
                           }}
-                          className="input py-1 px-2 text-xs"
-                          placeholder="Nama Printer Dapur"
+                          className="input py-1.5 px-2 text-xs mt-0.5"
+                          placeholder="Nama Printer"
                         />
-                      </td>
-                      <td className="p-3">
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Target Dapur</label>
                         <input
                           type="text"
                           value={kp.targetCategory}
@@ -761,11 +821,12 @@ export default function SettingsPage() {
                             newPrinters[idx] = { ...kp, targetCategory: e.target.value };
                             updateSettings({ kitchenPrinters: newPrinters });
                           }}
-                          className="input py-1 px-2 text-xs"
-                          placeholder="Contoh: Minuman atau Makanan"
+                          className="input py-1.5 px-2 text-xs mt-0.5"
+                          placeholder="Contoh: Minuman"
                         />
-                      </td>
-                      <td className="p-3">
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Tipe</label>
                         <select
                           value={kp.type}
                           onChange={(e) => {
@@ -773,13 +834,14 @@ export default function SettingsPage() {
                             newPrinters[idx] = { ...kp, type: e.target.value as 'browser' | 'bluetooth' };
                             updateSettings({ kitchenPrinters: newPrinters });
                           }}
-                          className="input py-1 px-2 text-xs"
+                          className="input py-1.5 px-2 text-xs mt-0.5"
                         >
                           <option value="browser">Browser Print</option>
                           <option value="bluetooth">Bluetooth</option>
                         </select>
-                      </td>
-                      <td className="p-3">
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Lebar</label>
                         <select
                           value={kp.width}
                           onChange={(e) => {
@@ -787,67 +849,100 @@ export default function SettingsPage() {
                             newPrinters[idx] = { ...kp, width: e.target.value as '58mm' | '80mm' };
                             updateSettings({ kitchenPrinters: newPrinters });
                           }}
-                          className="input py-1 px-2 text-xs"
+                          className="input py-1.5 px-2 text-xs mt-0.5"
                         >
                           <option value="58mm">58mm</option>
                           <option value="80mm">80mm</option>
                         </select>
-                      </td>
-                      <td className="p-3 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={kp.enabled}
-                            onChange={(e) => {
-                              const newPrinters = [...(settings.kitchenPrinters || [])];
-                              newPrinters[idx] = { ...kp, enabled: e.target.checked };
-                              updateSettings({ kitchenPrinters: newPrinters });
-                            }}
-                            className="sr-only peer"
-                          />
-                          <div className="w-9 h-5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
-                        </label>
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {kp.type === 'bluetooth' && (
-                            <button
-                              onClick={async () => {
-                                const ok = await connectBluetoothPrinter();
-                                if (ok) alert(`Printer "${kp.name}" berhasil terhubung!`);
-                              }}
-                              className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                              title="Hubungkan Bluetooth"
-                            >
-                              <Printer size={14} />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              const newPrinters = (settings.kitchenPrinters || []).filter((p) => p.id !== kp.id);
-                              updateSettings({ kitchenPrinters: newPrinters });
-                            }}
-                            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500"
-                            title="Hapus Printer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                      </div>
+                    </div>
+
+                    {/* Bluetooth Device Binding */}
+                    {kp.type === 'bluetooth' && (
+                      <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700/50 space-y-2">
+                        {/* Device Status */}
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isBluetoothConnected(kp.id) ? 'bg-green-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                          <p className="text-xs flex-1 min-w-0 truncate">
+                            {isBluetoothConnected(kp.id)
+                              ? `${getBluetoothStatus(kp.id).deviceName} — Connected`
+                              : kp.bluetoothDeviceName
+                                ? `${kp.bluetoothDeviceName} (Terputus)`
+                                : 'Belum ada printer Bluetooth'}
+                          </p>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+                        {/* Bluetooth Actions */}
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            onClick={async () => {
+                              const result = await connectBluetoothPrinter(kp.id);
+                              if (result.success) {
+                                // Check duplicate device
+                                const duplicate = getDuplicateDeviceInfo(result.deviceId!, kp.id, settings);
+                                if (duplicate) {
+                                  alert(`⚠️ Perhatian: Device "${result.deviceName}" juga digunakan oleh "${duplicate.printerName}". Dua printer mengirim ke device fisik yang sama.`);
+                                }
+                                // Save device info
+                                const newPrinters = [...(settings.kitchenPrinters || [])];
+                                newPrinters[idx] = {
+                                  ...kp,
+                                  bluetoothDeviceId: result.deviceId,
+                                  bluetoothDeviceName: result.deviceName,
+                                };
+                                updateSettings({ kitchenPrinters: newPrinters });
+                                alert(`"${kp.name}" terhubung ke "${result.deviceName}"!`);
+                              }
+                            }}
+                            className="text-[11px] px-2 py-1 rounded bg-brand-600 text-white hover:bg-brand-700"
+                          >
+                            {isBluetoothConnected(kp.id) ? 'Ganti' : 'Hubungkan'}
+                          </button>
+                          {isBluetoothConnected(kp.id) && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await testPrintBluetooth(kp.id, kp.name, kp.targetCategory, kp.width);
+                                    alert(`Test Print "${kp.name}" berhasil!`);
+                                  } catch (err: any) {
+                                    alert(`Test Print gagal: ${err.message}`);
+                                  }
+                                }}
+                                className="text-[11px] px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600"
+                              >
+                                Test Print
+                              </button>
+                              <button
+                                onClick={() => {
+                                  disconnectBluetoothPrinter(kp.id);
+                                  alert(`"${kp.name}" diputus.`);
+                                }}
+                                className="text-[11px] px-2 py-1 rounded text-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40"
+                              >
+                                Putus
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           
           <div className="p-3 bg-blue-50/50 dark:bg-slate-800 rounded-xl text-xs text-slate-600 dark:text-slate-400">
             <p className="font-semibold">💡 Tips Split Printing:</p>
             <p className="mt-1">
-              • Gunakan tipe <strong>Browser Print</strong> untuk mencetak secara berurutan ke berbagai printer sistem (Kasir, Bar, Dapur Makanan).
+              • Setiap printer Bluetooth memiliki koneksi <strong>independen</strong>. Kegagalan satu printer tidak menggagalkan printer lainnya.
             </p>
             <p className="mt-0.5">
-              • Setiap menu produk dapat diatur target dapurnya (misal: Produk A di-set target <strong>Minuman</strong>, Produk B di-set target <strong>Makanan</strong>).
+              • Setiap menu produk dapat diatur target dapurnya di halaman Katalog Menu (misal: target <strong>Minuman</strong> atau <strong>Makanan</strong>).
+            </p>
+            <p className="mt-0.5">
+              • Setelah browser di-refresh, koneksi Bluetooth perlu dihubungkan ulang (keterbatasan Web Bluetooth API).
             </p>
           </div>
         </div>

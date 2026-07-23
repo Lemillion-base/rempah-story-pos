@@ -114,11 +114,16 @@ BerdikariPOS adalah sistem kasir berbasis web multi-purpose yang dirancang untuk
 
 ### 10. 🖨️ Printer Thermal
 - **Browser Print**: window.print() dengan format thermal paper
-- **Bluetooth ESC/POS**: Web Bluetooth API untuk cetak langsung
+- **Bluetooth ESC/POS**: Web Bluetooth API untuk cetak langsung ke printer thermal
 - **Lebar kertas**: 58mm atau 80mm
 - **Auto-print saat checkout**: (toggle on/off)
-- **Format struk**: nama toko, alamat, item, total, kembalian, footer
-- **Split Printing (Printer Dapur & Bar)**: Otomatis mencetak pesanan makanan dan minuman ke printer dapur masing-masing secara terpisah berdasarkan kategori dapur yang di-set pada menu, sementara kasir mencetak struk utuh untuk pelanggan. Dukungan browser print dan bluetooth per printer.
+- **Format struk**: nama toko, alamat, item, total, kembalian, header & footer custom
+- **Split Printing (Printer Dapur & Bar)**: Otomatis mencetak pesanan makanan dan minuman ke printer dapur masing-masing secara terpisah berdasarkan kategori dapur yang di-set pada menu, sementara kasir mencetak struk utuh untuk pelanggan.
+- **Printer Device Registry (v4.0)**: Setiap logical printer (Kasir, Kitchen Makanan, Kitchen Minuman) memiliki koneksi Bluetooth & device binding independen via `Map<string, BluetoothConnection>`.
+- **Error Isolation (`Promise.allSettled`)**: Kegagalan satu printer (misal printer dapur mati/habis kertas) tidak membatalkan transaksi atau menghambat printer lainnya yang aktif.
+- **UI Settings Card & Live Status Indicator**: Pengaturan printer dapur dalam bentuk kartu interaktif di Settings, menampilkan nama perangkat Bluetooth dan status terhubung/terputus secara real-time.
+- **Independent Test Print per Device**: Tombol Test Print pada masing-masing konfigurasi printer untuk memverifikasi physical device secara independen.
+- **Duplicate Device Warning**: Dialog konfirmasi peringatan jika satu perangkat Bluetooth fisik digunakan oleh lebih dari satu konfigurasi printer.
 
 ### 11. 🛡️ Keamanan & Audit
 - Password hashing (bcrypt, 10 salt rounds)
@@ -243,7 +248,8 @@ Cocok untuk:
 - [ ] Multi-language (English)
 - [ ] AI menu recommendation
 
-### ✅ Recently Completed (v3.2–v3.4)
+### ✅ Recently Completed (v3.2–v4.0)
+- [x] Refactor Bluetooth Thermal Printer Device Registry & Split Printing (v4.0) — Independent device binding per printer, error isolation via `Promise.allSettled`, Test Print per device, & duplicate physical device warning
 - [x] Pengaturan suhu & gula per produk (sembunyikan untuk makanan)
 - [x] Tipe pesanan Dine In / Take Away
 - [x] Stock Opname module (rekonsiliasi stok fisik)
@@ -257,4 +263,4 @@ Cocok untuk:
 
 ---
 
-*Dokumen ini menggambarkan fitur aplikasi BerdikariPOS v3.4 yang sudah live di production.*
+*Dokumen ini menggambarkan fitur aplikasi BerdikariPOS v4.0 yang sudah live di production.*

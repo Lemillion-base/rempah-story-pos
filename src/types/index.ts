@@ -111,7 +111,8 @@ export interface KitchenPrinterConfig {
   enabled: boolean;
   type: 'browser' | 'bluetooth';
   width: '58mm' | '80mm';
-  bluetoothName?: string;
+  bluetoothDeviceId?: string;    // Web Bluetooth device.id — persistent identifier
+  bluetoothDeviceName?: string;  // Human-readable Bluetooth device name
 }
 
 export interface AppSettings {
@@ -126,6 +127,8 @@ export interface AppSettings {
   printerType: 'browser' | 'bluetooth'; // browser = window.print, bluetooth = Web Bluetooth API
   printerWidth: '58mm' | '80mm';
   autoPrintOnCheckout: boolean;
+  cashierBluetoothDeviceId?: string;    // Bluetooth device.id for cashier printer
+  cashierBluetoothDeviceName?: string;  // Bluetooth device name for cashier printer
   kitchenPrinters?: KitchenPrinterConfig[]; // Konfigurasi printer dapur untuk split print
   // Super Admin & Demo
   superAdminPin: string; // PIN untuk akses Manajemen Data (hanya developer)

@@ -1,7 +1,7 @@
 # 🐛 BUG & ERROR — Laporan Analisis BerdikariPOS
 
-## Status: 🟢 Stabil — Terakhir diperbarui: 15 Juli 2026 (Perbaikan Tahap Ketiga)
-## Versi Codebase: v3.4 (Production)
+## Status: 🟢 Stabil — Terakhir diperbarui: 23 Juli 2026 (Refactor Bluetooth Thermal Printer Device Registry v4.0)
+## Versi Codebase: v4.0 (Production)
 
 ---
 
@@ -242,6 +242,9 @@
 | UI-01 | Pending queue length tidak terlihat di sidebar | ✅ Fixed (Badge counter di samping status cloud) |
 | UI-02 | Halaman lazy-loaded crash memicu blank screen | ✅ Fixed (Default ErrorBoundary di level root) |
 | UI-03 | Baris kosong tercetak jika tidak ada kustomisasi | ✅ Fixed (Conditional print line checks) |
+| PRINT-v4.0-01 | Singleton Bluetooth Connection Crosstalk (Semua printer terikat ke 1 device global) | ✅ Fixed (Refactor ke Printer Device Registry `Map<string, BluetoothConnection>`) |
+| PRINT-v4.0-02 | Gagal cetak pada 1 printer memblokir printer lain / checkout | ✅ Fixed (Error isolation menggunakan `Promise.allSettled`) |
+| PRINT-v4.0-03 | Lack of Independent Test Print & Duplicate Device Detection | ✅ Fixed (UI Card Settings + Test Print per printer + warning duplicate physical device) |
 
 ---
 
@@ -258,7 +261,7 @@
 | 🔧 Tech Debt | 4 | TECH-01 s/d TECH-04 |
 
 **Total temuan aktif: 10 item**
-**Total yang sudah diperbaiki: 42 item**
+**Total yang sudah diperbaiki: 45 item**
 
 ---
 
