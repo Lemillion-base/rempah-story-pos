@@ -114,19 +114,19 @@ export default function AuditLog() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold flex items-center justify-center sm:justify-start gap-2 text-center sm:text-left w-full sm:w-auto">
           <Shield size={24} /> Audit Log
         </h1>
-        <div className="flex gap-2">
-          <button onClick={handleExport} className="btn-secondary text-sm">
+        <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
+          <button onClick={handleExport} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             <Download size={14} /> Export
           </button>
-          <button onClick={() => clearOldLogs(90)} className="btn-secondary text-sm">
+          <button onClick={() => clearOldLogs(90)} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             Hapus &gt; 90 hari
           </button>
-          <button onClick={() => setShowClearConfirm(true)} className="btn-secondary text-sm text-red-600 flex items-center gap-1">
-            <Trash2 size={14} /> Hapus Semua Log
+          <button onClick={() => setShowClearConfirm(true)} className="btn-secondary text-sm text-red-600 flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
+            <Trash2 size={14} /> Hapus Semua
           </button>
         </div>
       </div>

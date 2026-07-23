@@ -31,9 +31,12 @@ export interface ReceiptData {
   change?: number;
   orderType?: 'Dine In' | 'Take Away';
   tableNumber?: string;
+  receiptHeader?: string;
+  receiptFooter?: string;
+  isReprint?: boolean;
 }
 
-export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettings): ReceiptData {
+export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettings, isReprint: boolean = false): ReceiptData {
   return {
     storeName: settings.storeName,
     storeAddress: settings.address,
@@ -52,6 +55,9 @@ export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettin
     change: tx.change,
     orderType: tx.orderType,
     tableNumber: tx.tableNumber,
+    receiptHeader: settings.receiptHeader,
+    receiptFooter: settings.receiptFooter,
+    isReprint,
   };
 }
 
@@ -62,15 +68,20 @@ export function buildReceiptFromTransaction(tx: Transaction, settings: AppSettin
 export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
   const fontSize = width === '58mm' ? '10px' : '12px';
   const paperWidth = width === '58mm' ? '48mm' : '72mm';
-  const separator = width === '58mm' ? '─'.repeat(32) : '─'.repeat(42);
+  // ITEM-3 fix: Use pure ASCII characters ('-') to prevent corrupt symbols on thermal printers
+  const separator = width === '58mm' ? '-'.repeat(32) : '-'.repeat(42);
 
   const dateStr = new Date(data.date).toLocaleString('id-ID');
 
   let lines: string[] = [];
 
   // Header
+  if (data.isReprint) {
+    lines.push(center('*** CETAK ULANG ***', width));
+  }
   lines.push(center(data.storeName, width));
   if (data.storeAddress) lines.push(center(data.storeAddress, width));
+  if (data.receiptHeader) lines.push(center(data.receiptHeader, width));
   lines.push(separator);
 
   // Transaction info
@@ -115,8 +126,12 @@ export function printReceiptBrowser(data: ReceiptData, width: '58mm' | '80mm') {
 
   lines.push(separator);
   lines.push('');
-  lines.push(center('Terima kasih!', width));
-  lines.push(center('Semoga sehat selalu 🌿', width));
+  if (data.receiptFooter) {
+    lines.push(center(data.receiptFooter, width));
+  } else {
+    lines.push(center('Terima kasih!', width));
+    lines.push(center('Semoga sehat selalu', width));
+  }
   lines.push('');
 
   // Open print window
@@ -264,7 +279,13 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
 
   // Left align
   commands.push(ESC, 0x61, 0x00); // ESC a 0 - Left
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  if (data.isReprint) {
+    commands.push(...encoder.encode('*** CETAK ULANG ***\n'));
+  }
+  if (data.receiptHeader) {
+    commands.push(...encoder.encode(data.receiptHeader + '\n'));
+  }
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
 
   // Transaction info
   commands.push(...encoder.encode(`No: #${data.queueNumber}\n`));
@@ -276,7 +297,7 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
   if (data.orderType) {
     commands.push(...encoder.encode(`Tipe: ${data.orderType}${data.tableNumber ? ` (${data.tableNumber})` : ''}\n`));
   }
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
 
   // Items
   for (const item of data.items) {
@@ -291,7 +312,7 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
     commands.push(...encoder.encode(`  ${item.quantity}x    ${formatRupiah(item.subtotal)}\n`));
   }
 
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
 
   // Totals
   commands.push(...encoder.encode(`Subtotal: ${formatRupiah(data.subtotal)}\n`));
@@ -307,17 +328,18 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
   commands.push(...encoder.encode(`TOTAL: ${formatRupiah(data.total)}\n`));
   commands.push(ESC, 0x45, 0x00);
 
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
   commands.push(...encoder.encode(`Bayar (${data.paymentMethod}): ${formatRupiah(data.cashReceived || data.total)}\n`));
   if (data.paymentMethod === 'Cash' && data.change !== undefined) {
     commands.push(...encoder.encode(`Kembali: ${formatRupiah(data.change)}\n`));
   }
 
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
 
   // Center footer
   commands.push(ESC, 0x61, 0x01);
-  commands.push(...encoder.encode('\nTerima kasih!\nSemoga sehat selalu\n\n'));
+  const footerText = data.receiptFooter || 'Terima kasih!\nSemoga sehat selalu';
+  commands.push(...encoder.encode(`\n${footerText}\n\n`));
 
   // Feed and cut
   commands.push(ESC, 0x64, 0x04); // Feed 4 lines
@@ -351,7 +373,7 @@ export async function printReceiptBluetooth(data: ReceiptData, width: '58mm' | '
 export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[], kp: KitchenPrinterConfig) {
   const fontSize = kp.width === '58mm' ? '10px' : '12px';
   const paperWidth = kp.width === '58mm' ? '48mm' : '72mm';
-  const separator = kp.width === '58mm' ? '─'.repeat(32) : '─'.repeat(42);
+  const separator = kp.width === '58mm' ? '-'.repeat(32) : '-'.repeat(42);
 
   const dateStr = new Date(data.date).toLocaleString('id-ID');
 
@@ -360,6 +382,9 @@ export function printKitchenReceiptBrowser(data: ReceiptData, items: CartItem[],
   // Header
   lines.push(center(`TIKET DAPUR - #${data.queueNumber}`, kp.width));
   lines.push(center(kp.name.toUpperCase(), kp.width));
+  if (data.isReprint) {
+    lines.push(center('*** CETAK ULANG ***', kp.width));
+  }
   lines.push(separator);
 
   // Info
@@ -431,10 +456,13 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
   commands.push(ESC, 0x45, 0x01);
   commands.push(...encoder.encode(`TIKET DAPUR - #${data.queueNumber}\n`));
   commands.push(...encoder.encode(`${kp.name.toUpperCase()}\n`));
+  if (data.isReprint) {
+    commands.push(...encoder.encode('*** CETAK ULANG ***\n'));
+  }
   commands.push(ESC, 0x45, 0x00);
 
   commands.push(ESC, 0x61, 0x00);
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
   commands.push(...encoder.encode(`Tgl: ${new Date(data.date).toLocaleString('id-ID')}\n`));
   commands.push(...encoder.encode(`Kasir: ${data.cashierName}\n`));
   if (data.customerName) {
@@ -443,7 +471,7 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
   if (data.orderType) {
     commands.push(...encoder.encode(`Tipe: ${data.orderType}${data.tableNumber ? ` (${data.tableNumber})` : ''}\n`));
   }
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
 
   for (const item of items) {
     commands.push(...encoder.encode(`${item.name}\n`));
@@ -459,7 +487,7 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
     commands.push(ESC, 0x45, 0x00);
   }
 
-  commands.push(...encoder.encode('─'.repeat(maxChars) + '\n'));
+  commands.push(...encoder.encode('-'.repeat(maxChars) + '\n'));
   commands.push(ESC, 0x61, 0x01);
   commands.push(...encoder.encode('\nSelesai Tiket\n\n'));
   commands.push(ESC, 0x64, 0x04);
@@ -491,7 +519,11 @@ export async function printKitchenReceiptBluetooth(data: ReceiptData, items: Car
 
 import type { KitchenPrinterConfig } from '../types';
 
-export async function printReceipt(data: ReceiptData, settings: AppSettings) {
+export async function printReceipt(
+  data: ReceiptData,
+  settings: AppSettings,
+  targetPrinter: 'all' | 'cashier' = 'all'
+) {
   // 1. Print full receipt on cashier printer if enabled
   if (settings.printerEnabled) {
     if (settings.printerType === 'bluetooth') {
@@ -501,8 +533,8 @@ export async function printReceipt(data: ReceiptData, settings: AppSettings) {
     }
   }
 
-  // 2. Print split kitchen receipts for each configured kitchen printer
-  if (settings.kitchenPrinters && settings.kitchenPrinters.length > 0) {
+  // 2. Print split kitchen receipts ONLY if targetPrinter === 'all'
+  if (targetPrinter === 'all' && settings.kitchenPrinters && settings.kitchenPrinters.length > 0) {
     for (const kp of settings.kitchenPrinters) {
       if (!kp.enabled) continue;
 

@@ -116,9 +116,9 @@ export default function Customers() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">👥 Pelanggan (CRM)</h1>
-        <button onClick={openAdd} className="btn-primary text-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">👥 Pelanggan (CRM)</h1>
+        <button onClick={openAdd} className="btn-primary text-sm w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-4">
           <Plus size={16} /> Tambah Pelanggan
         </button>
       </div>

@@ -25,6 +25,7 @@ export interface AddOn {
   name: string;
   price: number;
   hpp?: number; // optional cost of goods for this addon (untuk hitung HPP akurat)
+  ingredients?: Record<string, number>; // { inventory_id: amount } resep bahan baku addon
 }
 
 export interface Menu {
@@ -145,6 +146,12 @@ export interface AppSettings {
   };
   tableFeaturesEnabled?: boolean;
   availableTableNumbers?: string[];
+  // Receipt Customization (v3.7)
+  receiptHeader?: string;
+  receiptFooter?: string;
+  receiptAsciiOnly?: boolean;
+  autoPrintReceipt?: boolean;
+  autoPrintKitchen?: boolean;
 }
 
 // Shift Management

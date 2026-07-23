@@ -106,16 +106,21 @@ export default function Promos() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">🎁 Promo & Loyalty</h1>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">🎁 Promo & Loyalty</h1>
+        {activeSection === 'promos' && (
+          <button onClick={openAdd} className="btn-primary text-sm w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-4">
+            <Plus size={16} /> Tambah Promo
+          </button>
+        )}
       </div>
 
       {/* Section Toggle */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-6">
         <button
           onClick={() => setActiveSection('promos')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${
-            activeSection === 'promos' ? 'bg-white shadow-sm text-brand-700' : 'text-slate-500'
+            activeSection === 'promos' ? 'bg-white dark:bg-slate-700 shadow-sm text-brand-700 dark:text-brand-400 font-semibold' : 'text-slate-500 dark:text-slate-400'
           }`}
         >
           <Tag size={16} /> Promo & Voucher
@@ -123,7 +128,7 @@ export default function Promos() {
         <button
           onClick={() => setActiveSection('loyalty')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${
-            activeSection === 'loyalty' ? 'bg-white shadow-sm text-brand-700' : 'text-slate-500'
+            activeSection === 'loyalty' ? 'bg-white dark:bg-slate-700 shadow-sm text-brand-700 dark:text-brand-400 font-semibold' : 'text-slate-500 dark:text-slate-400'
           }`}
         >
           <Crown size={16} /> Loyalty Member
@@ -133,11 +138,6 @@ export default function Promos() {
       {/* Promos Section */}
       {activeSection === 'promos' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
-            <button onClick={openAdd} className="btn-primary text-sm">
-              <Plus size={16} /> Tambah Promo
-            </button>
-          </div>
 
           {promos.length === 0 ? (
             <div className="card p-12 text-center text-slate-400">

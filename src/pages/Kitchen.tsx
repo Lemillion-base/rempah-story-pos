@@ -139,9 +139,9 @@ export default function Kitchen() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">🍳 Kitchen Display System</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">🍳 Kitchen Display System</h1>
+        <div className="flex items-center gap-2 justify-center w-full sm:w-auto">
           {overdueCount > 0 && (
             <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-950/50 border border-red-300 dark:border-red-700 rounded-xl animate-pulse">
               <AlertTriangle size={18} className="text-red-650" />

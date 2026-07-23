@@ -38,7 +38,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
 
 type ReportTab = 'pnl' | 'transactions' | 'inventory' | 'shift' | 'cash' | 'opname';
-type DateFilterType = 'today' | 'week' | 'month' | 'custom';
+type DateFilterType = 'today' | 'week' | 'month' | 'all' | 'custom';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<ReportTab>('pnl');
@@ -76,6 +76,8 @@ export default function Reports() {
           }
           return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         }
+        case 'all':
+          return true;
         case 'custom': {
           const from = customDateFrom ? new Date(customDateFrom) : new Date(0);
           const to = customDateTo ? new Date(customDateTo + 'T23:59:59') : new Date();
@@ -111,6 +113,9 @@ export default function Reports() {
         const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         return { dateFrom: from, dateTo: to };
       }
+      case 'all': {
+        return { dateFrom: new Date(0), dateTo: new Date(2099, 11, 31) };
+      }
       case 'custom': {
         const from = customDateFrom ? new Date(customDateFrom) : new Date(0);
         const to = customDateTo ? new Date(customDateTo + 'T23:59:59') : new Date();
@@ -121,7 +126,19 @@ export default function Reports() {
     }
   }, [dateFilterType, customDateFrom, customDateTo, filterMonth]);
 
-  // P&L calculations
+  // Filter stock opname records by date range for P&L shrinkage calculation (BUG-02 fix)
+  const filteredOpnameRecords = useMemo(() => {
+    return opnameRecords.filter((r) => {
+      const d = new Date(r.date);
+      return d >= dateFrom && d <= dateTo;
+    });
+  }, [opnameRecords, dateFrom, dateTo]);
+
+  const totalOpnameLoss = useMemo(() => {
+    return filteredOpnameRecords.reduce((acc, r) => acc + (r.totalLossValue || 0), 0);
+  }, [filteredOpnameRecords]);
+
+  // P&L calculations (BUG-02 fix: include stock opname shrinkage loss in net profit)
   const totalGrossRevenue = filteredTx.reduce((a, t) => a + t.subtotal, 0);
   const totalRevenue = filteredTx.reduce((a, t) => a + t.totalAmount, 0);
   const totalHPP = filteredTx.reduce((a, t) => a + t.hpp, 0);
@@ -129,7 +146,8 @@ export default function Reports() {
   const totalTax = filteredTx.reduce((a, t) => a + (t.tax || 0), 0); // GAP-3 fix
   const netRevenue = totalGrossRevenue - totalDiscount;
   const grossProfit = netRevenue - totalHPP;
-  const profitMargin = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0;
+  const netProfit = grossProfit - totalOpnameLoss;
+  const profitMargin = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
   const avgTransaction = filteredTx.length > 0 ? totalRevenue / filteredTx.length : 0;
 
   // Payment breakdown
@@ -198,6 +216,8 @@ export default function Reports() {
       ['Pajak Terkumpul', totalTax],
       ['Harga Pokok Penjualan (HPP)', -totalHPP],
       ['Laba Kotor', grossProfit],
+      ['Kerugian Stock Opname (Bahan Basi/Rusak/Hilang)', -totalOpnameLoss],
+      ['Laba Bersih Operasional (Net Profit)', netProfit],
       [''],
       ['Jumlah Transaksi', filteredTx.length],
       ['Rata-rata per Transaksi', Math.round(avgTransaction)],
@@ -325,6 +345,7 @@ export default function Reports() {
       case 'today': return 'Hari Ini (' + new Date().toLocaleDateString('id-ID') + ')';
       case 'week': return '7 Hari Terakhir';
       case 'month': return filterMonth || 'Bulan Ini';
+      case 'all': return 'Semua Tanggal';
       case 'custom': return `${customDateFrom || '...'} s/d ${customDateTo || '...'}`;
       default: return '';
     }
@@ -341,56 +362,56 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">📊 Laporan</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">📊 Laporan</h1>
+        <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
           {activeTab === 'pnl' && (
-            <button onClick={exportPnlExcel} className="btn-secondary text-sm">
+            <button onClick={exportPnlExcel} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <Download size={14} /> CSV
             </button>
           )}
           {activeTab === 'pnl' && (
-            <button onClick={() => exportPnlPDF({ storeName: settings.storeName, period: getDateLabel(), totalRevenue: totalGrossRevenue, totalHPP, totalDiscount, totalTax, netRevenue, grossProfit, profitMargin, txCount: filteredTx.length, avgTransaction, paymentBreakdown, orderTypeBreakdown, categorySales })} className="btn-primary text-sm">
+            <button onClick={() => exportPnlPDF({ storeName: settings.storeName, period: getDateLabel(), totalRevenue: totalGrossRevenue, totalHPP, totalDiscount, totalTax, netRevenue, grossProfit, totalOpnameLoss, netProfit, profitMargin, txCount: filteredTx.length, avgTransaction, paymentBreakdown, orderTypeBreakdown, categorySales })} className="btn-primary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <FileText size={14} /> PDF
             </button>
           )}
           {activeTab === 'inventory' && (
-            <button onClick={exportInventoryExcel} className="btn-secondary text-sm">
+            <button onClick={exportInventoryExcel} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <Download size={14} /> CSV
             </button>
           )}
           {activeTab === 'inventory' && (
-            <button onClick={() => exportInventoryPDF({ storeName: settings.storeName, items: inventory.map((i) => ({ name: i.name, stock: String(i.stock), unit: i.unit, minStock: String(i.minStock ?? 3), cost: formatRupiah(i.costPerUnit), value: formatRupiah(i.stock * i.costPerUnit), status: i.stock < (i.minStock ?? 3) ? 'RENDAH' : 'Aman' })), totalValue: totalInventoryValue, lowStockCount: lowStockItems.length })} className="btn-primary text-sm">
+            <button onClick={() => exportInventoryPDF({ storeName: settings.storeName, items: inventory.map((i) => ({ name: i.name, stock: String(i.stock), unit: i.unit, minStock: String(i.minStock ?? 3), cost: formatRupiah(i.costPerUnit), value: formatRupiah(i.stock * i.costPerUnit), status: i.stock < (i.minStock ?? 3) ? 'RENDAH' : 'Aman' })), totalValue: totalInventoryValue, lowStockCount: lowStockItems.length })} className="btn-primary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <FileText size={14} /> PDF
             </button>
           )}
           {activeTab === 'shift' && (
-            <button onClick={exportShiftExcel} className="btn-secondary text-sm">
+            <button onClick={exportShiftExcel} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <Download size={14} /> CSV
             </button>
           )}
           {activeTab === 'shift' && (
-            <button onClick={() => exportShiftPDF({ storeName: settings.storeName, period: getDateLabel(), shifts: shiftReport.map((e) => ({ name: e.name, txCount: String(e.txCount), revenue: formatRupiah(e.revenue), avg: formatRupiah(e.txCount > 0 ? e.revenue / e.txCount : 0), from: formatDate(e.firstTx), to: formatDate(e.lastTx) })) })} className="btn-primary text-sm">
+            <button onClick={() => exportShiftPDF({ storeName: settings.storeName, period: getDateLabel(), shifts: shiftReport.map((e) => ({ name: e.name, txCount: String(e.txCount), revenue: formatRupiah(e.revenue), avg: formatRupiah(e.txCount > 0 ? e.revenue / e.txCount : 0), from: formatDate(e.firstTx), to: formatDate(e.lastTx) })) })} className="btn-primary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <FileText size={14} /> PDF
             </button>
           )}
           {activeTab === 'cash' && (
-            <button onClick={exportCashExcel} className="btn-secondary text-sm">
+            <button onClick={exportCashExcel} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <Download size={14} /> CSV
             </button>
           )}
           {activeTab === 'cash' && (
-            <button onClick={() => exportCashPDF({ storeName: settings.storeName, shifts: shifts.map((s) => ({ cashier: s.userName, open: formatDate(s.openedAt), close: s.closedAt ? formatDate(s.closedAt) : '-', opening: formatRupiah(s.openingCash), expected: formatRupiah(s.expectedCash || 0), actual: formatRupiah(s.closingCash || 0), diff: formatRupiah(s.cashDifference || 0), sales: formatRupiah(s.totalSales), tx: String(s.totalTransactions) })) })} className="btn-primary text-sm">
+            <button onClick={() => exportCashPDF({ storeName: settings.storeName, shifts: shifts.map((s) => ({ cashier: s.userName, open: formatDate(s.openedAt), close: s.closedAt ? formatDate(s.closedAt) : '-', opening: formatRupiah(s.openingCash), expected: formatRupiah(s.expectedCash || 0), actual: formatRupiah(s.closingCash || 0), diff: formatRupiah(s.cashDifference || 0), sales: formatRupiah(s.totalSales), tx: String(s.totalTransactions) })) })} className="btn-primary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <FileText size={14} /> PDF
             </button>
           )}
           {activeTab === 'transactions' && (
-            <button onClick={exportTransactionsExcel} className="btn-secondary text-sm">
+            <button onClick={exportTransactionsExcel} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <Download size={14} /> CSV
             </button>
           )}
           {activeTab === 'transactions' && (
-            <button onClick={() => exportTransactionsPDF({ storeName: settings.storeName, period: getDateLabel(), transactions: filteredTx.map((t) => ({ queue: `#${t.queueNumber}`, date: formatDate(t.date), cashier: t.cashierName, customer: t.customerName || '-', items: t.items.map((i) => `${i.name} x${i.quantity}`).join(', '), tax: formatRupiah(t.tax || 0), total: formatRupiah(t.totalAmount), method: t.paymentMethod, status: t.txStatus })), totalRevenue, txCount: filteredTx.length })} className="btn-primary text-sm">
+            <button onClick={() => exportTransactionsPDF({ storeName: settings.storeName, period: getDateLabel(), transactions: filteredTx.map((t) => ({ queue: `#${t.queueNumber}`, date: formatDate(t.date), cashier: t.cashierName, customer: t.customerName || '-', items: t.items.map((i) => `${i.name} x${i.quantity}`).join(', '), tax: formatRupiah(t.tax || 0), total: formatRupiah(t.totalAmount), method: t.paymentMethod, status: t.txStatus })), totalRevenue, txCount: filteredTx.length })} className="btn-primary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
               <FileText size={14} /> PDF
             </button>
           )}
@@ -409,6 +430,7 @@ export default function Reports() {
               { value: 'today', label: 'Hari Ini' },
               { value: 'week', label: '7 Hari' },
               { value: 'month', label: 'Bulan' },
+              { value: 'all', label: 'Semua' },
               { value: 'custom', label: 'Tanggal' },
             ] as { value: DateFilterType; label: string }[]).map((opt) => (
               <button
@@ -417,7 +439,7 @@ export default function Reports() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                   dateFilterType === opt.value
                     ? 'bg-brand-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
                 }`}
               >
                 {opt.label}
@@ -437,7 +459,7 @@ export default function Reports() {
 
           {/* Custom date range */}
           {dateFilterType === 'custom' && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <input
                 type="date"
                 value={customDateFrom}
@@ -459,16 +481,16 @@ export default function Reports() {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+      {/* Tabs (Responsive scrollable for mobile) */}
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto whitespace-nowrap scrollbar-none">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${
+            className={`flex-shrink-0 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition ${
               activeTab === tab.id
-                ? 'bg-white shadow-sm text-brand-700'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white dark:bg-slate-700 shadow-sm text-brand-700 dark:text-brand-400 font-semibold'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <tab.icon size={16} />
@@ -554,6 +576,14 @@ export default function Reports() {
               <div className="flex justify-between py-3 bg-purple-50 dark:bg-purple-950/30 rounded-xl px-4 font-bold">
                 <span>Laba Kotor</span>
                 <span className="text-purple-700 dark:text-purple-400">{formatRupiah(grossProfit)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 pl-4">
+                <span className="text-slate-500 dark:text-slate-400">- Kerugian Stock Opname (Bahan Basi/Rusak/Hilang)</span>
+                <span className="text-amber-600 dark:text-amber-400 font-semibold">({formatRupiah(totalOpnameLoss)})</span>
+              </div>
+              <div className="flex justify-between py-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-xl px-4 font-bold">
+                <span className="text-green-800 dark:text-green-300">Laba Bersih Operasional (Net Profit)</span>
+                <span className="text-green-700 dark:text-green-400 text-lg">{formatRupiah(netProfit)}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
                 <span className="text-slate-600 dark:text-slate-400">Jumlah Transaksi</span>

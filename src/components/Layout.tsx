@@ -132,11 +132,14 @@ export default function Layout() {
     const cashSales = shiftTx
       .filter((t) => t.paymentMethod === 'Cash')
       .reduce((a, t) => a + t.totalAmount, 0);
-    const cashChange = shiftTx
-      .filter((t) => t.paymentMethod === 'Cash')
-      .reduce((a, t) => a + (t.change || 0), 0);
-    const expectedCash = activeShift.openingCash + cashSales - cashChange;
-    return { totalSales, totalTx: shiftTx.length, expectedCash };
+    const qrisSales = shiftTx
+      .filter((t) => t.paymentMethod === 'QRIS')
+      .reduce((a, t) => a + t.totalAmount, 0);
+    const transferSales = shiftTx
+      .filter((t) => t.paymentMethod === 'Transfer')
+      .reduce((a, t) => a + t.totalAmount, 0);
+    const expectedCash = activeShift.openingCash + cashSales;
+    return { totalSales, totalTx: shiftTx.length, expectedCash, cashSales, qrisSales, transferSales };
   }, [activeShift, transactions, currentUser]);
 
   const handleLogout = () => {
@@ -198,7 +201,7 @@ export default function Layout() {
       addLog(currentUser.id, currentUser.name, currentUser.role, 'close_shift', `Tutup shift - Kas aktual: ${formatRupiah(closingCash)}, Expected: ${formatRupiah(shiftStats.expectedCash)}`, { closingCash, expectedCash: shiftStats.expectedCash, totalSales: shiftStats.totalSales, totalTx: shiftStats.totalTx });
     }
 
-    // Print transaction summary
+    // ITEM-4 fix: Explicit breakdown & explanation of Expected Cash vs Kas Aktual
     const lines = [
       `=== RINGKASAN TRANSAKSI ===`,
       `${settings.storeName}`,
@@ -207,14 +210,19 @@ export default function Layout() {
       ``,
       `Modal Awal: ${formatRupiah(activeShift?.openingCash || 0)}`,
       `Total Penjualan: ${formatRupiah(shiftStats.totalSales)}`,
+      `  - Tunai (Cash): ${formatRupiah(shiftStats.cashSales || 0)}`,
+      `  - QRIS: ${formatRupiah(shiftStats.qrisSales || 0)}`,
+      `  - Transfer: ${formatRupiah(shiftStats.transferSales || 0)}`,
       `Jumlah Transaksi: ${shiftStats.totalTx}`,
+      ``,
       `Expected Cash: ${formatRupiah(shiftStats.expectedCash)}`,
-      `Kas Aktual: ${formatRupiah(closingCash)}`,
-      `Selisih: ${formatRupiah(closingCash - shiftStats.expectedCash)}`,
+      `(Modal Awal + Tunai)`,
+      `Kas Aktual (Fisik): ${formatRupiah(closingCash)}`,
+      `Selisih Kas: ${formatRupiah(closingCash - shiftStats.expectedCash)}`,
       ``,
       `--- Riwayat Transaksi ---`,
       ...todayTx.map(
-        (t) => `#${t.queueNumber} | ${t.paymentMethod} | ${formatRupiah(t.totalAmount)} | ${t.items.map((i) => i.name).join(', ')}`
+        (t) => `#${t.queueNumber} | ${t.paymentMethod} | ${formatRupiah(t.totalAmount)}`
       ),
       ``,
       `===========================`,
@@ -359,22 +367,29 @@ export default function Layout() {
 
       {/* Main */}
       <main className="flex-1 flex flex-col min-w-0 h-full">
-        {/* Mobile header */}
-        <header className="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700/50">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-2">
-              <MenuIcon size={20} />
-            </button>
-            {settings.storeLogo ? (
-              <img src={settings.storeLogo} alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
-            ) : (
-              <span className="text-lg">🌿</span>
-            )}
-            <h1 className="text-lg font-bold text-brand-700 dark:text-brand-400">{settings.storeName}</h1>
+        {/* Mobile header (Centered Logo & Store Name) */}
+        <header className="lg:hidden relative flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700/50 min-h-[56px]">
+          <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-2 z-10">
+            <MenuIcon size={20} />
+          </button>
+
+          {/* Centered Store Logo & Title */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12">
+            <div className="flex items-center gap-2 max-w-[220px] sm:max-w-none">
+              {settings.storeLogo ? (
+                <img src={settings.storeLogo} alt="Logo" className="w-7 h-7 rounded-lg object-contain flex-shrink-0" />
+              ) : (
+                <span className="text-lg flex-shrink-0">🌿</span>
+              )}
+              <h1 className="text-base sm:text-lg font-bold text-brand-700 dark:text-brand-400 truncate text-center">
+                {settings.storeName}
+              </h1>
+            </div>
           </div>
+
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition"
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition z-10"
             title={theme === 'light' ? 'Mode Gelap' : 'Mode Terang'}
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}

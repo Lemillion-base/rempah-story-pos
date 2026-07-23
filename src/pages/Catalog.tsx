@@ -242,19 +242,19 @@ export default function Catalog() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">📦 Katalog Menu</h1>
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={openAdd} className="btn-primary text-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold text-center sm:text-left w-full sm:w-auto">📦 Katalog Menu</h1>
+        <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+          <button onClick={openAdd} className="btn-primary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             <Plus size={16} /> Tambah Menu
           </button>
-          <button onClick={() => setShowCatManager(true)} className="btn-secondary text-sm">
+          <button onClick={() => setShowCatManager(true)} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             <Tag size={16} /> Kelola Kategori
           </button>
-          <button onClick={handleExport} className="btn-secondary text-sm">
+          <button onClick={handleExport} className="btn-secondary text-sm flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             <Download size={16} /> Export CSV
           </button>
-          <label className="btn-secondary text-sm cursor-pointer">
+          <label className="btn-secondary text-sm cursor-pointer flex items-center justify-center gap-1.5 py-2 px-3 w-full sm:w-auto">
             <Upload size={16} /> Import CSV
             <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
           </label>
